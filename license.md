@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2021 Brennan Fee
+Copyright © 2021 [Brennan Fee](https://github.com/brennanfee)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
