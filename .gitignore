@@ -1,6 +1,5 @@
-
-# Created by https://www.toptal.com/developers/gitignore/api/linux,windows,macos,backup,vim,visualstudiocode,emacs
-# Edit at https://www.toptal.com/developers/gitignore?templates=linux,windows,macos,backup,vim,visualstudiocode,emacs
+# Created by https://www.toptal.com/developers/gitignore/api/linux,windows,macos,backup,vim,emacs,visualstudiocode
+# Edit at https://www.toptal.com/developers/gitignore?templates=linux,windows,macos,backup,vim,emacs,visualstudiocode
 
 ### Backup ###
 *.bak
@@ -59,7 +58,6 @@ flycheck_*.el
 # network security
 /network-security.data
 
-
 ### Linux ###
 
 # temporary files which can be created if a process still has a handle open of a deleted file
@@ -82,7 +80,6 @@ flycheck_*.el
 
 # Icon must end with two \r
 Icon
-
 
 # Thumbnails
 ._*
@@ -139,6 +136,9 @@ tags
 .history
 .ionide
 
+# Support for Project snippet scope
+!.vscode/*.code-snippets
+
 ### Windows ###
 # Windows thumbnail cache files
 Thumbs.db
@@ -165,6 +165,6 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
-# End of https://www.toptal.com/developers/gitignore/api/linux,windows,macos,backup,vim,visualstudiocode,emacs
+# End of https://www.toptal.com/developers/gitignore/api/linux,windows,macos,backup,vim,emacs,visualstudiocode
 
 ###### Custom project specific overrides ######
