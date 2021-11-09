@@ -42,6 +42,8 @@ fi
 
 # TODO: Add support for setting up Ansible, Chef, or Salt so the machine is ready for those after boot.
 
+# TODO: Add support for package augmentation (a list passed in)
+
 ### Start: Constants & Global Variables
 
 # Should only be on during testing.  Primarly this turns on the output of passwords.
