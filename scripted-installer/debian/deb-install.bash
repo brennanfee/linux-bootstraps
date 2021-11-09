@@ -24,26 +24,6 @@ if ! ${SOURCED}; then
 fi
 # END Bash scrict mode
 
-# TODO: Convert all TODOs into tickets in the git repo (after script is moved to scripts repo)
-
-# TODO: Implement a "before" and "after" script option, each with a semi-colon list of scripts to run in order
-
-# TODO: Write all variables out to a sourceable bash script on the target
-
-# TODO: Consider variable for output of final files rather than hard coding to /data.
-
-# TODO: Move all the ask functions to an external "pre" script that exports variables to be used within here.
-
-# TODO: Variable to skip partitioning altogether
-
-# TODO: Variable for the repo to use in debootstrap & apt
-
-# TODO: Custom option with a third script to run to do the base debootstrap?
-
-# TODO: Add support for setting up Ansible, Chef, or Salt so the machine is ready for those after boot.
-
-# TODO: Add support for package augmentation (a list passed in)
-
 ### Start: Constants & Global Variables
 
 # Should only be on during testing.  Primarly this turns on the output of passwords.
@@ -77,7 +57,6 @@ XPINGS=0 # CONNECTION CHECK
 # This is not to be confused with the OS we are going to install, this is the OS that was booted to perform the installs.  This script only supports Debian and Ubuntu Live Server installers images.
 INSTALLER_DISTRO=$(lsb_release -i -s | tr "[:upper:]" "[:lower:]")
 
-# TODO: Consider support for other debian based distro's (pop? mint?)
 SUPPORTED_OS_DISPLAY=('Debian' 'Ubuntu')
 SUPPORTED_OS=('debian' 'ubuntu')
 
@@ -103,7 +82,6 @@ AUTO_INSTALL_EDITION="${AUTO_INSTALL_EDITION:-}"
 AUTO_USE_BACKPORTS_OR_HWE="${AUTO_USE_BACKPORTS_OR_HWE:-}"
 
 # Whether or not the swap size should be large enough to support hibernation.  The default is to NOT do this as it can needlessly consume a lot of disk space.
-# TODO: Remove this feature
 AUTO_SUPPORT_HIBERNATION="${AUTO_SUPPORT_HIBERNATION:-}"
 
 # The default hostname of the machine being created
@@ -119,11 +97,9 @@ AUTO_TIMEZONE="${AUTO_TIMEZONE:-}"
 AUTO_MAIN_DISK="${AUTO_MAIN_DISK:-}"
 
 # What to do if with a second disk on the machine.  This is ignored if only one disk is found.  But in cases where two or more disks are found this indicates what happens.  A value of "ignore" will ignore the second disk and install as though the machine had only one disk.  A device (like /dev/sdb) can be passed which will select that as the second disk, ignoring anything else.  It can NOT refer to the main disk even if the main disk was selected automatically.  Lastly, a size selector can be passed like "smallest" or "largest".  In the event that the main disk was selected by size, this would be the in essence the next smallest or next largest disk.
-# TODO: Support relink
 AUTO_SECOND_DISK="${AUTO_SECOND_DISK:-}"
 
 # Whether the volume(s) created should be encrypted.  Valid values are "yes" or "no".  Blank will prompt the user, or in an automated install will, by default, encrypt the disks.
-# TODO: For all bool values support y, n, t, f as well as the other
 AUTO_ENCRYPT_DISKS="${AUTO_ENCRYPT_DISKS:-}"
 
 # The password to use for the encrypted volumes.  A special value of "file" can be passed which will create a disk file in the bios/efi location that will auto-decrypt on boot.  This is obviously not secure but can be used in automated scenario's such that later encryption could be disabled or different key or unlock mechanisms could be put in place.
@@ -346,8 +322,6 @@ detect_if_eufi() {
   fi
 }
 
-## TODO: Test this more, make sure it will fail with error message if auto install and can't get connection
-# TODO: If in auto mode, fail if no connection
 check_network_connection() {
   print_info "Checking network connectivity..."
 
@@ -1515,7 +1489,6 @@ create_secondary_partitions() {
 # }
 
 setup_encryption() {
-  # TODO: Needs testing and convert to use passed in values with support for "file"
   if [[ ${ENCRYPT_DISKS} == 1 ]]; then
     print_info "Setting up encryption"
 
@@ -1663,7 +1636,6 @@ install_base_system_debian() {
 }
 
 install_base_system_ubuntu() {
-  # TODO: Needs testing
   print_status "    Installing Ubuntu"
 
   # Bootstrap
@@ -1682,7 +1654,6 @@ install_base_system_ubuntu() {
   release_ver=$(arch-chroot /mnt lsb_release -r -s)
   write_log "DEBUG>>> ubuntu release: ${release_ver}"
   # Kernel & Firmware (using backports means HWE kernel)
-  # TODO: Allow selection of which HWE kernel (regular or edge)
   #if [[ ${USE_BACKPORTS} == "1" ]]; then
   #else
   #fi
@@ -1702,7 +1673,6 @@ install_bootloader() {
     arch-chroot /mnt update-grub
   else
     print_warning "BIOS support is EXPERIMENTAL and not well tested"
-    # TODO: Test this
 
     chroot_install os-prober grub-pc
 
@@ -1713,7 +1683,6 @@ install_bootloader() {
 }
 
 install_virtualization() {
-  # TODO: Consider removing this and doing this post
   if [[ $(systemd-detect-virt) == "oracle" ]]; then
     # In virtualbox
     print_info "Installing VirtualBox Additions"
@@ -1822,7 +1791,6 @@ EOF
 
 configure_keymap() {
   print_info "Configure keymap"
-  # TODO: May need different fonts for virutalized environments and "real" machines
 
   chroot_install console-setup
 

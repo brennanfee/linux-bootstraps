@@ -1,10 +1,5 @@
 #!/usr/bin/env sh
 
-# TODO: Add support for backport kernel
-# TODO: Add support for HWE kernel (ubuntu preseed version)
-# TODO: Add support for setting up Ansible, Chef, Salt clients.
-# TODO: Add support for package augmentation (a list passed in)
-
 # POSIX strict mode (may produce issues in sourced scenarios)
 set -o errexit
 set -o nounset
