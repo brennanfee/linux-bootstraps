@@ -1,0 +1,102 @@
+#cloud-config
+# vim: set filetype=yaml :
+autoinstall:
+  version: 1
+  locale: en_US
+  keyboard:
+    layout: en
+    variant: us
+  identity:
+    hostname: ubuntu
+    password: $6$Ky49b8mBZ1nrwHkn$DSQUXl/7h0UceoZtZYQD9moOLkNAlO2Z1UjUHhDvKDDH3PJdhWzGB3x9ox1Zjm742hECPz2sMXFZm.rtOIlR81
+    username: ubuntu
+  early-commands:
+    - systemctl stop ssh
+    - wget -q -O /tmp/ubuntu-early-command.sh $(sed 's|.*s=\([^ ]\+\).*|\1|' /proc/cmdline)/ubuntu-early-command.sh
+    - sh /tmp/ubuntu-early-command.sh
+  ssh:
+    install-server: true
+  user-data:
+    disable_root: true
+    timezone: US/Central
+  storage:
+    swap:
+      size: 0
+    config:
+      - id: disk-root
+        type: disk
+        ptable: gpt
+        wipe: superblock-recursive
+        match:
+          size: smallest
+      - id: part-efi
+        type: partition
+        device: disk-root
+        grub_device: true
+        flag: boot
+        size: 512MB
+      - id: part-boot
+        type: partition
+        device: disk-root
+        size: 1G
+      - id: part-main
+        type: partition
+        device: disk-root
+        size: -1
+      - id: format-part-boot
+        type: format
+        fstype: ext4
+        label: boot
+        volume: part-boot
+      - id: format-part-efi
+        type: format
+        fstype: vfat
+        label: efi
+        volume: part-efi
+      - id: format-part-main
+        type: format
+        fstype: ext4
+        label: root
+        volume: part-main
+      - id: mount-root
+        type: mount
+        path: /
+        device: format-part-main
+        options: "errors=remount-ro"
+      - id: mount-boot
+        type: mount
+        path: /boot
+        device: format-part-boot
+        passno: 2
+      - id: mount-efi
+        type: mount
+        path: /boot/efi
+        device: format-part-efi
+        passno: 1
+        options: "umask=0077"
+  late-commands:
+    - wget -q -O /tmp/ubuntu-late-command.sh $(sed 's|.*s=\([^ ]\+\).*|\1|' /proc/cmdline)/ubuntu-late-command.sh
+    - sh /tmp/ubuntu-late-command.sh
+  refresh-installer:
+    update: true
+  packages:
+    - apt-transport-https
+    - ca-certificates
+    - curl
+    - wget
+    - gnupg
+    - lsb-release
+    - build-essential
+    - dkms
+    - sudo
+    - acl
+    - git
+    - vim-nox
+    - python3-dev
+    - python3-setuptools
+    - python3-wheel
+    - python3-keyring
+    - python3-venv
+    - python3-pip
+    - python-is-python3
+    - software-properties-common
