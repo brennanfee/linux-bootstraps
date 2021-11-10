@@ -237,11 +237,6 @@ invalid_option() {
   print_warning "Invalid option. Try again."
 }
 
-invalid_option_error() {
-  print_line
-  error_msg "Invalid option. Try again."
-}
-
 ### END: Print & Log Functions
 
 ### START: Helper Functions
@@ -325,61 +320,18 @@ detect_if_eufi() {
 check_network_connection() {
   print_info "Checking network connectivity..."
 
-  XPINGS=$((XPINGS + 1))
-  connection_test() {
-    ping -q -w 1 -c 1 "$(ip r | grep default | awk 'NR==1 {print $3}')" &>/dev/null && return 1 || return 0
-  }
-
-  set +o pipefail
-  WIRED_DEV=$(ip link | grep "ens\|eno\|enp" | awk '{print $2}' | sed 's/://' | sed '1!d')
-  write_log "Wired device: ${WIRED_DEV}"
-
-  WIRELESS_DEV=$(ip link | grep wlp | awk '{print $2}' | sed 's/://' | sed '1!d')
-  write_log "Wireless device: ${WIRELESS_DEV}"
-  set -o pipefail
-
-  if connection_test; then
-    print_warning "ERROR! Connection not Found."
-    print_info "Network Setup"
-    local _connection_opts=("Wired Automatic" "Wired Manual" "Wireless" "Skip")
-    PS3="Enter your option: "
-    # shellcheck disable=SC2034
-    select CONNECTION_TYPE in "${_connection_opts[@]}"; do
-      case "${REPLY}" in
-      1)
-        systemctl start "dhcpcd@${WIRED_DEV}.service"
-        break
-        ;;
-      2)
-        systemctl stop "dhcpcd@${WIRED_DEV}.service"
-        read -rp "IP Address: " IP_ADDR
-        read -rp "Submask: " SUBMASK
-        read -rp "Gateway: " GATEWAY
-        ip link set "${WIRED_DEV}" up
-        ip addr add "${IP_ADDR}/${SUBMASK}" dev "${WIRED_DEV}"
-        ip route add default via "${GATEWAY}"
-        break
-        ;;
-      3)
-        wifi-menu "${WIRELESS_DEV}"
-        break
-        ;;
-      4)
-        error_msg "No network setup, exiting."
-        break
-        ;;
-      *)
-        invalid_option
-        ;;
-      esac
-    done
-    if [[ ${XPINGS} -gt 2 ]]; then
-      print_warning "Can't establish connection. exiting..."
-      exit 1
+  # Check localhost first (if network stack is up at all)
+  if ping -q -w 3 -c 2 localhost &> /dev/null; then
+    # Test the gateway
+    gateway_ip=$(ip r | grep default | awk 'NR==1 {print $3}')
+    if ping -q -w 3 -c 2 "${gateway_ip}" &> /dev/null; then
+      # Should we also ping the install mirror?
+      print_info "Connection found."
+    else
+      error_msg "Gateway connection not accessible.  Exiting."
     fi
-    [[ ${REPLY} -ne 5 ]] && check_network_connection
   else
-    print_info "Connection found."
+    error_msg "Localhost network connection not found.  Exiting."
   fi
 }
 
