@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC2181
 # Author: Brennan Fee
+# License: MIT License
 # Version: 0.02  2021-11-05
 #
 # URL to install: bash <(curl -fsSL https://<path tbd>)
