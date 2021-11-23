@@ -50,6 +50,13 @@ INSTALLER_DISTRO=$(lsb_release -i -s | tr "[:upper:]" "[:lower:]")
 # The supported target OSes to be installed
 SUPPORTED_OSES=('debian' 'ubuntu')
 
+# Console font size, I pre-configure the console font to enlarge it which shoudl work better on higher resolution screens.
+# The font family chosen is the Lat15-Terminus font family.  The only value changed here is the final size.
+#
+# Others small-ish: Lat15-Terminus14,Lat15-Terminus16,Lat15-Terminus18x10
+# Others large-ish: Lat15-Terminus20x10,Lat15-Terminus22x11,Lat15-Terminus24x12,Lat15-Terminus28x14
+CONSOLE_FONT_SIZE="20x10"
+
 ### End: Constants & Global Variables
 
 ### Start: Options & User Overrideable Parameters
@@ -89,16 +96,18 @@ AUTO_MAIN_DISK="${AUTO_MAIN_DISK:=smallest}"
 #
 # At no time can the second disk refer or resolve to the same disk as the main disk.  Such situations will result in an error and the script exiting.
 #
-# In dual disk automatic partitioning, no change is made to the main disk.  This script creates a single LVM volume on the second disk with one of two layouts (based on the AUTO_CREATE_DATA_FOLDER value).  Without the data option you get a single LVM partition of 70% for /home with 30% space free for later LVM expansion\use.  With the data folder option you get two partitions, 50% for /home, 30% for /data, and 20% empty and free for lat LVM expansion\use.
+# In dual disk automatic partitioning, no change is made to the main disk layout.  For the second disk, this script creates a single LVM volume on the second disk with one of two layouts (based on the AUTO_CREATE_DATA_FOLDER value).  Without the data option you get a single LVM partition of 70% for /home with 30% space free for later LVM expansion\use.  With the data folder option you get two partitions, 50% for /home, 30% for /data, and 20% empty and free for later LVM expansion\use.
 AUTO_SECOND_DISK="${AUTO_SECOND_DISK:=ignore}"
 
-# Whether to create a /data folder or partition on the target machine.  For further details on this read the information under the AUTO_SECOND_DISK option.  This is a boolean value.
+# Whether to create a /data folder or partition on the target machine.  This folder is a convention that I follow and use and is therefore disabled by default.  I use it for all non-user specific files and setups (usually of docker files, configuraitons, etc.).  If being used along with the AUTO_SECOND_DISK option, this value does affect the partition scheme used.  For further details on this read the information under the AUTO_SECOND_DISK option.  This is a boolean value.
 AUTO_CREATE_DATA_FOLDER="${AUTO_CREATE_DATA_FOLDER:=0}"
 
 # Whether the volume(s) created should be encrypted.  This is a boolean value.
 AUTO_ENCRYPT_DISKS="${AUTO_ENCRYPT_DISKS:=1}"
 
-# The password to use for the encrypted volumes.  A special value of "file", the default, can be passed which will create a disk file in the /boot partition that will auto-decrypt on boot.  This is done so that any automated systems that expect a boot without the need of a password can still function.  You can also pass a full path (it must start with /) to a file to use, that file will be copied to the /boot partition to preserve the automatic boot nature required for automation.  In the event you provide a file, the same file will be used for both disks (assuming a dual disk setup).  Lastly, you can still provide an actual passphrase which again will be used for both disks in dual disk setup.
+# The password to use for the main encrypte volume.  A special value of "file", the default, can be passed which will create a disk file in the /boot partition that will auto-decrypt on boot.  This is done so that any automated systems that expect a boot without the need of a password can still function.  You can also pass a full path (it must start with /) to a file to use, that file will be copied to the /boot partition to preserve the automatic boot nature required for automation.  Lastly, you can still provide an actual passphrase which again will be used for both disks in dual disk setup.  However, this method will break any automations as typing the password will be required at boot.
+#
+# In all configurations, if a second disk is being used a file will be generated automatically as the decryption key for the second disk and stored on the root partition (in the /etc/keys folder).  The system will be configured to automatically unlock that partition after the root partition is decrypted.
 #
 # NOTE: This is not intended to be a secure installation without the need for the user to modify things post bootstrap.  This merely "initializes" the encryption as it is much easier to modify the encryption keys\slots later than it is to encrypt a partition which is already in use (especially root).  Therefore, it is fully expected that the user will either replace the file or otherwise manage the encryption keys after initial boot.
 AUTO_DISK_PWD="${AUTO_DISK_PWD:=file}"
@@ -118,7 +127,7 @@ AUTO_USERNAME="${AUTO_USERNAME:=}"
 # The password for the created user.  If you do not provide a password it iwll default to the target installed OS in all lower case ("debian" or "ubuntu", etc.). The password can be a plain text password or a crypted password.
 AUTO_USER_PWD="${AUTO_USER_PWD:=}"
 
-# Whether to automatically reboot after the script has completed.   Default is not to reboot.
+# Whether to automatically reboot after the script has completed.   Default is not to reboot.  Automated environments such as Packer should turn this on.
 AUTO_REBOOT="${AUTO_REBOOT:=0}"
 
 ### END: Options & User Overrideable Parameters
@@ -127,6 +136,8 @@ AUTO_REBOOT="${AUTO_REBOOT:=0}"
 
 SELECTED_MAIN_DISK=""
 SELECTED_SECOND_DISK=""
+ENCRYPTION_FILE=""
+SECONDARY_FILE=""
 
 ### END: Params created during verification
 
@@ -197,6 +208,8 @@ log_values() {
   write_log "SELECTED_MAIN_DISK: '${SELECTED_MAIN_DISK}'"
   write_log "SECOND_DISK_METHOD: '${SECOND_DISK_METHOD}'"
   write_log "SELECTED_SECOND_DISK: '${SELECTED_SECOND_DISK}'"
+  write_log "ENCRYPTION_FILE: '${ENCRYPTION_FILE}'"
+  write_log "SECONDARY_FILE: '${SECONDARY_FILE}'"
 
   write_log_blank
   write_log_spacer
@@ -281,7 +294,7 @@ setup_installer_environment() {
   export LANGUAGE=
 
   # Font
-  setfont Lat15-Terminus18x10
+  setfont "Lat15-Terminus${CONSOLE_FONT_SIZE}"
 }
 
 contains_element() {
@@ -374,7 +387,7 @@ install_prereqs() {
 
   # Things they both need
   print_status "    Installing common prerequisites"
-  DEBIAN_FRONTEND=noninteractive apt-get -y -q install vim-nox debootstrap arch-install-scripts parted gdisk bc
+  DEBIAN_FRONTEND=noninteractive apt-get -y -q --no-install-recommends install vim debootstrap arch-install-scripts parted bc cryptsetup lvm2 xfsprogs
 
   DEBIAN_FRONTEND=noninteractive apt-get -y -q autoremove || true
 }
@@ -440,6 +453,10 @@ normalize_parameters() {
   normalize_variable_boolean "AUTO_ROOT_DISABLED"
   normalize_variable_boolean "AUTO_CREATE_USER"
   normalize_variable_boolean "AUTO_REBOOT"
+
+  if [[ "${AUTO_DISK_PWD}" == "" ]]; then
+    AUTO_DISK_PWD=file
+  fi
 }
 
 verify_install_os() {
@@ -565,10 +582,11 @@ parse_main_disk() {
 parse_second_disk() {
   print_info "Reading Second Disk Selection"
 
-  print_info "Collecting disks..."
+  print_status "    Collecting disks..."
   local devices_list
   mapfile -t devices_list < <(lsblk -ndpl --output NAME --include "${BLOCK_DISKS}" | grep -v "${SELECTED_MAIN_DISK}")
 
+  write_log "checking for second disk"
   if [[ "${AUTO_SKIP_PARTITIONING}" == 1 || ${#devices_list[@]} == 0 || "${SELECTED_MAIN_DISK}" == "ignore" ]]; then
     # There is only 1 disk in the system or the user has chosen to ignore the main disk (bypassing partitioning), so regardless of what they asked for on second disk it should be ignored
     SECOND_DISK_METHOD="forced"
@@ -580,33 +598,34 @@ parse_second_disk() {
     return
   fi
 
-  if echo "${AUTO_SECOND_DISK}" | grep -q '^/dev/'; then
-    # We have already verified the disk prior, so need need to do anything else
-    SECOND_DISK_METHOD="direct"
-    SELECTED_SECOND_DISK=${AUTO_SECOND_DISK}
-  else
-    case "${AUTO_SECOND_DISK}" in
-      ignore)
-        SECOND_DISK_METHOD="ignore"
-        SELECTED_SECOND_DISK="ignore"
-        ;;
+  write_log "Checking second disk"
+  write_log "AUTO_SECOND_DISK=${AUTO_SECOND_DISK}"
+  case "${AUTO_SECOND_DISK}" in
+    /dev/*)
+      # We have already verified the disk prior, so need need to do anything else
+      SECOND_DISK_METHOD="direct"
+      SELECTED_SECOND_DISK=${AUTO_SECOND_DISK}
+      ;;
+    ignore)
+      SECOND_DISK_METHOD="ignore"
+      SELECTED_SECOND_DISK="ignore"
+      ;;
 
-      smallest)
-        SECOND_DISK_METHOD="smallest"
-        SELECTED_SECOND_DISK=$(lsblk -ndpl --output NAME --include "${BLOCK_DISKS}" --sort SIZE | grep -v "${SELECTED_MAIN_DISK}" | head -n 1)
-        ;;
+    smallest)
+      SECOND_DISK_METHOD="smallest"
+      SELECTED_SECOND_DISK=$(lsblk -ndpl --output NAME --include "${BLOCK_DISKS}" --sort SIZE | grep -v "${SELECTED_MAIN_DISK}" | head -n 1)
+      ;;
 
-      largest)
-        SECOND_DISK_METHOD="largest"
-        SELECTED_SECOND_DISK=$(lsblk -ndpl --output NAME --include "${BLOCK_DISKS}" --sort SIZE | grep -v "${SELECTED_MAIN_DISK}" | tail 1)
-        ;;
+    largest)
+      SECOND_DISK_METHOD="largest"
+      SELECTED_SECOND_DISK=$(lsblk -ndpl --output NAME --include "${BLOCK_DISKS}" --sort SIZE | grep -v "${SELECTED_MAIN_DISK}" | tail -n 1)
+      ;;
 
-      *)
-        # Should never happen as we have already verified thie value
-        error_msg "ERROR! Invalid second disk selection: '${AUTO_SECOND_DISK}'"
-        ;;
-    esac
-  fi
+    *)
+      # Should never happen as we have already verified thie value
+      error_msg "ERROR! Invalid second disk selection: '${AUTO_SECOND_DISK}'"
+      ;;
+  esac
 
   # One more validation if it is a valid disk/device locator
   if [[ "${SELECTED_SECOND_DISK}" != "ignore" && ! -b "${SELECTED_SECOND_DISK}" ]]; then
@@ -712,44 +731,75 @@ create_secondary_partitions() {
   partprobe 2>/dev/null || true
 }
 
-# setup_encryption() {
-#   if [[ ${ENCRYPT_DISKS} == 1 ]]; then
-#     print_info "Setting up encryption"
-
-#     local main_drive=""
-#     local main_sector_size=""
-
-#     # shellcheck disable=SC2001
-#     main_drive=$(echo "${MAIN_DISK}" | sed -e 's|^/dev/||')
-#     main_sector_size=$(cat /sys/block/"${main_drive}"/queue/physical_block_size)
-
-#     echo "test" | cryptsetup luksFormat --type luks2 --sector-size "${main_sector_size}" "${MAIN_DISK}3" -
-
-#     if [[ ${use_second_disk} == "1" ]]; then
-#       local second_drive=""
-#       local second_sector_size=""
-
-#       # shellcheck disable=SC2001
-#       second_drive=$(echo "${SELECTED_SECOND_DISK}" | sed -e 's|^/dev/||')
-#       second_sector_size=$(cat /sys/block/"${second_drive}"/queue/physical_block_size)
-
-#       echo "test" | cryptsetup luksFormat --type luks2 --sector-size "${second_sector_size}" "${SELECTED_SECOND_DISK}1" -
-#     fi
-#   fi
-# }
-
 setup_encryption() {
+  ENCRYPTION_FILE=""
+  SECONDARY_FILE=""
+
   if [[ ${AUTO_ENCRYPT_DISKS} == 1 ]]; then
     print_info "Setting up encryption"
 
-    echo -n "test" | cryptsetup -s 512 --iter-time 5000 luksFormat --type luks2 "${SELECTED_MAIN_DISK}3" -
-    echo -n "test" | cryptsetup open "${SELECTED_MAIN_DISK}3" cryptroot --key-file -
+    case "${AUTO_DISK_PWD}" in
+      file)
+        encrypt_main_generated_file
+        ;;
 
-    if [[ ${SELECTED_SECOND_DISK} != "ignore" ]]; then
-      echo -n "test" | cryptsetup -s 512 --iter-time 5000 luksFormat --type luks2 "${SELECTED_SECOND_DISK}1" -
-      echo -n "test" | cryptsetup open "${SELECTED_SECOND_DISK}1" cryptdata --key-file -
-    fi
+      /*)
+        encrypt_main_provided_file
+        ;;
+
+      *)
+        encrypt_main_passphrase
+        ;;
+    esac
   fi
+
+  if [[ ${SELECTED_SECOND_DISK} != "ignore" ]]; then
+    print_status "    Generating keyfile for second disk"
+    SECONDARY_FILE=$(mktemp)
+    openssl genrsa -out "${SECONDARY_FILE}" 4096
+
+    print_status "    Encrypting second disk"
+    cryptsetup --batch-mode -s 512 --iter-time 5000 --type luks2 luksFormat "${SELECTED_SECOND_DISK}1" "${SECONDARY_FILE}"
+
+    print_status "    Opening second disk"
+    cryptsetup open --type luks --key-file "${SECONDARY_FILE}" "${SELECTED_SECOND_DISK}1" cryptdata
+  fi
+}
+
+encrypt_main_generated_file() {
+  print_status "    Generating encryption file"
+
+  ENCRYPTION_FILE=$(mktemp)
+  write_log "ENCRYPTION_FILE=${ENCRYPTION_FILE}"
+
+  openssl genrsa -out "${ENCRYPTION_FILE}" 4096
+
+  print_status "    Encrypting main disk"
+  cryptsetup --batch-mode -s 512 --iter-time 5000 --type luks2 luksFormat "${SELECTED_MAIN_DISK}3" "${ENCRYPTION_FILE}"
+
+  print_status "    Opening main disk"
+  cryptsetup open --type luks --key-file "${ENCRYPTION_FILE}" "${SELECTED_MAIN_DISK}3" cryptroot
+}
+
+encrypt_main_provided_file() {
+  ENCRYPTION_FILE="${AUTO_DISK_PWD}"
+  print_status "    Using encryption file"
+
+  print_status "    Encrypting main disk"
+  cryptsetup --batch-mode -s 512 --iter-time 5000 --type luks2 luksFormat "${SELECTED_MAIN_DISK}3" "${ENCRYPTION_FILE}"
+
+  print_status "    Opening main disk"
+  cryptsetup open --type luks --key-file "${ENCRYPTION_FILE}" "${SELECTED_MAIN_DISK}3" cryptroot
+}
+
+encrypt_main_passphrase() {
+  print_status "    Using provided encryption passphrase"
+
+  print_status "    Encrypting main disk"
+  echo -n "${AUTO_DISK_PWD}" | cryptsetup --batch-mode -s 512 --iter-time 5000 --type luks2 luksFormat "${SELECTED_MAIN_DISK}3" -
+
+  print_status "    Opening main disk"
+  echo -n "${AUTO_DISK_PWD}" | cryptsetup open --type luks "${SELECTED_MAIN_DISK}3" cryptroot --key-file -
 }
 
 setup_lvm() {
@@ -758,9 +808,9 @@ setup_lvm() {
 
     local pv_volume
     if [[ ${AUTO_ENCRYPT_DISKS} == 1 ]]; then
-      pv_volume "/dev/mapper/cryptdata"
+      pv_volume="/dev/mapper/cryptdata"
     else
-      pv_volume "${SELECTED_SECOND_DISK}1"
+      pv_volume="${SELECTED_SECOND_DISK}1"
     fi
 
     pvcreate "${pv_volume}"
@@ -880,7 +930,7 @@ install_base_system_debian() {
   arch-chroot /mnt apt-get upgrade -y --no-install-recommends
 
   # Standard server setup
-  arch-chroot /mnt tasksel --new-install install standard task-english
+  arch-chroot /mnt tasksel --new-install install standard
 
   # Can't use branches like "stable" or "oldstable" must convert to the codename like "bullseye" or "bookworm"
   local edition
@@ -908,11 +958,11 @@ install_base_system_debian() {
   # Now install the kernel
   case "${kernel_to_install}" in
     default)
-      chroot_install "linux-image-${DPKG_ARCH}" "linux-headers-${DPKG_ARCH}" firmware-linux
+      chroot_install "linux-image-${DPKG_ARCH}" "linux-headers-${DPKG_ARCH}"
       ;;
 
     backport)
-      arch-chroot /mnt apt-get -y -q --no-install-recommends install -t "${edition}-backports" "linux-image-${DPKG_ARCH}" "linux-headers-${DPKG_ARCH}" firmware-linux
+      arch-chroot /mnt apt-get -y -q --no-install-recommends install -t "${edition}-backports" "linux-image-${DPKG_ARCH}" "linux-headers-${DPKG_ARCH}"
       ;;
 
     *)
@@ -980,8 +1030,6 @@ install_base_system_ubuntu() {
       error_msg "ERROR! Unable to determine kernel to install."
       ;;
   esac
-
-  chroot_install linux-firmware
 }
 
 install_bootloader() {
@@ -1118,23 +1166,106 @@ configure_keymap() {
   chroot_install console-setup
 
   echo "KEYMAP=${AUTO_KEYMAP}" > /mnt/etc/vconsole.conf
-  echo "FONT=Lat15-Terminus18x10" >> /mnt/etc/vconsole.conf
+  echo "FONT=Lat15-Terminus${CONSOLE_FONT_SIZE}" >> /mnt/etc/vconsole.conf
 
   sed -i '/^CODESET=/ c\CODESET="Lat15"' /mnt/etc/default/console-setup
   sed -i '/^FONTFACE=/ c\FONTFACE="Terminus"' /mnt/etc/default/console-setup
-  sed -i '/^FONTSIZE=/ c\FONTSIZE="18x10"' /mnt/etc/default/console-setup
-  # Others small-ish: Lat15-Terminus14,Lat15-Terminus16,Lat15-Terminus18x10
-  # Others large-ish: Lat15-Terminus20x10,Lat15-Terminus22x11,Lat15-Terminus24x12,Lat15-Terminus28x14,
+  sed -i "/^FONTSIZE=/ c\FONTSIZE=\"${CONSOLE_FONT_SIZE}\"" /mnt/etc/default/console-setup
+}
+
+configure_encryption() {
+  if [[ ${AUTO_ENCRYPT_DISKS} == 1 ]]; then
+    print_info "Configuring encryption"
+
+    mkdir -p /mnt/etc/keys
+
+    local main_keyfile="none"
+    if [[ ${ENCRYPTION_FILE} != "" ]]; then
+      main_keyfile="/mnt/boot/root.key"
+      mv "${ENCRYPTION_FILE}" "${main_keyfile}"
+      chmod 0400 "${main_keyfile}"
+    fi
+
+    local main_uuid
+    local boot_uuid
+    main_uuid=$(blkid -o value -s UUID "${SELECTED_MAIN_DISK}3")
+    boot_uuid=$(blkid -o value -s UUID "${SELECTED_MAIN_DISK}2")
+    echo "cryptroot UUID=${main_uuid} /dev/disk/by-uuid/${boot_uuid}:root.key luks,initramfs,keyscript=/lib/cryptsetup/scripts/passdev,tries=3" >> /mnt/etc/crypttab
+
+    fix_systemd_encryption_bug
+
+    if [[ ${SELECTED_SECOND_DISK} != "ignore" && ${SECONDARY_FILE} != "" ]]; then
+      local second_key="/etc/keys/secondary.key"
+      mv "${SECONDARY_FILE}" "/mnt${second_key}"
+      chmod 0400 "/mnt${second_key}"
+
+      local second_uuid
+      second_uuid=$(blkid -o value -s UUID "${SELECTED_SECOND_DISK}1")
+
+      echo "cryptdata UUID=${second_uuid} ${second_key} luks,tries=3" >> /mnt/etc/crypttab
+    fi
+  fi
+}
+
+fix_systemd_encryption_bug() {
+  # BAF - There is a major bug in Systemd where it doesn't handle the passdev syntax for the key.  It expects the OPPOSITE where the first part is the file path, then a colon, then a disk identifier like UUID=xxx or LABEL=xxx.  Passdev uses a format of a disk identifier (usually a persistent devices /dev/disk/xxx, then a colon, then the path to the file.
+  #
+  # Systemd calls systemd-cryptsetup-generator on boot and generates some files.  We can manually call that, edit one of the files and copy it to /etc/systemd/system to override what the generator creates.
+  #
+  # Lastly, the chroot environment isn't running systemd so we can't do it in there.  Instead, we have to set up a script to run on boot which takes care of everything.
+
+  write_log "Applying systemd fix for encryption"
+
+  cat <<- 'EOF' > /mnt/etc/systemd/system/cryptsetup-first-boot.service
+[Unit]
+Description=First boot script to fix systemd encryption issue
+
+[Service]
+Type=oneshot
+ExecStart=/srv/fix-systemd-encryption-issue.sh
+
+[Install]
+WantedBy=default.target
+EOF
+
+  arch-chroot /mnt systemctl enable cryptsetup-first-boot.service
+
+  cat <<- 'EOF' > /mnt/srv/fix-systemd-encryption-issue.sh
+#!/usr/bin/env sh
+
+# Run the generator
+/lib/systemd/system-generators/systemd-cryptsetup-generator
+if [[ ! -f "/tmp/systemd-cryptsetup@cryptroot.service" ]]; then
+  exit 1
+fi
+
+dest_file="/etc/systemd/system/systemd-cryptsetup@cryptroot.service"
+
+cp "/tmp/systemd-cryptsetup@cryptroot.service" "${dest_file}"
+
+# Now edit the file to remove the offending lines
+sed -i '/^After=dev-disk-by.*root\.key\.device$/d' "${dest_file}"
+sed -i '/^Requires=dev-disk-by.*root\.key\.device$/d' "${dest_file}"
+
+# Clean up the systemctl service
+systemctl disable cryptsetup-first-boot.service
+rm /etc/systemd/system/cryptsetup-first-boot.service
+
+# Clean up by deleting this script
+rm $0
+EOF
+
+  chmod 0754 /mnt/srv/fix-systemd-encryption-issue.sh
 }
 
 configure_fstab() {
-  print_info "Write fstab"
+  print_info "Configuring fstab"
 
   genfstab -t UUID -p /mnt > /mnt/etc/fstab
 }
 
 configure_hostname() {
-  print_info "Setup hostname"
+  print_info "Configuring hostname"
 
   local hostname
   hostname=${AUTO_HOSTNAME}
@@ -1242,6 +1373,10 @@ EOF
 install_applications_common() {
   print_info "Installing common applications"
 
+  # Required in all environments
+  chroot_install cryptsetup cryptsetup-initramfs xfsprogs lvm2
+
+  # TODO: Trim and tweak these
   chroot_install apt-transport-https ca-certificates curl wget gnupg lsb-release build-essential dkms sudo acl git vim-nox python3-dev python3-setuptools python3-wheel python3-keyring python3-venv python3-pip python-is-python3 software-properties-common
 }
 
@@ -1249,7 +1384,7 @@ install_applications_debian() {
   if [[ ${AUTO_INSTALL_OS} == "debian" ]]; then
     print_info "Installing Debian specific applications"
 
-    chroot_install task-ssh-server
+    chroot_install task-ssh-server task-english firmware-linux
   fi
 }
 
@@ -1257,7 +1392,7 @@ install_applications_ubuntu() {
   if [[ ${AUTO_INSTALL_OS} == "ubuntu" ]]; then
     print_info "Installing Ubuntu specific applications"
 
-    chroot_install openssh-server openssh-client
+    chroot_install openssh-server openssh-client linux-firmware
   fi
 }
 
@@ -1437,17 +1572,6 @@ install_main_system() {
   configure_virtualization
 }
 
-do_system_configurations() {
-  configure_locale
-  configure_keymap
-  configure_fstab
-  configure_hostname
-  configure_timezone
-  configure_initramfs
-  configure_swap
-  configure_networking
-}
-
 install_applications() {
   install_applications_debian
   install_applications_ubuntu
@@ -1457,6 +1581,18 @@ install_applications() {
 setup_users() {
   setup_root
   setup_user
+}
+
+do_system_configurations() {
+  configure_locale
+  configure_keymap
+  configure_encryption
+  configure_fstab
+  configure_hostname
+  configure_timezone
+  configure_initramfs
+  configure_swap
+  configure_networking
 }
 
 wrap_up() {
@@ -1484,11 +1620,11 @@ main() {
   # Setup the core system
   setup_disks
   install_main_system
-  do_system_configurations
 
   # Configurations
   install_applications
   setup_users
+  do_system_configurations
 
   # Finished
   wrap_up
