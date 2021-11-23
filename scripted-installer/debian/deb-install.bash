@@ -96,11 +96,14 @@ AUTO_MAIN_DISK="${AUTO_MAIN_DISK:=smallest}"
 #
 # At no time can the second disk refer or resolve to the same disk as the main disk.  Such situations will result in an error and the script exiting.
 #
-# In dual disk automatic partitioning, no change is made to the main disk layout.  For the second disk, this script creates a single LVM volume on the second disk with one of two layouts (based on the AUTO_CREATE_DATA_FOLDER value).  Without the data option you get a single LVM partition of 70% for /home with 30% space free for later LVM expansion\use.  With the data folder option you get two partitions, 50% for /home, 30% for /data, and 20% empty and free for later LVM expansion\use.
+# In dual disk automatic partitioning, no change is made to the main disk layout.  For the second disk, this script creates a single LVM volume on the second disk with one of two layouts (based on the AUTO_USE_DATA_FOLDER value).  Without the data option you get a single LVM partition of 70% for /home with 30% space free for later LVM expansion\use.  With the data folder option you get two partitions, 50% for /home, 30% for /data, and 20% empty and free for later LVM expansion\use.
 AUTO_SECOND_DISK="${AUTO_SECOND_DISK:=ignore}"
 
-# Whether to create a /data folder or partition on the target machine.  This folder is a convention that I follow and use and is therefore disabled by default.  I use it for all non-user specific files and setups (usually of docker files, configuraitons, etc.).  If being used along with the AUTO_SECOND_DISK option, this value does affect the partition scheme used.  For further details on this read the information under the AUTO_SECOND_DISK option.  This is a boolean value.
-AUTO_CREATE_DATA_FOLDER="${AUTO_CREATE_DATA_FOLDER:=0}"
+# Whether to use a /data folder or partition on the target machine.  This folder is a convention that I follow and use and is therefore disabled by default.  I use it for all non-user specific files and setups (usually of docker files, configuraitons, etc.).  If being used along with the AUTO_SECOND_DISK option, this value does affect the partition scheme used.  For further details on this read the information under the AUTO_SECOND_DISK option.  This is a boolean value.
+AUTO_USE_DATA_FOLDER="${AUTO_USE_DATA_FOLDER:=0}"
+
+# After installation, the install log and some other files are copied to the target machine.  This indicates (overrides) the default location.  By default, the files are copied to the /srv folder unless AUTO_USE_DATA_FOLDER is enabled.  With AUTO_USE_DATA_FOLDER turned on the files are copied to the /data folder instead of /srv.  You can override these defaults by providing a path here.  Note that your path MUST start with a full path (must start with /).
+AUTO_STAMP_FOLDER="${AUTO_STAMP_FOLDER:=}"
 
 # Whether the volume(s) created should be encrypted.  This is a boolean value.
 AUTO_ENCRYPT_DISKS="${AUTO_ENCRYPT_DISKS:=1}"
@@ -196,7 +199,8 @@ log_values() {
   write_log "AUTO_SKIP_PARTITIONING: '${AUTO_SKIP_PARTITIONING}'"
   write_log "AUTO_MAIN_DISK: '${AUTO_MAIN_DISK}'"
   write_log "AUTO_SECOND_DISK: '${AUTO_SECOND_DISK}'"
-  write_log "AUTO_CREATE_DATA_FOLDER: '${AUTO_CREATE_DATA_FOLDER}'"
+  write_log "AUTO_USE_DATA_FOLDER: '${AUTO_USE_DATA_FOLDER}'"
+  write_log "AUTO_STAMP_FOLDER: '${AUTO_STAMP_FOLDER}'"
   write_log "AUTO_ENCRYPT_DISKS: '${AUTO_ENCRYPT_DISKS}'"
   if [[ ${AUTO_DISK_PWD} == "file" ]]; then
     write_log "AUTO_DISK_PWD: 'file'"
@@ -446,16 +450,17 @@ normalize_parameters() {
   normalize_variable_string "AUTO_MAIN_DISK"
   normalize_variable_string "AUTO_SECOND_DISK"
   normalize_variable_string "AUTO_USERNAME"
+  normalize_variable_string "AUTO_STAMP_FOLDER"
 
   normalize_variable_boolean "AUTO_SKIP_PARTITIONING"
-  normalize_variable_boolean "AUTO_CREATE_DATA_FOLDER"
+  normalize_variable_boolean "AUTO_USE_DATA_FOLDER"
   normalize_variable_boolean "AUTO_ENCRYPT_DISKS"
   normalize_variable_boolean "AUTO_ROOT_DISABLED"
   normalize_variable_boolean "AUTO_CREATE_USER"
   normalize_variable_boolean "AUTO_REBOOT"
 
   if [[ "${AUTO_DISK_PWD}" == "" ]]; then
-    AUTO_DISK_PWD=file
+    AUTO_DISK_PWD="file"
   fi
 }
 
@@ -816,7 +821,7 @@ setup_lvm() {
     pvcreate "${pv_volume}"
     vgcreate "vg_data" "${pv_volume}"
 
-    if [[ "${AUTO_CREATE_DATA_FOLDER}" == 1 ]]; then
+    if [[ "${AUTO_USE_DATA_FOLDER}" == 1 ]]; then
       lvcreate -l 50%VG "vg_data" -n lv_home
       lvcreate -l 30%VG "vg_data" -n lv_data
     else
@@ -848,7 +853,7 @@ format_partitions() {
 
   if [[ ${SELECTED_SECOND_DISK} != "ignore" ]]; then
     mkfs.xfs "/dev/mapper/vg_data-lv_home"
-    if [[ "${AUTO_CREATE_DATA_FOLDER}" == 1 ]]; then
+    if [[ "${AUTO_USE_DATA_FOLDER}" == 1 ]]; then
       mkfs.xfs "/dev/mapper/vg_data-lv_data"
     fi
   fi
@@ -880,12 +885,12 @@ mount_partitions() {
     mkdir /mnt/home
     mount -t xfs "/dev/mapper/vg_data-lv_home" /mnt/home
 
-    if [[ "${AUTO_CREATE_DATA_FOLDER}" == 1 ]]; then
+    if [[ "${AUTO_USE_DATA_FOLDER}" == 1 ]]; then
       mkdir /mnt/data
       mount -t xfs "/dev/mapper/vg_data-lv_data" /mnt/data
     fi
   else
-    if [[ "${AUTO_CREATE_DATA_FOLDER}" == 1 ]]; then
+    if [[ "${AUTO_USE_DATA_FOLDER}" == 1 ]]; then
       # Just make a data directory on the root
       mkdir /mnt/data
     fi
@@ -1492,9 +1497,21 @@ clean_up() {
 stamp_build() {
   print_info "Stamping build"
 
-  # TODO: Fix
-  echo "Build Time: $(date -Is)" | sudo tee /mnt/data/build-time.txt
-  cp "${LOG}" /mnt/data/deb-install-log.txt
+  local stamp_path="${AUTO_STAMP_FOLDER}"
+  if [[ ${stamp_path} == "" ]]; then
+    stamp_path="/srv"
+
+    if [[ ${AUTO_USE_DATA_FOLDER} == 1 ]]; then
+      stamp_path="/data"
+    fi
+  fi
+
+  # Prepend the /mnt to it and create it if it doesn't exist
+  stamp_path="/mnt${stamp_path}"
+  mkdir -p "${stamp_path}"
+
+  echo "Build Time: $(date -Is)" | sudo tee "${stamp_path}/install-time.txt"
+  cp "${LOG}" "${stamp_path}/install-log.txt"
 }
 
 show_complete_screen() {
