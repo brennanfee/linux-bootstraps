@@ -147,12 +147,17 @@ SECONDARY_FILE=""
 ### START: Log Functions
 
 write_log() {
-  echo -e "LOG: ${1}" >> "${LOG}"
+  echo "LOG: ${1}" >> "${LOG}"
+}
+
+write_log_and_inputs() {
+  echo "LOG: ${1}" >> "${LOG}"
+  echo "${1}" >> "${WORKING_DIR}/install-inputs.txt"
 }
 
 write_log_password() {
   if [[ ${IS_DEBUG} == "1" ]]; then
-    echo -e "LOG: ${1}" >> "${LOG}"
+    echo "LOG: ${1}" >> "${LOG}"
   else
     local val
     val=${1//:*/: ******}
@@ -161,11 +166,11 @@ write_log_password() {
 }
 
 write_log_blank() {
-  echo -e "" >> "${LOG}"
+  echo "" >> "${LOG}"
 }
 
 write_log_spacer() {
-  echo -e "------" >> "${LOG}"
+  echo "------" >> "${LOG}"
 }
 
 log_values() {
@@ -173,40 +178,46 @@ log_values() {
   write_log "Post Validation Values"
 
   write_log_blank
-  write_log "INSTALLER_DISTRO: '${INSTALLER_DISTRO}'"
-  write_log "SYS_ARCH: '${SYS_ARCH}'"
-  write_log "DPKG_ARCH: '${DPKG_ARCH}'"
-  write_log "UEFI: '${UEFI}'"
+  write_log "INSTALLER_DISTRO: ${INSTALLER_DISTRO}"
+  write_log "SYS_ARCH: ${SYS_ARCH}"
+  write_log "DPKG_ARCH: ${DPKG_ARCH}"
+  write_log "UEFI: ${UEFI}"
   write_log_blank
 
-  write_log "AUTO_KEYMAP: '${AUTO_KEYMAP}'"
-  write_log "AUTO_INSTALL_OS: '${AUTO_INSTALL_OS}'"
-  write_log "AUTO_INSTALL_EDITION: '${AUTO_INSTALL_EDITION}'"
-  write_log "AUTO_KERNEL_VERSION: '${AUTO_KERNEL_VERSION}'"
-  write_log "AUTO_HOSTNAME: '${AUTO_HOSTNAME}'"
-  write_log "AUTO_DOMAIN: '${AUTO_DOMAIN}'"
-  write_log "AUTO_TIMEZONE: '${AUTO_TIMEZONE}'"
-  write_log "AUTO_REBOOT: '${AUTO_REBOOT}'"
+  write_log_and_inputs "AUTO_KEYMAP: ${AUTO_KEYMAP}"
+  write_log_and_inputs "AUTO_INSTALL_OS: ${AUTO_INSTALL_OS}"
+  write_log_and_inputs "AUTO_INSTALL_EDITION: ${AUTO_INSTALL_EDITION}"
+  write_log_and_inputs "AUTO_KERNEL_VERSION: ${AUTO_KERNEL_VERSION}"
+  write_log_and_inputs "AUTO_HOSTNAME: ${AUTO_HOSTNAME}"
+  write_log_and_inputs "AUTO_DOMAIN: ${AUTO_DOMAIN}"
+  write_log_and_inputs "AUTO_TIMEZONE: ${AUTO_TIMEZONE}"
+  write_log_and_inputs "AUTO_REBOOT: ${AUTO_REBOOT}"
   write_log_blank
 
-  write_log "AUTO_ROOT_DISABLED: '${AUTO_ROOT_DISABLED}'"
-  write_log_password "AUTO_ROOT_PWD: '${AUTO_ROOT_PWD}'"
-  write_log "AUTO_CREATE_USER: '${AUTO_CREATE_USER}'"
-  write_log "AUTO_USERNAME: '${AUTO_USERNAME}'"
-  write_log_password "AUTO_USER_PWD: '${AUTO_USER_PWD}'"
+  write_log_and_inputs "AUTO_ROOT_DISABLED: ${AUTO_ROOT_DISABLED}"
+  write_log_password "AUTO_ROOT_PWD: ${AUTO_ROOT_PWD}"
+  write_log_and_inputs "AUTO_CREATE_USER: ${AUTO_CREATE_USER}"
+  write_log_and_inputs "AUTO_USERNAME: ${AUTO_USERNAME}"
+  write_log_password "AUTO_USER_PWD: ${AUTO_USER_PWD}"
   write_log_blank
 
-  write_log "AUTO_SKIP_PARTITIONING: '${AUTO_SKIP_PARTITIONING}'"
-  write_log "AUTO_MAIN_DISK: '${AUTO_MAIN_DISK}'"
-  write_log "AUTO_SECOND_DISK: '${AUTO_SECOND_DISK}'"
-  write_log "AUTO_USE_DATA_FOLDER: '${AUTO_USE_DATA_FOLDER}'"
-  write_log "AUTO_STAMP_FOLDER: '${AUTO_STAMP_FOLDER}'"
-  write_log "AUTO_ENCRYPT_DISKS: '${AUTO_ENCRYPT_DISKS}'"
-  if [[ ${AUTO_DISK_PWD} == "file" ]]; then
-    write_log "AUTO_DISK_PWD: 'file'"
-  else
-    write_log_password "AUTO_DISK_PWD: '${AUTO_DISK_PWD}'"
-  fi
+  write_log_and_inputs "AUTO_SKIP_PARTITIONING: ${AUTO_SKIP_PARTITIONING}"
+  write_log_and_inputs "AUTO_MAIN_DISK: ${AUTO_MAIN_DISK}"
+  write_log_and_inputs "AUTO_SECOND_DISK: ${AUTO_SECOND_DISK}"
+  write_log_and_inputs "AUTO_USE_DATA_FOLDER: ${AUTO_USE_DATA_FOLDER}"
+  write_log_and_inputs "AUTO_STAMP_FOLDER: ${AUTO_STAMP_FOLDER}"
+  write_log_and_inputs "AUTO_ENCRYPT_DISKS: ${AUTO_ENCRYPT_DISKS}"
+  case "${AUTO_DISK_PWD}" in
+    file)
+      write_log_and_inputs "AUTO_DISK_PWD: file"
+      ;;
+    /*)
+      write_log_and_inputs "AUTO_DISK_PWD: ${AUTO_DISK_PWD}"
+      ;;
+    *)
+      write_log_password "AUTO_DISK_PWD: ${AUTO_DISK_PWD}"
+      ;;
+  esac
   write_log_blank
   write_log "MAIN_DISK_METHOD: '${MAIN_DISK_METHOD}'"
   write_log "SELECTED_MAIN_DISK: '${SELECTED_MAIN_DISK}'"
@@ -217,6 +228,54 @@ log_values() {
 
   write_log_blank
   write_log_spacer
+}
+
+write_inputs_script() {
+  write_log "Writing inputs script"
+
+  local script_file="${WORKING_DIR}/install-inputs.sh"
+  # This writes a shell script that can be used to source the values that were passed in/parsed.  This supports being able to do a repeatable install.  NOTE: Passwords are NOT exported here for security reasons.
+
+  cat <<- 'EOF' > "${script_file}"
+#!/usr/bin/env sh
+# Produced by deb-install.bash.  This is a sourceable file that will export environment variables to be read by the deb-install.bash script.  This allows running a repeatable installation with the same input values that were read/parsed from this execution of the deb-install.bash script.
+#
+
+EOF
+
+  {
+    echo "export AUTO_KEYMAP='${AUTO_KEYMAP}'"
+    echo "export AUTO_INSTALL_OS='${AUTO_INSTALL_OS}'"
+    echo "export AUTO_INSTALL_EDITION='${AUTO_INSTALL_EDITION}'"
+    echo "export AUTO_KERNEL_VERSION='${AUTO_KERNEL_VERSION}'"
+    echo "export AUTO_HOSTNAME='${AUTO_HOSTNAME}'"
+    echo "export AUTO_DOMAIN='${AUTO_DOMAIN}'"
+    echo "export AUTO_TIMEZONE='${AUTO_TIMEZONE}'"
+    echo "export AUTO_REBOOT='${AUTO_REBOOT}'"
+    echo "export AUTO_ROOT_DISABLED='${AUTO_ROOT_DISABLED}'"
+    echo "export AUTO_CREATE_USER='${AUTO_CREATE_USER}'"
+    echo "export AUTO_USERNAME='${AUTO_USERNAME}'"
+    echo "export AUTO_SKIP_PARTITIONING='${AUTO_SKIP_PARTITIONING}'"
+    echo "export AUTO_MAIN_DISK='${AUTO_MAIN_DISK}'"
+    echo "export AUTO_SECOND_DISK='${AUTO_SECOND_DISK}'"
+    echo "export AUTO_USE_DATA_FOLDER='${AUTO_USE_DATA_FOLDER}'"
+    echo "export AUTO_STAMP_FOLDER='${AUTO_STAMP_FOLDER}'"
+    echo "export AUTO_ENCRYPT_DISKS='${AUTO_ENCRYPT_DISKS}'"
+  } >> "${script_file}"
+
+  case "${AUTO_DISK_PWD}" in
+    file)
+      echo "export AUTO_DISK_PWD='file'" >> "${script_file}"
+      ;;
+    /*)
+      echo "export AUTO_DISK_PWD='${AUTO_DISK_PWD}'" >> "${script_file}"
+      ;;
+    *)
+      write_log "Skipping write to script of AUTO_DISK_PWD."
+      ;;
+  esac
+
+  echo "" >> "${script_file}"
 }
 
 ### START: Log Functions
@@ -496,7 +555,7 @@ verify_kernel_version() {
     *)
       error_msg "ERROR! OS to install not supported: '${AUTO_INSTALL_OS}'"
       ;;
-    esac
+  esac
 }
 
 verify_user_configuration() {
@@ -1176,6 +1235,8 @@ configure_keymap() {
   sed -i '/^CODESET=/ c\CODESET="Lat15"' /mnt/etc/default/console-setup
   sed -i '/^FONTFACE=/ c\FONTFACE="Terminus"' /mnt/etc/default/console-setup
   sed -i "/^FONTSIZE=/ c\FONTSIZE=\"${CONSOLE_FONT_SIZE}\"" /mnt/etc/default/console-setup
+
+  setfont "Lat15-Terminus${CONSOLE_FONT_SIZE}"
 }
 
 configure_encryption() {
@@ -1511,7 +1572,17 @@ stamp_build() {
   mkdir -p "${stamp_path}"
 
   echo "Build Time: $(date -Is)" | sudo tee "${stamp_path}/install-time.txt"
+
   cp "${LOG}" "${stamp_path}/install-log.txt"
+
+  if [[ -f "${WORKING_DIR}/install-inputs.txt" ]]; then
+    cp "${WORKING_DIR}/install-inputs.txt" "${stamp_path}/install-inputs.txt"
+  fi
+
+  if [[ -f "${WORKING_DIR}/install-inputs.sh" ]]; then
+    cp "${WORKING_DIR}/install-inputs.sh" "${stamp_path}/install-inputs.sh"
+    chmod +x "${stamp_path}/install-inputs.sh"
+  fi
 }
 
 show_complete_screen() {
@@ -1562,6 +1633,7 @@ verify_parameters() {
   parse_second_disk
 
   log_values
+  write_inputs_script
 }
 
 setup_disks() {
