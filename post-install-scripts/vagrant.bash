@@ -45,7 +45,7 @@ EOF
   fi
 
   # Add the user to some groups
-  groupsToAdd=(sudo ssh data-user vboxsf)
+  groupsToAdd=(sudo ssh _ssh users data-user vboxsf)
 
   for groupToAdd in "${groupsToAdd[@]}"
   do

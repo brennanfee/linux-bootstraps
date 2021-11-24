@@ -25,7 +25,6 @@ fi
 
 if [ "$(getent passwd svcacct | wc -l || true)" -eq 1 ]; then
   runuser --shell=/bin/bash svcacct -c "/usr/bin/python3 -m pip install --user --no-warn-script-location pipx"
-#  runuser --shell=/bin/bash svcacct -c "/usr/bin/python3 -m pipx ensurepath"
 
   runuser --shell=/bin/bash svcacct -c "/home/svcacct/.local/bin/pipx install --include-deps ansible"
   runuser --shell=/bin/bash svcacct -c "/home/svcacct/.local/bin/pipx inject ansible cryptography"

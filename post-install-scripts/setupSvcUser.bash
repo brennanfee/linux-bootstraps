@@ -40,7 +40,7 @@ fi
 [ -f /home/svcacct/.bashrc ] && echo 'export PATH="$PATH:/home/svcacct/.local/bin"' >> /home/svcacct/.bashrc
 
 # Add the user to some groups
-groupsToAdd=(sudo ssh data-user vboxsf)
+groupsToAdd=(sudo ssh _ssh users data-user vboxsf)
 
 for groupToAdd in "${groupsToAdd[@]}"
 do

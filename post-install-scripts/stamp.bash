@@ -23,27 +23,36 @@ if [ "$(id -u)" -ne 0 ]; then
   exit 1
 fi
 
-echo "Build Time: $(date -Is)" | sudo tee /data/image_build_info
+stamp_path="/srv"
+if [[ -d "/data/" ]]; then
+  stamp_path="/data"
+fi
+
+echo "Build Time: $(date -Is)" | sudo tee "${stamp_path}/image_build_info"
 
 set +o nounset
 if [ -n "${PACKER_BUILD_NAME}" ]; then
-  echo "Packer Build Name: ${PACKER_BUILD_NAME}" | sudo tee -a /data/image_build_info
+  echo "Packer Build Name: ${PACKER_BUILD_NAME}" | sudo tee -a "${stamp_path}/image_build_info"
 fi
 
 if [ -n "${PACKER_BUILDER_TYPE}" ]; then
-  echo "Packer Builder Type: ${PACKER_BUILDER_TYPE}" | sudo tee -a /data/image_build_info
+  echo "Packer Builder Type: ${PACKER_BUILDER_TYPE}" | sudo tee -a "${stamp_path}/image_build_info"
 fi
 set -o nounset
 
 # Can't use $USER here because we are running this script as root
 current_user=$(logname)
-echo "Installed User: ${current_user}" | sudo tee -a /data/image_build_info
+echo "Installed User: ${current_user}" | sudo tee -a "${stamp_path}/image_build_info"
 
 if [ -f /home/"${current_user}"/.vbox_version ]; then
   vbox_version=$(cat /home/"${current_user}"/.vbox_version)
-  echo "VirtualBox Version: ${vbox_version}" | sudo tee -a /data/image_build_info
+  echo "VirtualBox Version: ${vbox_version}" | sudo tee -a "${stamp_path}/image_build_info"
   rm /home/"${current_user}"/.vbox_version
 fi
 
-chown root:data-user /data/image_build_info
-chmod g+w /data/image_build_info
+if [ "$(getent group data-user | wc -l || true)" -eq 1 ]; then
+  chown root:data-user "${stamp_path}/image_build_info"
+else
+  chown root:users "${stamp_path}/image_build_info"
+fi
+chmod g+w "${stamp_path}/image_build_info"

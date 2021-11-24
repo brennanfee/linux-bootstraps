@@ -27,7 +27,7 @@ fi
 current_user=$(logname)
 
 usersToAdd=("${current_user}" svcacct ansible vagrant)
-groupsToAdd=(sudo ssh data-user vboxsf)
+groupsToAdd=(sudo ssh _ssh users data-user vboxsf)
 
 for userToAdd in "${usersToAdd[@]}"
 do

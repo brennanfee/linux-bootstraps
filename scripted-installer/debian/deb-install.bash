@@ -542,9 +542,9 @@ verify_kernel_version() {
       ;;
 
     ubuntu)
-      options=('default' 'hwe' "hwe-edge" "hwe_edge")
+      options=('default' 'hwe' 'hwe-edge' 'hwe_edge')
       if ! contains_element "${AUTO_KERNEL_VERSION}" "${options[@]}"; then
-        error_msg "Invalid Debian kernel version to install: '${AUTO_KERNEL_VERSION}'"
+        error_msg "Invalid Ubuntu kernel version to install: '${AUTO_KERNEL_VERSION}'"
       fi
       # Normalize the two edge options
       if [[ "${AUTO_KERNEL_VERSION}" == "hwe_edge" ]]; then
@@ -1118,56 +1118,6 @@ install_bootloader() {
   fi
 }
 
-install_virtualization() {
-  if [[ $(systemd-detect-virt) == "oracle" ]]; then
-    # In virtualbox
-    print_info "Installing VirtualBox Additions"
-
-    # Install the prerequs
-    chroot_install build-essential dkms
-
-    # Download the iso
-    /usr/bin/wget --output-document "/tmp/LATEST-STABLE.TXT" https://download.virtualbox.org/virtualbox/LATEST-STABLE.TXT
-
-    vb_version=$(cat "/tmp/LATEST-STABLE.TXT")
-    rm "/tmp/LATEST-STABLE.TXT"
-
-    vb_url="https://download.virtualbox.org/virtualbox/${vb_version}/VBoxGuestAdditions_${vb_version}.iso"
-    /usr/bin/wget --output-document "/tmp/VBoxGuestAdditions.iso" "${vb_url}"
-
-    # Mount the ISO and run the install
-    mkdir -p /mnt/media/vb-additions
-    mount -t iso9660 -o loop,ro /tmp/VBoxGuestAdditions.iso /mnt/media/vb-additions
-    arch-chroot /mnt /media/vb-additions/VBoxLinuxAdditions.run --nox11 || true
-    umount /mnt/media/vb-additions
-    rmdir /mnt/media/vb-additions
-    rm /tmp/VBoxGuestAdditions.iso
-  fi
-}
-
-configure_virtualization() {
-  if [[ $(systemd-detect-virt) == "oracle" && "${UEFI}" = 1 && "${AUTO_INSTALL_OS}" == "debian" ]]; then
-    # In virtualbox
-    print_info "Setting up Virtualbox EFI"
-
-    if [[ ! -f "/mnt/boot/efi/startup.nsh" ]]; then
-      echo "FS0:" > /mnt/boot/efi/startup.nsh
-      echo "\EFI\debian\grubx64.efi" >> /mnt/boot/efi/startup.nsh
-    fi
-
-    local boot_imgs
-    boot_imgs=$(arch-chroot /mnt efibootmgr)
-    if ! "${boot_imgs}" | grep -i -q '\* debian'
-    then
-      efi_disk=$(lsblk -np -o PKNAME,MOUNTPOINT | grep -i "/mnt/boot/efi" | cut -d' ' -f 1)
-      efi_device=$(lsblk -np -o PATH,MOUNTPOINT | grep -i "/mnt/boot/efi" | cut -d' ' -f 1)
-      efi_part="$(udevadm info --query=property --name="${efi_device}" | grep -i ID_PART_ENTRY_NUM |cut -d= -f 2)"
-
-      arch-chroot /mnt efibootmgr -c -d "${efi_disk}" -p "${efi_part}" -l '\EFI\debian\grubx64.efi' -L 'debian'
-    fi
-  fi
-}
-
 ### END: Install System
 
 ### START: System Configuration
@@ -1434,6 +1384,30 @@ EOF
   arch-chroot /mnt netplan generate
 }
 
+configure_virtualization() {
+  if [[ $(systemd-detect-virt) == "oracle" && "${UEFI}" = 1 && "${AUTO_INSTALL_OS}" == "debian" ]]; then
+    # On virtualbox we MUST configure this or the system won't boot correctly.  I am doing the absolute minimum I can here to get things working.  Any other virtualization configurations should be done post bootstrap.
+
+    print_info "Setting up Virtualbox EFI"
+
+    if [[ ! -f "/mnt/boot/efi/startup.nsh" ]]; then
+      echo "FS0:" > /mnt/boot/efi/startup.nsh
+      echo "\EFI\debian\grubx64.efi" >> /mnt/boot/efi/startup.nsh
+    fi
+
+    local boot_imgs
+    boot_imgs=$(arch-chroot /mnt efibootmgr)
+    if ! "${boot_imgs}" | grep -i -q '\* debian'
+    then
+      efi_disk=$(lsblk -np -o PKNAME,MOUNTPOINT | grep -i "/mnt/boot/efi" | cut -d' ' -f 1)
+      efi_device=$(lsblk -np -o PATH,MOUNTPOINT | grep -i "/mnt/boot/efi" | cut -d' ' -f 1)
+      efi_part="$(udevadm info --query=property --name="${efi_device}" | grep -i ID_PART_ENTRY_NUM |cut -d= -f 2)"
+
+      arch-chroot /mnt efibootmgr -c -d "${efi_disk}" -p "${efi_part}" -l '\EFI\debian\grubx64.efi' -L 'debian'
+    fi
+  fi
+}
+
 ### END: System Configuration
 
 ### START: Install Applications
@@ -1532,16 +1506,15 @@ setup_user() {
       arch-chroot /mnt usermod --password "$(echo "${user_pwd}" | openssl passwd -6 -stdin)" "${user_name}"
     fi
 
-    # Add the user to some default groups
-    arch-chroot /mnt usermod -a -G audio,video,plugdev,netdev "${user_name}"
-
-    # Add the user to the sudo and ssh groups
-    arch-chroot /mnt usermod -a -G sudo,ssh "${user_name}"
-
-    if [[ $(systemd-detect-virt) == "oracle" ]]; then
-      # In virtualbox, add them to the vboxsf group
-      arch-chroot /mnt usermod -a -G vboxsf "${user_name}"
-    fi
+    # NOTE: I added _ssh as a group because it seems that Debian testing is currently not creating the standard ssh group but instead naming it _ssh, need to investigate further.
+    groupsToAdd=(audio video plugdev netdev sudo ssh _ssh users data-user vboxsf)
+    for groupToAdd in "${groupsToAdd[@]}"
+    do
+      group_exists=$(arch-chroot /mnt getent group "${groupToAdd}" | wc -l || true)
+      if [ "${group_exists}" -eq 1 ]; then
+        arch-chroot /mnt usermod -a -G "${groupToAdd}" "${user_name}"
+      fi
+    done
   fi
 }
 
@@ -1662,8 +1635,6 @@ setup_disks() {
 install_main_system() {
   install_base_system
   install_bootloader
-  install_virtualization
-  configure_virtualization
 }
 
 install_applications() {
@@ -1687,6 +1658,7 @@ do_system_configurations() {
   configure_initramfs
   configure_swap
   configure_networking
+  configure_virtualization
 }
 
 wrap_up() {
@@ -1717,8 +1689,8 @@ main() {
 
   # Configurations
   install_applications
-  setup_users
   do_system_configurations
+  setup_users
 
   # Finished
   wrap_up
