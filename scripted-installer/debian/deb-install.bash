@@ -220,9 +220,9 @@ log_values() {
   esac
   write_log_blank
   write_log "MAIN_DISK_METHOD: '${MAIN_DISK_METHOD}'"
-  write_log "SELECTED_MAIN_DISK: '${SELECTED_MAIN_DISK}'"
+  write_log_and_inputs "SELECTED_MAIN_DISK: '${SELECTED_MAIN_DISK}'"
   write_log "SECOND_DISK_METHOD: '${SECOND_DISK_METHOD}'"
-  write_log "SELECTED_SECOND_DISK: '${SELECTED_SECOND_DISK}'"
+  write_log_and_inputs "SELECTED_SECOND_DISK: '${SELECTED_SECOND_DISK}'"
   write_log "ENCRYPTION_FILE: '${ENCRYPTION_FILE}'"
   write_log "SECONDARY_FILE: '${SECONDARY_FILE}'"
 
@@ -450,7 +450,7 @@ install_prereqs() {
 
   # Things they both need
   print_status "    Installing common prerequisites"
-  DEBIAN_FRONTEND=noninteractive apt-get -y -q --no-install-recommends install vim debootstrap arch-install-scripts parted bc cryptsetup lvm2 xfsprogs
+  DEBIAN_FRONTEND=noninteractive apt-get -y -q --no-install-recommends install vim debootstrap arch-install-scripts parted bc cryptsetup lvm2 xfsprogs laptop-detect
 
   DEBIAN_FRONTEND=noninteractive apt-get -y -q autoremove || true
 }
@@ -1099,8 +1099,10 @@ install_base_system_ubuntu() {
 install_bootloader() {
   print_info "Installing bootloader"
 
+  # TODO: Suport for ARM UEIF?
+
   if [[ ${UEFI} == 1 ]]; then
-    chroot_install os-prober efibootmgr grub-efi-amd64 grub-efi-amd64-signed
+    chroot_install os-prober efibootmgr grub-efi-amd64 grub-efi-amd64-signed shim-signed shim-helpers-amd64-signed mokutil
 
     arch-chroot /mnt grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=debian --recheck --no-nvram "${SELECTED_MAIN_DISK}"
 
@@ -1441,6 +1443,9 @@ install_applications_common() {
 
   # Required in all environments
   chroot_install cryptsetup cryptsetup-initramfs xfsprogs lvm2
+
+  # Packages to true up with a standard server installation
+  chroot_install apparmor dictionaries-common iamerican ibritish discover discover-data laptop-detect installation-report usbutils eject util-linux-locales
 
   # TODO: Trim and tweak these
   chroot_install apt-transport-https ca-certificates curl wget gnupg lsb-release build-essential dkms sudo acl git vim-nox python3-dev python3-setuptools python3-wheel python3-keyring python3-venv python3-pip python-is-python3 software-properties-common

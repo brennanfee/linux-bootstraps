@@ -13,6 +13,17 @@ in-target DEBIAN_FRONTEND=noninteractive apt-get -y -q update || true
 in-target DEBIAN_FRONTEND=noninteractive apt-get -y -q dist-upgrade || true
 in-target DEBIAN_FRONTEND=noninteractive apt-get -y -q autoremove || true
 
+# In UEFI setups we need to install a few extra packages
+if [ "$(cat /sys/class/dmi/id/sys_vendor)" = 'Apple Inc.' ] || [ "$(cat /sys/class/dmi/id/sys_vendor)" = 'Apple Computer, Inc.' ]; then
+  modprobe -r -q efivars || true # if MAC
+else
+  modprobe -q efivarfs # all others
+fi
+
+if [ -d "/sys/firmware/efi/" ]; then
+  in-target DEBIAN_FRONTEND=noninteractive apt-get -y -q --no-install-recommends grub-efi-amd64-signed shim-signed
+fi
+
 # Create a swap file
 fallocate -l 4G /target/swapfile
 chmod 600 /target/swapfile
