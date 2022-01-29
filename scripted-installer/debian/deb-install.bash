@@ -904,6 +904,22 @@ create_secondary_partitions() {
   partprobe 2>/dev/null || true
 }
 
+query_disk_partitions() {
+  print_info "Querying partitions"
+
+  MAIN_DISK_FIRST_PART=$(lsblk -np --output PATH,MAJ:MIN,TYPE "${SELECTED_MAIN_DISK}" | grep "part" | grep ":1" | cut -d' ' -f 1)
+
+  MAIN_DISK_SECOND_PART=$(lsblk -np --output PATH,MAJ:MIN,TYPE "${SELECTED_MAIN_DISK}" | grep "part" | grep ":2" | cut -d' ' -f 1)
+
+  MAIN_DISK_THIRD_PART=$(lsblk -np --output PATH,MAJ:MIN,TYPE "${SELECTED_MAIN_DISK}" | grep "part" | grep ":3" | cut -d' ' -f 1)
+
+  if [[ ${SELECTED_SECOND_DISK} != "ignore" ]]; then
+    SECOND_DISK_FIRST_PART=$(lsblk -np --output PATH,MAJ:MIN,TYPE "${SELECTED_SECOND_DISK}" | grep "part" | grep ":1" | cut -d' ' -f 1)
+  else
+    SECOND_DISK_FIRST_PART="/zzz/zzz"
+  fi
+}
+
 setup_encryption() {
   ENCRYPTION_FILE=""
   SECONDARY_FILE=""
@@ -932,10 +948,10 @@ setup_encryption() {
     openssl genrsa -out "${SECONDARY_FILE}" 4096
 
     print_status "    Encrypting second disk"
-    cryptsetup --batch-mode -s 512 --iter-time 5000 --type luks2 luksFormat "${SELECTED_SECOND_DISK}1" "${SECONDARY_FILE}"
+    cryptsetup --batch-mode -s 512 --iter-time 5000 --type luks2 luksFormat "${SECOND_DISK_FIRST_PART}" "${SECONDARY_FILE}"
 
     print_status "    Opening second disk"
-    cryptsetup open --type luks --key-file "${SECONDARY_FILE}" "${SELECTED_SECOND_DISK}1" cryptdata
+    cryptsetup open --type luks --key-file "${SECONDARY_FILE}" "${SECOND_DISK_FIRST_PART}" cryptdata
   fi
 }
 
@@ -948,10 +964,10 @@ encrypt_main_generated_file() {
   openssl genrsa -out "${ENCRYPTION_FILE}" 4096
 
   print_status "    Encrypting main disk"
-  cryptsetup --batch-mode -s 512 --iter-time 5000 --type luks2 luksFormat "${SELECTED_MAIN_DISK}3" "${ENCRYPTION_FILE}"
+  cryptsetup --batch-mode -s 512 --iter-time 5000 --type luks2 luksFormat "${MAIN_DISK_THIRD_PART}" "${ENCRYPTION_FILE}"
 
   print_status "    Opening main disk"
-  cryptsetup open --type luks --key-file "${ENCRYPTION_FILE}" "${SELECTED_MAIN_DISK}3" cryptroot
+  cryptsetup open --type luks --key-file "${ENCRYPTION_FILE}" "${MAIN_DISK_THIRD_PART}" cryptroot
 }
 
 encrypt_main_provided_file() {
@@ -959,20 +975,20 @@ encrypt_main_provided_file() {
   print_status "    Using encryption file"
 
   print_status "    Encrypting main disk"
-  cryptsetup --batch-mode -s 512 --iter-time 5000 --type luks2 luksFormat "${SELECTED_MAIN_DISK}3" "${ENCRYPTION_FILE}"
+  cryptsetup --batch-mode -s 512 --iter-time 5000 --type luks2 luksFormat "${MAIN_DISK_THIRD_PART}" "${ENCRYPTION_FILE}"
 
   print_status "    Opening main disk"
-  cryptsetup open --type luks --key-file "${ENCRYPTION_FILE}" "${SELECTED_MAIN_DISK}3" cryptroot
+  cryptsetup open --type luks --key-file "${ENCRYPTION_FILE}" "${MAIN_DISK_THIRD_PART}" cryptroot
 }
 
 encrypt_main_passphrase() {
   print_status "    Using provided encryption passphrase"
 
   print_status "    Encrypting main disk"
-  echo -n "${AUTO_DISK_PWD}" | cryptsetup --batch-mode -s 512 --iter-time 5000 --type luks2 luksFormat "${SELECTED_MAIN_DISK}3" -
+  echo -n "${AUTO_DISK_PWD}" | cryptsetup --batch-mode -s 512 --iter-time 5000 --type luks2 luksFormat "${MAIN_DISK_THIRD_PART}" -
 
   print_status "    Opening main disk"
-  echo -n "${AUTO_DISK_PWD}" | cryptsetup open --type luks "${SELECTED_MAIN_DISK}3" cryptroot --key-file -
+  echo -n "${AUTO_DISK_PWD}" | cryptsetup open --type luks "${MAIN_DISK_THIRD_PART}" cryptroot --key-file -
 }
 
 setup_lvm() {
@@ -983,7 +999,7 @@ setup_lvm() {
     if [[ ${AUTO_ENCRYPT_DISKS} == 1 ]]; then
       pv_volume="/dev/mapper/cryptdata"
     else
-      pv_volume="${SELECTED_SECOND_DISK}1"
+      pv_volume="${SECOND_DISK_FIRST_PART}"
     fi
 
     pvcreate "${pv_volume}"
@@ -1003,18 +1019,18 @@ format_partitions() {
 
   if [[ ${UEFI} == 1 ]]; then
     # Format the EFI partition
-    mkfs.vfat -n EFI "${SELECTED_MAIN_DISK}1"
+    mkfs.vfat -n EFI "${MAIN_DISK_FIRST_PART}"
   fi
 
   # Now boot...
-  mkfs.ext4 "${SELECTED_MAIN_DISK}2"
+  mkfs.ext4 "${MAIN_DISK_SECOND_PART}"
 
   # Now root...
   local root_volume
   if [[ ${AUTO_ENCRYPT_DISKS} == 1 ]]; then
     root_volume="/dev/mapper/cryptroot"
   else
-    root_volume="${SELECTED_MAIN_DISK}3"
+    root_volume="${MAIN_DISK_THIRD_PART}"
   fi
 
   mkfs.ext4 "${root_volume}"
@@ -1035,18 +1051,18 @@ mount_partitions() {
   if [[ ${AUTO_ENCRYPT_DISKS} == 1 ]]; then
     root_volume="/dev/mapper/cryptroot"
   else
-    root_volume="${SELECTED_MAIN_DISK}3"
+    root_volume="${MAIN_DISK_THIRD_PART}"
   fi
   mount -t ext4 -o errors=remount-ro "${root_volume}" /mnt
 
   # Now boot
   mkdir /mnt/boot
-  mount -t ext4 "${SELECTED_MAIN_DISK}2" /mnt/boot
+  mount -t ext4 "${MAIN_DISK_SECOND_PART}" /mnt/boot
 
   if [[ ${UEFI} == 1 ]]; then
     # And EFI
     mkdir /mnt/boot/efi
-    mount -t vfat "${SELECTED_MAIN_DISK}1" /mnt/boot/efi
+    mount -t vfat "${MAIN_DISK_FIRST_PART}" /mnt/boot/efi
   fi
 
   if [[ ${SELECTED_SECOND_DISK} != "ignore" ]]; then
@@ -1315,8 +1331,8 @@ configure_encryption() {
 
     local main_uuid
     local boot_uuid
-    main_uuid=$(blkid -o value -s UUID "${SELECTED_MAIN_DISK}3")
-    boot_uuid=$(blkid -o value -s UUID "${SELECTED_MAIN_DISK}2")
+    main_uuid=$(blkid -o value -s UUID "${MAIN_DISK_THIRD_PART}")
+    boot_uuid=$(blkid -o value -s UUID "${MAIN_DISK_SECOND_PART}")
     echo "cryptroot UUID=${main_uuid} /dev/disk/by-uuid/${boot_uuid}:root.key luks,initramfs,keyscript=/lib/cryptsetup/scripts/passdev,tries=3" >> /mnt/etc/crypttab
 
     fix_systemd_encryption_bug
@@ -1327,7 +1343,7 @@ configure_encryption() {
       chmod 0400 "/mnt${second_key}"
 
       local second_uuid
-      second_uuid=$(blkid -o value -s UUID "${SELECTED_SECOND_DISK}1")
+      second_uuid=$(blkid -o value -s UUID "${SECOND_DISK_FIRST_PART}")
 
       echo "cryptdata UUID=${second_uuid} ${second_key} luks,tries=3" >> /mnt/etc/crypttab
     fi
@@ -1734,6 +1750,7 @@ setup_disks() {
   wipe_disks
   create_main_partitions
   create_secondary_partitions
+  query_disk_partitions
 
   setup_encryption
 
