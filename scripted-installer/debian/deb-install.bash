@@ -606,6 +606,12 @@ verify_disk_inputs() {
 parse_main_disk() {
   print_info "Reading Main Disk Selection"
 
+  local ventoy_disk
+  ventoy_disk=$(lsblk -np -o PKNAME,LABEL | grep -i "ventoy" | cut -d' ' -f 1)
+  if [ -z "${ventoy_disk}"]; then
+    ventoy_disk="/zzz/zzz"
+  fi
+
   if echo "${AUTO_MAIN_DISK}" | grep -q '^/dev/'; then
     # We have already verified the disk prior, so need need to do anything else
     MAIN_DISK_METHOD="direct"
@@ -619,12 +625,12 @@ parse_main_disk() {
     case "${AUTO_MAIN_DISK}" in
       smallest)
         MAIN_DISK_METHOD="smallest"
-        SELECTED_MAIN_DISK=$(lsblk -ndpl --output NAME --include "${BLOCK_DISKS}" --sort SIZE | head -n 1)
+        SELECTED_MAIN_DISK=$(lsblk -ndpl --output NAME --include "${BLOCK_DISKS}" --sort SIZE | grep -v "${ventoy_disk}" | head -n 1)
         ;;
 
       largest)
         MAIN_DISK_METHOD="largest"
-        SELECTED_MAIN_DISK=$(lsblk -ndpl --output NAME --include "${BLOCK_DISKS}" --sort SIZE | tail 1)
+        SELECTED_MAIN_DISK=$(lsblk -ndpl --output NAME --include "${BLOCK_DISKS}" --sort SIZE | grep -v "${ventoy_disk}" | tail 1)
         ;;
 
       *)
@@ -639,6 +645,10 @@ parse_main_disk() {
     error_msg "ERROR! Invalid main disk selected '${SELECTED_MAIN_DISK}'."
   fi
 
+  if [[ "${SELECTED_MAIN_DISK}" == "${ventoy_disk}" ]]; then
+    error_msg "ERROR! Invalid main disk selected (ventoy) '${SELECTED_MAIN_DISK}'."
+  fi
+
   write_log "Main disk selection method: '${MAIN_DISK_METHOD}'"
   write_log "Main disk selected: '${SELECTED_MAIN_DISK}'"
 }
@@ -649,6 +659,12 @@ parse_second_disk() {
   print_status "    Collecting disks..."
   local devices_list
   mapfile -t devices_list < <(lsblk -ndpl --output NAME --include "${BLOCK_DISKS}" | grep -v "${SELECTED_MAIN_DISK}")
+
+  local ventoy_disk
+  ventoy_disk=$(lsblk -np -o PKNAME,LABEL | grep -i "ventoy" | cut -d' ' -f 1)
+  if [ -z "$ventoy_disk"]; then
+    ventoy_disk="/zzz/zzz"
+  fi
 
   write_log "checking for second disk"
   if [[ "${AUTO_SKIP_PARTITIONING}" == 1 || ${#devices_list[@]} == 0 || "${SELECTED_MAIN_DISK}" == "ignore" ]]; then
@@ -677,12 +693,12 @@ parse_second_disk() {
 
     smallest)
       SECOND_DISK_METHOD="smallest"
-      SELECTED_SECOND_DISK=$(lsblk -ndpl --output NAME --include "${BLOCK_DISKS}" --sort SIZE | grep -v "${SELECTED_MAIN_DISK}" | head -n 1)
+      SELECTED_SECOND_DISK=$(lsblk -ndpl --output NAME --include "${BLOCK_DISKS}" --sort SIZE | grep -v "${SELECTED_MAIN_DISK}" | grep -v "${ventoy_disk}" | head -n 1)
       ;;
 
     largest)
       SECOND_DISK_METHOD="largest"
-      SELECTED_SECOND_DISK=$(lsblk -ndpl --output NAME --include "${BLOCK_DISKS}" --sort SIZE | grep -v "${SELECTED_MAIN_DISK}" | tail -n 1)
+      SELECTED_SECOND_DISK=$(lsblk -ndpl --output NAME --include "${BLOCK_DISKS}" --sort SIZE | grep -v "${SELECTED_MAIN_DISK}" | grep -v "${ventoy_disk}" | tail -n 1)
       ;;
 
     *)
@@ -699,6 +715,10 @@ parse_second_disk() {
   # Verify it is not the same as the main disk
   if [[ "${SELECTED_SECOND_DISK}" == "${SELECTED_MAIN_DISK}" ]]; then
     error_msg "ERROR! Main disk and second disk can not be the same disk."
+  fi
+
+  if [[ "${SELECTED_SECOND_DISK}" == "${ventoy_disk}" ]]; then
+    error_msg "ERROR! Invalid second disk selected (ventoy) '${SELECTED_MAIN_DISK}'."
   fi
 
   write_log "Second disk selection method: '${SECOND_DISK_METHOD}'"
