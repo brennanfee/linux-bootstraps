@@ -3,7 +3,9 @@
 # License: MIT License
 # Version: 0.02  2021-11-05
 #
-# URL to install: bash <(curl -fsSL https://<path tbd>)
+# URL to install: bash <(curl -fsSL https://tinyurl.com/deb-install/deb-install.bash)
+#
+# For the development version: https://tinyurl.com/dev-deb-install/deb-install.bash
 #
 # This script installs Debian/Ubuntu the "Arch" way.  In order to have more fine-grained control it completely bypasses the Debian or Ubuntu installers and does all the setup here.  You must run the Debian (or Ubuntu) live "server" ISOs (which one shouldn't matter), truthfully it doesn't matter which one as you can install Ubuntu using the Debian ISO and Debian using the Ubuntu ISO.
 #
