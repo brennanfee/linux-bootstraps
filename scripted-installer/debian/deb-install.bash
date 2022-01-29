@@ -130,6 +130,9 @@ AUTO_USERNAME="${AUTO_USERNAME:=}"
 # The password for the created user.  If you do not provide a password it iwll default to the target installed OS in all lower case ("debian" or "ubuntu", etc.). The password can be a plain text password or a crypted password.
 AUTO_USER_PWD="${AUTO_USER_PWD:=}"
 
+# Whether the installer should pause, display the selected and calculated values and wait for confirmation before continuing.  Off by default to preserve fully automated installations.
+AUTO_CONFIRM_SETTINGS="${AUTO_CONFIRM_SETTINGS:=0}"
+
 # Whether to automatically reboot after the script has completed.   Default is not to reboot.  Automated environments such as Packer should turn this on.
 AUTO_REBOOT="${AUTO_REBOOT:=0}"
 
@@ -191,6 +194,7 @@ log_values() {
   write_log_and_inputs "AUTO_HOSTNAME: ${AUTO_HOSTNAME}"
   write_log_and_inputs "AUTO_DOMAIN: ${AUTO_DOMAIN}"
   write_log_and_inputs "AUTO_TIMEZONE: ${AUTO_TIMEZONE}"
+  write_log_and_inputs "AUTO_CONFIRM_SETTINGS: ${AUTO_CONFIRM_SETTINGS}"
   write_log_and_inputs "AUTO_REBOOT: ${AUTO_REBOOT}"
   write_log_blank
 
@@ -230,6 +234,71 @@ log_values() {
   write_log_spacer
 }
 
+confirm_with_user() {
+  if [[ "${AUTO_CONFIRM_SETTINGS}" == "1" ]] || [[ "${IS_DEBUG}" == "1"]]; then
+    print_title "Install Summary"
+    print_title_info "Below is a summary of your selections and any auto-detected system information.  If anything is wrong cancel out now with Ctrl-C.  If you continue, the installation will begin and there will be no more input required."
+    print_line
+    if [[ ${UEFI} == 1 ]]; then
+      print_status "The architecture is ${SYS_ARCH}, dpkg ${DPKG_ARCH}, and UEFI has been found."
+    else
+      print_status "The architecture is ${SYS_ARCH}, dpkg ${DPKG_ARCH}, and a BIOS has been found."
+    fi
+
+    blank_line
+
+    print_status "The keymap to use is '${AUTO_KEYMAP}'."
+
+    print_status "The distribution to install is '${AUTO_INSTALL_OS}', '${AUTO_INSTALL_EDITION}' edition."
+
+    print_status "The kernel version to install, if available, is '${AUTO_KERNEL_VERSION}'."
+
+    print_status "The hostname selected is '${AUTO_HOSTNAME}'."
+    if [[ ${AUTO_DOMAIN} != "" ]]; then
+      print_status "The domain selected is '${AUTO_DOMAIN}'."
+    fi
+
+    print_status "The timezone to use is '${AUTO_TIMEZONE}'."
+
+    if [[ ${AUTO_USE_DATA_FOLDER} == 1 ]]; then
+      print_status "The /data folder will be used."
+    else
+      print_status "The /data folder will NOT be used."
+    fi
+
+    print_status "The stamp\output location is '${AUTO_STAMP_FOLDER}'."
+
+    blank_line
+    if [[ ${AUTO_ROOT_DISABLED} == 1 ]]; then
+      print_status "The root account will be disabled."
+    else
+      print_status "The root account will be activated."
+    fi
+
+    if [[ ${AUTO_CREATE_USER} == 1 ]]; then
+      print_status "User '${AUTO_USERNAME}' will be created and granted sudo permissions."
+    else
+      print_status "User creation was disabled."
+    fi
+
+    blank_line
+    print_status "The main disk option was '${AUTO_MAIN_DISK}', the selection method was '${MAIN_DISK_METHOD}', and the selected main disk is '${SELECTED_MAIN_DISK}'."
+
+    print_status "The secondary disk option was '${AUTO_SECOND_DISK}', the selection method was '${SECOND_DISK_METHOD}', and the selected main disk is '${SELECTED_SECOND_DISK}'."
+
+    if [[ ${AUTO_ENCRYPT_DISKS} == 1 ]]; then
+      print_status "The disks will be encrypted."
+    else
+      print_status "The disks will NOT be encrypted."
+    fi
+
+    blank_line
+    pause_output
+  else
+    write_log "Skipping settings confirmation.  Option not selected."
+  fi
+}
+
 write_inputs_script() {
   write_log "Writing inputs script"
 
@@ -251,6 +320,7 @@ EOF
     echo "export AUTO_HOSTNAME='${AUTO_HOSTNAME}'"
     echo "export AUTO_DOMAIN='${AUTO_DOMAIN}'"
     echo "export AUTO_TIMEZONE='${AUTO_TIMEZONE}'"
+    echo "export AUTO_CONFIRM_SETTINGS='${AUTO_CONFIRM_SETTINGS}'"
     echo "export AUTO_REBOOT='${AUTO_REBOOT}'"
     echo "export AUTO_ROOT_DISABLED='${AUTO_ROOT_DISABLED}'"
     echo "export AUTO_CREATE_USER='${AUTO_CREATE_USER}'"
@@ -284,6 +354,22 @@ EOF
 
 # Text modifiers
 RESET="\033[0m"
+BOLD="\033[1m"
+
+print_title() {
+  clear
+  print_line
+  echo -e "# ${BOLD}$1${RESET}"
+  echo -e "SECTION: ${1}" >> "${LOG}"
+  print_line
+  blank_line
+}
+
+print_title_info() {
+  T_COLS=$(tput cols)
+  echo -e "${BOLD}$1${RESET}\n" | fold -sw $((T_COLS - 18)) | sed 's/^/\t/'
+  echo -e "TITLE: ${1}" >> "${LOG}"
+}
 
 print_line() {
   printf "%$(tput cols)s\n" | tr ' ' '-'
@@ -302,10 +388,9 @@ print_status() {
 }
 
 print_info() {
-  local Bold="\033[1m"
   local T_COLS
   T_COLS=$(tput cols)
-  echo -e "${Bold}$1${RESET}" | fold -sw $((T_COLS - 1))
+  echo -e "${BOLD}$1${RESET}" | fold -sw $((T_COLS - 1))
   echo -e "INFO: ${1}" >> "${LOG}"
 }
 
@@ -326,10 +411,8 @@ print_success() {
 }
 
 pause_output() {
-  if [[ ${IS_DEBUG} == "1" ]]; then
-    print_line
-    read -re -sn 1 -p "Press enter to continue..."
-  fi
+  print_line
+  read -re -sn 1 -p "Press enter to continue..."
 }
 
 error_msg() {
@@ -516,6 +599,7 @@ normalize_parameters() {
   normalize_variable_boolean "AUTO_ENCRYPT_DISKS"
   normalize_variable_boolean "AUTO_ROOT_DISABLED"
   normalize_variable_boolean "AUTO_CREATE_USER"
+  normalize_variable_boolean "AUTO_CONFIRM_SETTINGS"
   normalize_variable_boolean "AUTO_REBOOT"
 
   if [[ "${AUTO_DISK_PWD}" == "" ]]; then
@@ -1631,6 +1715,7 @@ verify_parameters() {
   parse_second_disk
 
   log_values
+  confirm_with_user
   write_inputs_script
 }
 
