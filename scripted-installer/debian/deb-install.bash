@@ -907,14 +907,14 @@ create_secondary_partitions() {
 query_disk_partitions() {
   print_info "Querying partitions"
 
-  MAIN_DISK_FIRST_PART=$(lsblk -np --output PATH,MAJ:MIN,TYPE "${SELECTED_MAIN_DISK}" | grep "part" | grep ":1" | cut -d' ' -f 1)
+  MAIN_DISK_FIRST_PART=$(lsblk -lnp --output PATH,TYPE "${SELECTED_MAIN_DISK}" | grep "part" | head -n 1 | cut -d' ' -f 1)
 
-  MAIN_DISK_SECOND_PART=$(lsblk -np --output PATH,MAJ:MIN,TYPE "${SELECTED_MAIN_DISK}" | grep "part" | grep ":2" | cut -d' ' -f 1)
+  MAIN_DISK_SECOND_PART=$(lsblk -lnp --output PATH,TYPE "${SELECTED_MAIN_DISK}" | grep "part" | head -n 2 | cut -d' ' -f 1)
 
-  MAIN_DISK_THIRD_PART=$(lsblk -np --output PATH,MAJ:MIN,TYPE "${SELECTED_MAIN_DISK}" | grep "part" | grep ":3" | cut -d' ' -f 1)
+  MAIN_DISK_THIRD_PART=$(lsblk -lnp --output PATH,TYPE "${SELECTED_MAIN_DISK}" | grep "part" | head -n 3 | cut -d' ' -f 1)
 
   if [[ ${SELECTED_SECOND_DISK} != "ignore" ]]; then
-    SECOND_DISK_FIRST_PART=$(lsblk -np --output PATH,MAJ:MIN,TYPE "${SELECTED_SECOND_DISK}" | grep "part" | grep ":1" | cut -d' ' -f 1)
+    SECOND_DISK_FIRST_PART=$(lsblk -lnp --output PATH,TYPE "${SELECTED_SECOND_DISK}" | grep "part" | head -n 1 | cut -d' ' -f 1)
   else
     SECOND_DISK_FIRST_PART="/zzz/zzz"
   fi
