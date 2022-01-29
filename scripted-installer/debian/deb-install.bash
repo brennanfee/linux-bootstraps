@@ -115,8 +115,8 @@ AUTO_ENCRYPT_DISKS="${AUTO_ENCRYPT_DISKS:=1}"
 # NOTE: This is not intended to be a secure installation without the need for the user to modify things post bootstrap.  This merely "initializes" the encryption as it is much easier to modify the encryption keys\slots later than it is to encrypt a partition which is already in use (especially root).  Therefore, it is fully expected that the user will either replace the file or otherwise manage the encryption keys after initial boot.
 AUTO_DISK_PWD="${AUTO_DISK_PWD:=file}"
 
-# Whether root should be disabled.  This is a boolean value.  The default is to disable root as that is considered by many a more secure installation footprint.
-AUTO_ROOT_DISABLED="${AUTO_ROOT_DISABLED:=1}"
+# Whether root should be disabled.  This is a boolean value.  The default is to NOT disable the root account.  Some feel that disabling root is a more secure installation footprint, so this setting can be used for those that wish.
+AUTO_ROOT_DISABLED="${AUTO_ROOT_DISABLED:=0}"
 
 # If root is enabled, what the root password should be.  This can be a plain text password or a crypted password.  If you do not pass a root password, we will use the same password you passed for the AUTO_USER_PWD.  If that is also blank the password will be the target installed OS in all lower case ("debian" or "ubuntu", etc.)
 AUTO_ROOT_PWD="${AUTO_ROOT_PWD:=}"
@@ -235,9 +235,9 @@ log_values() {
 }
 
 confirm_with_user() {
-  if [[ "${AUTO_CONFIRM_SETTINGS}" == "1" ]] || [[ "${IS_DEBUG}" == "1"]]; then
+  if [[ "${AUTO_CONFIRM_SETTINGS}" == "1" || "${IS_DEBUG}" == "1" ]]; then
     print_title "Install Summary"
-    print_title_info "Below is a summary of your selections and any auto-detected system information.  If anything is wrong cancel out now with Ctrl-C.  If you continue, the installation will begin and there will be no more input required."
+    print_title_info "Below is a summary of your selections and any detected system information.  If anything is wrong cancel out now with Ctrl-C.  Otherwise press any key to continue installation."
     print_line
     if [[ ${UEFI} == 1 ]]; then
       print_status "The architecture is ${SYS_ARCH}, dpkg ${DPKG_ARCH}, and UEFI has been found."
@@ -253,20 +253,19 @@ confirm_with_user() {
 
     print_status "The kernel version to install, if available, is '${AUTO_KERNEL_VERSION}'."
 
-    print_status "The hostname selected is '${AUTO_HOSTNAME}'."
+    local domain_info
     if [[ ${AUTO_DOMAIN} != "" ]]; then
-      print_status "The domain selected is '${AUTO_DOMAIN}'."
+      domain_info="The domain selected is '${AUTO_DOMAIN}'."
+    else
+      domain_info="No domain was provided."
+    fi
+    if [[ ${AUTO_HOSTNAME} == "" ]]; then
+      print_status "The hostname will be auto-generated. ${domain_info}"
+    else
+      print_status "The hostname selected is '${AUTO_HOSTNAME}'. ${domain_info}"
     fi
 
     print_status "The timezone to use is '${AUTO_TIMEZONE}'."
-
-    if [[ ${AUTO_USE_DATA_FOLDER} == 1 ]]; then
-      print_status "The /data folder will be used."
-    else
-      print_status "The /data folder will NOT be used."
-    fi
-
-    print_status "The stamp\output location is '${AUTO_STAMP_FOLDER}'."
 
     blank_line
     if [[ ${AUTO_ROOT_DISABLED} == 1 ]]; then
@@ -276,7 +275,11 @@ confirm_with_user() {
     fi
 
     if [[ ${AUTO_CREATE_USER} == 1 ]]; then
-      print_status "User '${AUTO_USERNAME}' will be created and granted sudo permissions."
+      if [[ ${AUTO_USERNAME} == "" ]]; then
+        print_status "A default user '${AUTO_INSTALL_OS}' will be created and granted sudo permissions."
+      else
+        print_status "User '${AUTO_USERNAME}' will be created and granted sudo permissions."
+      fi
     else
       print_status "User creation was disabled."
     fi
@@ -367,7 +370,7 @@ print_title() {
 
 print_title_info() {
   T_COLS=$(tput cols)
-  echo -e "${BOLD}$1${RESET}\n" | fold -sw $((T_COLS - 18)) | sed 's/^/\t/'
+  echo -e "${BOLD}$1${RESET}\n" | fold -sw $((T_COLS - 10)) | sed 's/^/\t/'
   echo -e "TITLE: ${1}" >> "${LOG}"
 }
 
@@ -691,8 +694,8 @@ parse_main_disk() {
   print_info "Reading Main Disk Selection"
 
   local ventoy_disk
-  ventoy_disk=$(lsblk -np -o PKNAME,LABEL | grep -i "ventoy" | cut -d' ' -f 1)
-  if [ -z "${ventoy_disk}"]; then
+  ventoy_disk=$(lsblk -np -o PKNAME,LABEL | grep -i "ventoy" | cut -d' ' -f 1 || true)
+  if [ -z "${ventoy_disk}" ]; then
     ventoy_disk="/zzz/zzz"
   fi
 
@@ -745,7 +748,7 @@ parse_second_disk() {
   mapfile -t devices_list < <(lsblk -ndpl --output NAME --include "${BLOCK_DISKS}" | grep -v "${SELECTED_MAIN_DISK}")
 
   local ventoy_disk
-  ventoy_disk=$(lsblk -np -o PKNAME,LABEL | grep -i "ventoy" | cut -d' ' -f 1)
+  ventoy_disk=$(lsblk -np -o PKNAME,LABEL | grep -i "ventoy" | cut -d' ' -f 1 || true)
   if [ -z "$ventoy_disk"]; then
     ventoy_disk="/zzz/zzz"
   fi
