@@ -1006,10 +1006,10 @@ setup_lvm() {
     vgcreate "vg_data" "${pv_volume}"
 
     if [[ "${AUTO_USE_DATA_FOLDER}" == 1 ]]; then
-      lvcreate -l 50%VG "vg_data" -n lv_home
-      lvcreate -l 30%VG "vg_data" -n lv_data
+      lvcreate -l 80%VG "vg_data" -n lv_home
+      lvcreate -l 10%VG "vg_data" -n lv_data
     else
-      lvcreate -l 70%VG "vg_data" -n lv_home
+      lvcreate -l 80%VG "vg_data" -n lv_home
     fi
   fi
 }
