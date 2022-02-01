@@ -841,6 +841,8 @@ wipe_disks() {
   dd if=/dev/zero of="${SELECTED_MAIN_DISK}" bs=512 count=100 conv=notrunc
   dd if=/dev/zero of="${SELECTED_MAIN_DISK}" bs=512 seek=$(( $(blockdev --getsz "${SELECTED_MAIN_DISK}") - 100 )) count=100 conv=notrunc
 
+  partprobe "${SELECTED_MAIN_DISK}" 2>/dev/null || true
+
   if [[ ${SELECTED_SECOND_DISK} != "ignore" ]]; then
     print_info "    Wiping second disk partitions"
     wipefs --all --force "${SELECTED_SECOND_DISK}*" 2>/dev/null || true
@@ -848,9 +850,9 @@ wipe_disks() {
 
     dd if=/dev/zero of="${SELECTED_SECOND_DISK}" bs=512 count=100 conv=notrunc
     dd if=/dev/zero of="${SELECTED_SECOND_DISK}" bs=512 seek=$(( $(blockdev --getsz "${SELECTED_SECOND_DISK}") - 100 )) count=100 conv=notrunc
-  fi
 
-  partprobe 2>/dev/null || true
+    partprobe "${SELECTED_SECOND_DISK}" 2>/dev/null || true
+  fi
 }
 
 create_main_partitions() {
@@ -884,7 +886,7 @@ create_main_partitions() {
     parted --script -a optimal "${SELECTED_MAIN_DISK}" mkpart "os" ext4 1025MB 100%
   fi
 
-  partprobe 2>/dev/null || true
+  partprobe "${SELECTED_MAIN_DISK}" 2>/dev/null || true
 }
 
 create_secondary_partitions() {
@@ -899,9 +901,9 @@ create_secondary_partitions() {
     if [[ ${AUTO_ENCRYPT_DISKS} == 0 ]]; then
       parted --script -a optimal "${SELECTED_SECOND_DISK}" set 1 lvm on
     fi
-  fi
 
-  partprobe 2>/dev/null || true
+    partprobe "${SELECTED_SECOND_DISK}" 2>/dev/null || true
+  fi
 }
 
 query_disk_partitions() {
