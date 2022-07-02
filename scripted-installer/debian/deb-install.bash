@@ -81,7 +81,7 @@ AUTO_KEYMAP="${AUTO_KEYMAP:=us}"
 # The OS to install, default is debian, alternative ubuntu.
 AUTO_INSTALL_OS="${AUTO_INSTALL_OS:=debian}"
 
-# The distro edition (sometimes called codename) to install.  For debian this is things like 'stable', 'bullesye', etc.  And for Ubuntu it is always the codename 'focal', 'impish', etc.  For anything else that is "debian" like this is what should be placed into the APT sources.list.  If you do not provide a value, the default will be defined by each supported OS.  For instance, with Debian this will always be stable and for Ubuntu always the latest LTS edition.
+# The distro edition (sometimes called codename) to install.  For debian this is things like 'stable', 'bullesye', etc.  And for Ubuntu it is always the codename 'jammy', 'kinetic', etc.  For anything else that is "debian" like this is what should be placed into the APT sources.list.  If you do not provide a value, the default will be defined by each supported OS.  For instance, with Debian this will always be stable and for Ubuntu always the latest LTS edition.
 AUTO_INSTALL_EDITION="${AUTO_INSTALL_EDITION:=stable}"
 
 # For all distro's "default" will install the default kernel for the edition requested.  However, some distributions support alternate kernels.  For those, other values may be supported.  For instance, for Debian stable you can pass "backport" to install the kernel from the backports repository (if available).  For Ubuntu LTS editions you can choose "hwe" and "hwe-edge" as alternatives.
@@ -321,62 +321,13 @@ confirm_with_user() {
   fi
 }
 
-write_inputs_script() {
-  write_log "Writing inputs script"
-
-  local script_file="${WORKING_DIR}/install-inputs.sh"
-  # This writes a shell script that can be used to source the values that were passed in/parsed.  This supports being able to do a repeatable install.  NOTE: Passwords are NOT exported here for security reasons.
-
-  cat <<- 'EOF' > "${script_file}"
-#!/usr/bin/env sh
-# Produced by deb-install.bash.  This is a sourceable file that will export environment variables to be read by the deb-install.bash script.  This allows running a repeatable installation with the same input values that were read/parsed from this execution of the deb-install.bash script.
-#
-
-EOF
-
-  {
-    echo "export AUTO_KEYMAP='${AUTO_KEYMAP}'"
-    echo "export AUTO_INSTALL_OS='${AUTO_INSTALL_OS}'"
-    echo "export AUTO_INSTALL_EDITION='${AUTO_INSTALL_EDITION}'"
-    echo "export AUTO_KERNEL_VERSION='${AUTO_KERNEL_VERSION}'"
-    echo "export AUTO_HOSTNAME='${AUTO_HOSTNAME}'"
-    echo "export AUTO_DOMAIN='${AUTO_DOMAIN}'"
-    echo "export AUTO_TIMEZONE='${AUTO_TIMEZONE}'"
-    echo "export AUTO_CONFIRM_SETTINGS='${AUTO_CONFIRM_SETTINGS}'"
-    echo "export AUTO_REBOOT='${AUTO_REBOOT}'"
-    echo "export AUTO_ROOT_DISABLED='${AUTO_ROOT_DISABLED}'"
-    echo "export AUTO_CREATE_USER='${AUTO_CREATE_USER}'"
-    echo "export AUTO_USERNAME='${AUTO_USERNAME}'"
-    echo "export AUTO_SKIP_PARTITIONING='${AUTO_SKIP_PARTITIONING}'"
-    echo "export AUTO_MAIN_DISK='${AUTO_MAIN_DISK}'"
-    echo "export AUTO_SECOND_DISK='${AUTO_SECOND_DISK}'"
-    echo "export AUTO_USE_DATA_FOLDER='${AUTO_USE_DATA_FOLDER}'"
-    echo "export AUTO_STAMP_FOLDER='${AUTO_STAMP_FOLDER}'"
-    echo "export AUTO_ENCRYPT_DISKS='${AUTO_ENCRYPT_DISKS}'"
-  } >> "${script_file}"
-
-  case "${AUTO_DISK_PWD}" in
-    file)
-      echo "export AUTO_DISK_PWD='file'" >> "${script_file}"
-      ;;
-    /*)
-      echo "export AUTO_DISK_PWD='${AUTO_DISK_PWD}'" >> "${script_file}"
-      ;;
-    *)
-      write_log "Skipping write to script of AUTO_DISK_PWD."
-      ;;
-  esac
-
-  echo "" >> "${script_file}"
-}
-
 ### START: Log Functions
 
 ### START: Print Functions
 
 # Text modifiers
-RESET="\033[0m"
-BOLD="\033[1m"
+RESET="$(tput sgr0)"
+BOLD="$(tput bold)"
 
 print_title() {
   clear
@@ -423,7 +374,8 @@ print_info() {
 }
 
 print_warning() {
-  local YELLOW="\033[33m"
+  local YELLOW
+  YELLOW="$(tput setaf 3)"
   local T_COLS
   T_COLS=$(tput cols)
   T_COLS=$((T_COLS - 1))
@@ -432,7 +384,8 @@ print_warning() {
 }
 
 print_success() {
-  local GREEN="\033[32m"
+  local GREEN
+  GREEN="$(tput setaf 2)"
   local T_COLS
   T_COLS=$(tput cols)
   T_COLS=$((T_COLS - 1))
@@ -446,7 +399,8 @@ pause_output() {
 }
 
 error_msg() {
-  local RED="\033[31m"
+  local RED
+  RED="$(tput setaf 1)"
   local T_COLS
   T_COLS=$(tput cols)
   T_COLS=$((T_COLS - 1))
@@ -1551,17 +1505,17 @@ configure_hostname() {
   hostname=${AUTO_HOSTNAME}
   if [[ ${hostname} == "" ]]
   then
-    hostname=${AUTO_INSTALL_OS}
+    hostname="${AUTO_INSTALL_OS}-$((1 + RANDOM % 10000))"
   fi
 
-  echo "${AUTO_HOSTNAME}" > /mnt/etc/hostname
+  echo "${hostname}" > /mnt/etc/hostname
 
   local the_line
   if [[ ${AUTO_DOMAIN} == "" ]]
   then
-    the_line="127.0.1.1 ${AUTO_HOSTNAME}"
+    the_line="127.0.1.1 ${hostname}"
   else
-    the_line="127.0.1.1 ${AUTO_HOSTNAME}.${AUTO_DOMAIN} ${AUTO_HOSTNAME}"
+    the_line="127.0.1.1 ${hostname}.${AUTO_DOMAIN} ${hostname}"
   fi
 
   if grep -q '^127.0.1.1[[:blank:]]' /mnt/etc/hosts
@@ -1904,7 +1858,6 @@ verify_parameters() {
 
   log_values
   confirm_with_user
-  write_inputs_script
 }
 
 setup_disks() {
