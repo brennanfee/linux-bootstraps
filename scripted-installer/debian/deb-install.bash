@@ -7,7 +7,12 @@
 #
 # For the development version: https://tinyurl.com/dev-deb-install/deb-install.bash
 #
-# This script installs Debian/Ubuntu the "Arch" way.  In order to have more fine-grained control it completely bypasses the Debian or Ubuntu installers and does all the setup here.  You must run the Debian (or Ubuntu) live "server" ISOs (which one shouldn't matter), truthfully it doesn't matter which one as you can install Ubuntu using the Debian ISO and Debian using the Ubuntu ISO.
+# This script installs Debian/Ubuntu the "Arch" way.  In order to have more
+# fine-grained control it completely bypasses the Debian or Ubuntu installers
+# and does all the setup here.  You must run the Debian (or Ubuntu) live
+# "server" ISOs (which one shouldn't matter), truthfully it doesn't matter
+# which one as you can install Ubuntu using the Debian ISO and Debian using
+# the Ubuntu ISO.
 #
 # Bash strict mode
 ([[ -n ${ZSH_EVAL_CONTEXT} && ${ZSH_EVAL_CONTEXT} =~ :file$ ]] ||

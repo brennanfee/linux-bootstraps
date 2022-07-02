@@ -13,9 +13,11 @@
 # This version of the scripts prepares for this configuration:
 #   - Will confirm settings with the user before executing.
 #   - Main disk using the "smallest" selection option.
-#   - Second disk using the "largest" selecton option.
+#   - Secondary disk using the "largest" selection option.
 #   - The disk(s) will be encrypted.
-#   - The data folder will not be used.
+#   - The data folder will be configured.
+#   - Debian testing will be installed
+#   - Domain of bfee.org and a default use of brennan will be created.
 #
 # Bash strict mode
 ([[ -n ${ZSH_EVAL_CONTEXT} && ${ZSH_EVAL_CONTEXT} =~ :file$ ]] ||
@@ -40,7 +42,12 @@ export AUTO_CONFIRM_SETTINGS=1
 export AUTO_MAIN_DISK=smallest
 export AUTO_SECOND_DISK=largest
 export AUTO_ENCRYPT_DISKS=1
-export AUTO_USE_DATA_FOLDER=0
+export AUTO_USE_DATA_FOLDER=1
+
+export AUTO_INSTALL_EDITION=testing
+
+export AUTO_DOMAIN=bfee.org
+export AUTO_USERNAME=brennan
 
 #
 ## This downloads and runs the script.

@@ -11,11 +11,7 @@
 # and then automatically calls the deb-install script.
 #
 # This version of the scripts prepares for this configuration:
-#   - Will confirm settings with the user before executing.
-#   - Main disk using the "smallest" selection option.
-#   - Second disk using the "largest" selecton option.
-#   - The disk(s) will be encrypted.
-#   - The data folder will not be used.
+#   << list it here>
 #
 # Bash strict mode
 ([[ -n ${ZSH_EVAL_CONTEXT} && ${ZSH_EVAL_CONTEXT} =~ :file$ ]] ||
@@ -36,11 +32,6 @@ fi
 # END Bash scrict mode
 
 ## Set the variables here, make sure to export them
-export AUTO_CONFIRM_SETTINGS=1
-export AUTO_MAIN_DISK=smallest
-export AUTO_SECOND_DISK=largest
-export AUTO_ENCRYPT_DISKS=1
-export AUTO_USE_DATA_FOLDER=0
 
 #
 ## This downloads and runs the script.
