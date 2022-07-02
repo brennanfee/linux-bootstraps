@@ -6,6 +6,8 @@
 #
 # For the development version: TBD
 #
+# Github URL: https://raw.githubusercontent.com/brennanfee/linux-bootstraps/main/scripted-installer/debian/my-configs/confirm-desktop-single-disk.bash
+#
 # This script uses the deb-install script to install Debian/Ubuntu the "Arch"
 # way.  The config script sets some values for a specific type of installation
 # and then automatically calls the deb-install script.
