@@ -1243,9 +1243,8 @@ install_base_system_debian() {
     if [[ ! ${EXIT_CODE} -eq 0 ]]
     then
       # Check to see the package exists in backports, if not we'll just install the default kernel
-      local exists
-      exists=$(package_exists "linux-image-${DPKG_ARCH}/${edition}-backports")
-      if ${exists}
+      get_exit_code package_exists "linux-image-${DPKG_ARCH}/${edition}-backports"
+      if [[ ${EXIT_CODE} -eq 0 ]]
       then
         kernel_to_install="backport"
       else
@@ -1295,18 +1294,19 @@ install_base_system_ubuntu() {
   local release_ver
   release_ver=$(arch-chroot /mnt lsb_release -r -s)
 
-  local hwe_edge_exists
-  local hwe_exists
-  hwe_edge_exists=$(package_exists "linux-generic-hwe-${release_ver}-edge")
-  hwe_exists=$(package_exists "linux-generic-hwe-${release_ver}")
+  get_exit_code package_exists "linux-generic-hwe-${release_ver}-edge"
+  local hwe_edge_exists=${EXIT_CODE}
+
+  get_exit_code package_exists "linux-generic-hwe-${release_ver}"
+  local hwe_exists=${EXIT_CODE}
 
   local kernel_to_install="default"
   if [[ "${AUTO_KERNEL_VERSION}" == "hwe-edge" ]]
   then
-    if ${hwe_edge_exists}
+    if [[ ${hwe_edge_exists} -eq 0 ]]
     then
       kernel_to_install="hwe-edge"
-    elif ${hwe_exists}
+    elif [[ ${hwe_exists} -eq 0 ]]
     then
       kernel_to_install="hwe"
       write_log "The hwe-edge kernel was requested, but the package was not found.  Found a standard hwe kernel instead and choosing that for install."
@@ -1315,7 +1315,7 @@ install_base_system_ubuntu() {
     fi
   elif [[ "${AUTO_KERNEL_VERSION}" == "hwe" ]]
   then
-    if ${hwe_exists}
+    if [[ ${hwe_exists} -eq 0 ]]
     then
       kernel_to_install="hwe"
     else
