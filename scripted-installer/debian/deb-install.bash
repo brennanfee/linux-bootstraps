@@ -10,10 +10,10 @@
 # This script installs Debian/Ubuntu the "Arch" way.  In order to have more fine-grained control it completely bypasses the Debian or Ubuntu installers and does all the setup here.  You must run the Debian (or Ubuntu) live "server" ISOs (which one shouldn't matter), truthfully it doesn't matter which one as you can install Ubuntu using the Debian ISO and Debian using the Ubuntu ISO.
 #
 # Bash strict mode
-# shellcheck disable=SC2154
 ([[ -n ${ZSH_EVAL_CONTEXT} && ${ZSH_EVAL_CONTEXT} =~ :file$ ]] ||
  [[ -n ${BASH_VERSION} ]] && (return 0 2>/dev/null)) && SOURCED=true || SOURCED=false
-if ! ${SOURCED}; then
+if ! ${SOURCED}
+then
   set -o errexit # same as set -e
   set -o nounset # same as set -u
   set -o errtrace # same as set -E
@@ -21,6 +21,7 @@ if ! ${SOURCED}; then
   set -o posix
   #set -o xtrace # same as set -x, turn on for debugging
 
+  shopt -s inherit_errexit
   shopt -s extdebug
   IFS=$(printf '\n\t')
 fi
@@ -35,8 +36,10 @@ IS_DEBUG=1
 WORKING_DIR=$(pwd)
 LOG="${WORKING_DIR}/install.log"
 [[ -f ${LOG} ]] && rm -f "${LOG}"
-echo "Start log: $(date -Is)" >> "${LOG}"
+the_date=$(date -Is)
+echo "Start log: ${the_date}" >> "${LOG}"
 echo "------------" >> "${LOG}"
+unset the_date
 
 # Auto detected flags and variables
 SYS_ARCH=$(uname -m) # Architecture (x86_64)
@@ -161,7 +164,8 @@ write_log_and_inputs() {
 }
 
 write_log_password() {
-  if [[ ${IS_DEBUG} == "1" ]]; then
+  if [[ ${IS_DEBUG} == "1" ]]
+  then
     echo "LOG: ${1}" >> "${LOG}"
   else
     local val
@@ -237,11 +241,13 @@ log_values() {
 }
 
 confirm_with_user() {
-  if [[ "${AUTO_CONFIRM_SETTINGS}" == "1" || "${IS_DEBUG}" == "1" ]]; then
+  if [[ "${AUTO_CONFIRM_SETTINGS}" == "1" || "${IS_DEBUG}" == "1" ]]
+  then
     print_title "Install Summary"
     print_title_info "Below is a summary of your selections and any detected system information.  If anything is wrong cancel out now with Ctrl-C.  Otherwise press any key to continue installation."
     print_line
-    if [[ ${UEFI} == 1 ]]; then
+    if [[ ${UEFI} == 1 ]]
+    then
       print_status "The architecture is ${SYS_ARCH}, dpkg ${DPKG_ARCH}, and UEFI has been found."
     else
       print_status "The architecture is ${SYS_ARCH}, dpkg ${DPKG_ARCH}, and a BIOS has been found."
@@ -256,12 +262,14 @@ confirm_with_user() {
     print_status "The kernel version to install, if available, is '${AUTO_KERNEL_VERSION}'."
 
     local domain_info
-    if [[ ${AUTO_DOMAIN} != "" ]]; then
+    if [[ ${AUTO_DOMAIN} != "" ]]
+    then
       domain_info="The domain selected is '${AUTO_DOMAIN}'."
     else
       domain_info="No domain was provided."
     fi
-    if [[ ${AUTO_HOSTNAME} == "" ]]; then
+    if [[ ${AUTO_HOSTNAME} == "" ]]
+    then
       print_status "The hostname will be auto-generated. ${domain_info}"
     else
       print_status "The hostname selected is '${AUTO_HOSTNAME}'. ${domain_info}"
@@ -270,14 +278,17 @@ confirm_with_user() {
     print_status "The timezone to use is '${AUTO_TIMEZONE}'."
 
     blank_line
-    if [[ ${AUTO_ROOT_DISABLED} == 1 ]]; then
+    if [[ ${AUTO_ROOT_DISABLED} == 1 ]]
+    then
       print_status "The root account will be disabled."
     else
       print_status "The root account will be activated."
     fi
 
-    if [[ ${AUTO_CREATE_USER} == 1 ]]; then
-      if [[ ${AUTO_USERNAME} == "" ]]; then
+    if [[ ${AUTO_CREATE_USER} == 1 ]]
+    then
+      if [[ ${AUTO_USERNAME} == "" ]]
+      then
         print_status "A default user '${AUTO_INSTALL_OS}' will be created and granted sudo permissions."
       else
         print_status "User '${AUTO_USERNAME}' will be created and granted sudo permissions."
@@ -291,7 +302,8 @@ confirm_with_user() {
 
     print_status "The secondary disk option was '${AUTO_SECOND_DISK}', the selection method was '${SECOND_DISK_METHOD}', and the selected main disk is '${SELECTED_SECOND_DISK}'."
 
-    if [[ ${AUTO_ENCRYPT_DISKS} == 1 ]]; then
+    if [[ ${AUTO_ENCRYPT_DISKS} == 1 ]]
+    then
       print_status "The disks will be encrypted."
     else
       print_status "The disks will NOT be encrypted."
@@ -371,13 +383,17 @@ print_title() {
 }
 
 print_title_info() {
+  local T_COLS
   T_COLS=$(tput cols)
-  echo -e "${BOLD}$1${RESET}\n" | fold -sw $((T_COLS - 10)) | sed 's/^/\t/'
+  T_COLS=$((T_COLS - 10))
+  echo -e "${BOLD}$1${RESET}\n" | fold -sw "${T_COLS}" | sed 's/^/\t/'
   echo -e "TITLE: ${1}" >> "${LOG}"
 }
 
 print_line() {
-  printf "%$(tput cols)s\n" | tr ' ' '-'
+  local T_COLS
+  T_COLS=$(tput cols)
+  printf "%${T_COLS}s\n" | tr ' ' '-'
   echo -e "------" >> "${LOG}"
 }
 
@@ -388,14 +404,16 @@ blank_line() {
 print_status() {
   local T_COLS
   T_COLS=$(tput cols)
-  echo -e "$1${RESET}" | fold -sw $((T_COLS - 1))
+  T_COLS=$((T_COLS - 1))
+  echo -e "$1${RESET}" | fold -sw "${T_COLS}"
   echo -e "STATUS: ${1}" >> "${LOG}"
 }
 
 print_info() {
   local T_COLS
   T_COLS=$(tput cols)
-  echo -e "${BOLD}$1${RESET}" | fold -sw $((T_COLS - 1))
+  T_COLS=$((T_COLS - 1))
+  echo -e "${BOLD}$1${RESET}" | fold -sw "${T_COLS}"
   echo -e "INFO: ${1}" >> "${LOG}"
 }
 
@@ -403,7 +421,8 @@ print_warning() {
   local YELLOW="\033[33m"
   local T_COLS
   T_COLS=$(tput cols)
-  echo -e "${YELLOW}$1${RESET}" | fold -sw $((T_COLS - 1))
+  T_COLS=$((T_COLS - 1))
+  echo -e "${YELLOW}$1${RESET}" | fold -sw "${T_COLS}"
   echo -e "WARN: ${1}" >> "${LOG}"
 }
 
@@ -411,7 +430,8 @@ print_success() {
   local GREEN="\033[32m"
   local T_COLS
   T_COLS=$(tput cols)
-  echo -e "${GREEN}$1${RESET}" | fold -sw $((T_COLS - 1))
+  T_COLS=$((T_COLS - 1))
+  echo -e "${GREEN}$1${RESET}" | fold -sw "${T_COLS}"
   echo -e "SUCCESS: ${1}" >> "${LOG}"
 }
 
@@ -424,7 +444,8 @@ error_msg() {
   local RED="\033[31m"
   local T_COLS
   T_COLS=$(tput cols)
-  echo -e "${RED}$1${RESET}\n" | fold -sw $((T_COLS - 1))
+  T_COLS=$((T_COLS - 1))
+  echo -e "${RED}$1${RESET}\n" | fold -sw "${T_COLS}"
   echo -e "ERROR: ${1}" >> "${LOG}"
   exit 1
 }
@@ -448,9 +469,26 @@ setup_installer_environment() {
   setfont "Lat15-Terminus${CONSOLE_FONT_SIZE}"
 }
 
+get_exit_code() {
+  # We first disable errexit in the current shell
+  set +e
+  (
+    # Then we set it again inside a subshell
+    set -e;
+    # ...and run the function
+    "$@"
+  )
+  EXIT_CODE=$?
+  # And finally turn errexit back on in the current shell
+  set -e
+}
+
 contains_element() {
   #check if an element exist in a string
-  for e in "${@:2}"; do [[ ${e} == "$1" ]] && break; done
+  for e in "${@:2}"
+  do
+    [[ ${e} == "$1" ]] && break
+  done
 }
 
 chroot_install() {
@@ -470,7 +508,10 @@ package_exists() {
 check_root() {
   print_info "Checking root permissions..."
 
-  if [[ "$(id -u)" != "0" ]]; then
+  local user_id
+  user_id=$(id -u)
+  if [[ "${user_id}" != "0" ]]
+  then
     error_msg "ERROR! You must execute the script as the 'root' user."
   fi
 }
@@ -479,7 +520,8 @@ check_linux_distro() {
   print_info "Checking installer distribution..."
   write_log "Installer distro detected: ${INSTALLER_DISTRO}"
 
-  if [[ ${INSTALLER_DISTRO} != "debian" && ${INSTALLER_DISTRO} != "ubuntu" ]]; then
+  if [[ ${INSTALLER_DISTRO} != "debian" && ${INSTALLER_DISTRO} != "ubuntu" ]]
+  then
     error_msg "ERROR! You must execute the script on a Debian or Ubuntu Server Live Image."
   fi
 }
@@ -487,16 +529,20 @@ check_linux_distro() {
 detect_if_eufi() {
   print_info "Detecting UEFI..."
 
-  if [[ "$(cat /sys/class/dmi/id/sys_vendor)" == 'Apple Inc.' ]] || [[ "$(cat /sys/class/dmi/id/sys_vendor)" == 'Apple Computer, Inc.' ]]; then
+  local vendor
+  vendor=$(cat /sys/class/dmi/id/sys_vendor)
+  if [[ "${vendor}" == 'Apple Inc.' ]] || [[ "${vendor}" == 'Apple Computer, Inc.' ]]
+  then
     modprobe -r -q efivars || true # if MAC
   else
     modprobe -q efivarfs # all others
   fi
 
-  if [[ -d "/sys/firmware/efi/" ]]; then
+  if [[ -d "/sys/firmware/efi/" ]]
+  then
     ## Mount efivarfs if it is not already mounted
-    # shellcheck disable=SC2143
-    if [[ -z $(mount | grep /sys/firmware/efi/efivars) ]]; then
+    if mount | grep -q /sys/firmware/efi/efivars
+    then
       mount -t efivarfs efivarfs /sys/firmware/efi/efivars
     fi
     UEFI=1
@@ -509,10 +555,12 @@ check_network_connection() {
   print_info "Checking network connectivity..."
 
   # Check localhost first (if network stack is up at all)
-  if ping -q -w 3 -c 2 localhost &> /dev/null; then
+  if ping -q -w 3 -c 2 localhost &> /dev/null
+  then
     # Test the gateway
     gateway_ip=$(ip r | grep default | awk 'NR==1 {print $3}')
-    if ping -q -w 3 -c 2 "${gateway_ip}" &> /dev/null; then
+    if ping -q -w 3 -c 2 "${gateway_ip}" &> /dev/null
+    then
       # Should we also ping the install mirror?
       print_info "Connection found."
     else
@@ -544,7 +592,8 @@ install_prereqs() {
 }
 
 install_debian_prereqs() {
-  if [[ ${INSTALLER_DISTRO} == "debian" ]]; then
+  if [[ ${INSTALLER_DISTRO} == "debian" ]]
+  then
     print_status "    Installing Debian prerequisites"
 
     DEBIAN_FRONTEND=noninteractive apt-get -y -q install console-data
@@ -552,7 +601,8 @@ install_debian_prereqs() {
 }
 
 install_ubuntu_prereqs() {
-  if [[ ${INSTALLER_DISTRO} == "ubuntu" ]]; then
+  if [[ ${INSTALLER_DISTRO} == "ubuntu" ]]
+  then
     print_status "    Installing Ubuntu prerequisites"
 
     write_log "No Ubuntu specific prereqs at this time."
@@ -573,9 +623,11 @@ normalize_variable_boolean() {
   local input
   local output
   input=${!1}
-  if [[ "${input}" == "yes" || "${input}" == "true" || "${input}" == "y" || "${input}" == "t" || "${input}" == "1" ]]; then
+  if [[ "${input}" == "yes" || "${input}" == "true" || "${input}" == "y" || "${input}" == "t" || "${input}" == "1" ]]
+  then
     output="1"
-  elif [[ "${input}" == "no" || "${input}" == "false" || "${input}" == "n" || "${input}" == "f" || "${input}" == "0" ]]; then
+  elif [[ "${input}" == "no" || "${input}" == "false" || "${input}" == "n" || "${input}" == "f" || "${input}" == "0" ]]
+  then
     output="0"
   else
     echo "ERROR!!! Invalid option."
@@ -607,14 +659,18 @@ normalize_parameters() {
   normalize_variable_boolean "AUTO_CONFIRM_SETTINGS"
   normalize_variable_boolean "AUTO_REBOOT"
 
-  if [[ "${AUTO_DISK_PWD}" == "" ]]; then
+  if [[ "${AUTO_DISK_PWD}" == "" ]]
+  then
     AUTO_DISK_PWD="file"
   fi
 }
 
 verify_install_os() {
   print_info "Verifying Install OS"
-  if ! contains_element "${AUTO_INSTALL_OS}" "${SUPPORTED_OSES[@]}"; then
+  EXIT_CODE=0
+  get_exit_code contains_element "${AUTO_INSTALL_OS}" "${SUPPORTED_OSES[@]}"
+  if [[ ! ${EXIT_CODE} -eq 0 ]]
+  then
     error_msg "Invalid OS to install: '${AUTO_INSTALL_OS}'"
   fi
 }
@@ -625,18 +681,25 @@ verify_kernel_version() {
   case "${AUTO_INSTALL_OS}" in
     debian)
       options=('default' 'backport')
-      if ! contains_element "${AUTO_KERNEL_VERSION}" "${options[@]}"; then
+      EXIT_CODE=0
+      get_exit_code contains_element "${AUTO_KERNEL_VERSION}" "${options[@]}"
+      if [[ ! ${EXIT_CODE} -eq 0 ]]
+      then
         error_msg "Invalid Debian kernel version to install: '${AUTO_KERNEL_VERSION}'"
       fi
       ;;
 
     ubuntu)
       options=('default' 'hwe' 'hwe-edge' 'hwe_edge')
-      if ! contains_element "${AUTO_KERNEL_VERSION}" "${options[@]}"; then
+      EXIT_CODE=0
+      get_exit_code contains_element "${AUTO_KERNEL_VERSION}" "${options[@]}"
+      if [[ ! ${EXIT_CODE} -eq 0 ]]
+      then
         error_msg "Invalid Ubuntu kernel version to install: '${AUTO_KERNEL_VERSION}'"
       fi
       # Normalize the two edge options
-      if [[ "${AUTO_KERNEL_VERSION}" == "hwe_edge" ]]; then
+      if [[ "${AUTO_KERNEL_VERSION}" == "hwe_edge" ]]
+      then
         AUTO_KERNEL_VERSION="hwe-edge"
       fi
       ;;
@@ -649,7 +712,8 @@ verify_kernel_version() {
 
 verify_user_configuration() {
   # If the root user is disabled, we need to force the normal user to be created
-  if [[ ${AUTO_ROOT_DISABLED} == 1 ]]; then
+  if [[ ${AUTO_ROOT_DISABLED} == 1 ]]
+  then
     AUTO_CREATE_USER=1
   fi
 }
@@ -657,7 +721,8 @@ verify_user_configuration() {
 verify_mount_point() {
   print_info "Verifying mount point"
   # All we need is that /mnt is a mountpoint
-  if [[ "$(mount | grep -c ' /mnt ')" == 0 ]]; then
+  if mount | grep -q -c ' /mnt '
+  then
     error_msg "Bypass of automatic partitioning has been selected but the mount point (/mnt) for the target machine is not mounted.  To skip automatic partitioning, you first must perform the partitioning manually or by script and ensure that the inteded /root and all sub-paths desired are mounted at /mnt."
   fi
 }
@@ -666,12 +731,17 @@ verify_disk_input() {
   local input
   input=${!1}
   shift
-  if echo "${input}" | grep -q '^/dev/'; then
-    if ! lsblk -ndpl --output NAME --include "${BLOCK_DISKS}" | grep -q "${input}"; then
+  if echo "${input}" | grep -q '^/dev/'
+  then
+    if ! lsblk -ndpl --output NAME --include "${BLOCK_DISKS}" | grep -q "${input}"
+    then
       echo "Invalid device selection option: '${input}'"
     fi
   else
-    if ! contains_element "${input}" "$@"; then
+    EXIT_CODE=0
+    get_exit_code contains_element "${input}" "$@"
+    if [[ ! ${EXIT_CODE} -eq 0 ]]
+    then
       echo "Invalid disk selection option: '${input}'"
       exit 1
     fi
@@ -680,10 +750,12 @@ verify_disk_input() {
 
 verify_disk_inputs() {
   print_info "Verifying disk inputs"
-  if [[ "${AUTO_SKIP_PARTITIONING}" == 1 ]]; then
+  if [[ "${AUTO_SKIP_PARTITIONING}" == 1 ]]
+  then
     verify_mount_point
 
-    if ! echo "${AUTO_MAIN_DISK}" | grep -q '^/dev/'; then
+    if ! echo "${AUTO_MAIN_DISK}" | grep -q '^/dev/'
+    then
       error_msg "When skipping automatic partitioning, a device path (like /dev/sda) MUST be passed into AUTO_MAIN_DISK, value received: '${AUTO_MAIN_DISK}'"
     fi
   else
@@ -697,16 +769,19 @@ parse_main_disk() {
 
   local ventoy_disk
   ventoy_disk=$(lsblk -np -o PKNAME,LABEL | grep -i "ventoy" | cut -d' ' -f 1 || true)
-  if [ -z "${ventoy_disk}" ]; then
+  if [[ -z "${ventoy_disk}" ]]
+  then
     ventoy_disk="/zzz/zzz"
   fi
 
-  if echo "${AUTO_MAIN_DISK}" | grep -q '^/dev/'; then
+  if echo "${AUTO_MAIN_DISK}" | grep -q '^/dev/'
+  then
     # We have already verified the disk prior, so need need to do anything else
     MAIN_DISK_METHOD="direct"
     SELECTED_MAIN_DISK=${AUTO_MAIN_DISK}
   else
-    if [[ "${AUTO_SKIP_PARTITIONING}" == 1 ]]; then
+    if [[ "${AUTO_SKIP_PARTITIONING}" == 1 ]]
+    then
       # This should never happen, but here just in case
       error_msg "An error in configuration regarding partition has been found. Exiting."
     fi
@@ -730,11 +805,13 @@ parse_main_disk() {
   fi
 
   # One more validation if it is a valid disk/device locator
-  if [[ ! -b "${SELECTED_MAIN_DISK}" ]]; then
+  if [[ ! -b "${SELECTED_MAIN_DISK}" ]]
+  then
     error_msg "ERROR! Invalid main disk selected '${SELECTED_MAIN_DISK}'."
   fi
 
-  if [[ "${SELECTED_MAIN_DISK}" == "${ventoy_disk}" ]]; then
+  if [[ "${SELECTED_MAIN_DISK}" == "${ventoy_disk}" ]]
+  then
     error_msg "ERROR! Invalid main disk selected (ventoy) '${SELECTED_MAIN_DISK}'."
   fi
 
@@ -751,12 +828,14 @@ parse_second_disk() {
 
   local ventoy_disk
   ventoy_disk=$(lsblk -np -o PKNAME,LABEL | grep -i "ventoy" | cut -d' ' -f 1 || true)
-  if [ -z "$ventoy_disk"]; then
+  if [[ -z ${ventoy_disk} ]]
+  then
     ventoy_disk="/zzz/zzz"
   fi
 
   write_log "checking for second disk"
-  if [[ "${AUTO_SKIP_PARTITIONING}" == 1 || ${#devices_list[@]} == 0 || "${SELECTED_MAIN_DISK}" == "ignore" ]]; then
+  if [[ "${AUTO_SKIP_PARTITIONING}" == 1 || ${#devices_list[@]} == 0 || "${SELECTED_MAIN_DISK}" == "ignore" ]]
+  then
     # There is only 1 disk in the system or the user has chosen to ignore the main disk (bypassing partitioning), so regardless of what they asked for on second disk it should be ignored
     SECOND_DISK_METHOD="forced"
     SELECTED_SECOND_DISK="ignore"
@@ -797,16 +876,19 @@ parse_second_disk() {
   esac
 
   # One more validation if it is a valid disk/device locator
-  if [[ "${SELECTED_SECOND_DISK}" != "ignore" && ! -b "${SELECTED_SECOND_DISK}" ]]; then
+  if [[ "${SELECTED_SECOND_DISK}" != "ignore" && ! -b "${SELECTED_SECOND_DISK}" ]]
+  then
     error_msg "ERROR! Invalid second disk selected '${SELECTED_SECOND_DISK}'."
   fi
 
   # Verify it is not the same as the main disk
-  if [[ "${SELECTED_SECOND_DISK}" == "${SELECTED_MAIN_DISK}" ]]; then
+  if [[ "${SELECTED_SECOND_DISK}" == "${SELECTED_MAIN_DISK}" ]]
+  then
     error_msg "ERROR! Main disk and second disk can not be the same disk."
   fi
 
-  if [[ "${SELECTED_SECOND_DISK}" == "${ventoy_disk}" ]]; then
+  if [[ "${SELECTED_SECOND_DISK}" == "${ventoy_disk}" ]]
+  then
     error_msg "ERROR! Invalid second disk selected (ventoy) '${SELECTED_MAIN_DISK}'."
   fi
 
@@ -826,7 +908,8 @@ unmount_partitions() {
   mapfile -t mounted_partitions < <(lsblk --output MOUNTPOINT | grep "^/mnt" | sort -r)
 
   swapoff -a
-  for i in "${mounted_partitions[@]}"; do
+  for i in "${mounted_partitions[@]}"
+  do
     umount "${i}"
   done
 }
@@ -838,18 +921,27 @@ wipe_disks() {
   wipefs --all --force "${SELECTED_MAIN_DISK}*" 2>/dev/null || true
   wipefs --all --force "${SELECTED_MAIN_DISK}" || true
 
+  local sector_count
+  sector_count=$(blockdev --getsz "${SELECTED_MAIN_DISK}")
+  sector_count=$(${sector_count} - 100)
+
   dd if=/dev/zero of="${SELECTED_MAIN_DISK}" bs=512 count=100 conv=notrunc
-  dd if=/dev/zero of="${SELECTED_MAIN_DISK}" bs=512 seek=$(( $(blockdev --getsz "${SELECTED_MAIN_DISK}") - 100 )) count=100 conv=notrunc
+  dd if=/dev/zero of="${SELECTED_MAIN_DISK}" bs=512 seek="${sector_count}" count=100 conv=notrunc
 
   partprobe "${SELECTED_MAIN_DISK}" 2>/dev/null || true
 
-  if [[ ${SELECTED_SECOND_DISK} != "ignore" ]]; then
+  if [[ ${SELECTED_SECOND_DISK} != "ignore" ]]
+  then
     print_info "    Wiping second disk partitions"
     wipefs --all --force "${SELECTED_SECOND_DISK}*" 2>/dev/null || true
     wipefs --all --force "${SELECTED_SECOND_DISK}" || true
 
+    local second_sector_count
+    second_sector_count=$(blockdev --getsz "${SELECTED_SECOND_DISK}")
+    second_sector_count=$(${second_sector_count} - 100)
+
     dd if=/dev/zero of="${SELECTED_SECOND_DISK}" bs=512 count=100 conv=notrunc
-    dd if=/dev/zero of="${SELECTED_SECOND_DISK}" bs=512 seek=$(( $(blockdev --getsz "${SELECTED_SECOND_DISK}") - 100 )) count=100 conv=notrunc
+    dd if=/dev/zero of="${SELECTED_SECOND_DISK}" bs=512 seek="${second_sector_count}" count=100 conv=notrunc
 
     partprobe "${SELECTED_SECOND_DISK}" 2>/dev/null || true
   fi
@@ -865,7 +957,8 @@ create_main_partitions() {
   # the third partition (such as /dev/sda3) will ALWAYS be the main data partition.
 
   print_status "    Boot partitions"
-  if [[ ${UEFI} == 1 ]]; then
+  if [[ ${UEFI} == 1 ]]
+  then
     # EFI partition (512mb)
     parted --script -a optimal "${SELECTED_MAIN_DISK}" mkpart "esp" fat32 0% 512MB
     parted --script -a optimal "${SELECTED_MAIN_DISK}" set 1 esp on
@@ -890,7 +983,8 @@ create_main_partitions() {
 }
 
 create_secondary_partitions() {
-  if [[ ${SELECTED_SECOND_DISK} != "ignore" ]]; then
+  if [[ ${SELECTED_SECOND_DISK} != "ignore" ]]
+  then
     print_info "Creating secondary disk partitions"
 
     print_status "    Creating partition table"
@@ -898,7 +992,8 @@ create_secondary_partitions() {
 
     print_status "    Secondary Partition"
     parted --script -a optimal "${SELECTED_SECOND_DISK}" mkpart "data" xfs 0% 100%
-    if [[ ${AUTO_ENCRYPT_DISKS} == 0 ]]; then
+    if [[ ${AUTO_ENCRYPT_DISKS} == 0 ]]
+    then
       parted --script -a optimal "${SELECTED_SECOND_DISK}" set 1 lvm on
     fi
 
@@ -915,7 +1010,8 @@ query_disk_partitions() {
 
   MAIN_DISK_THIRD_PART=$(lsblk -lnp --output PATH,TYPE "${SELECTED_MAIN_DISK}" | grep "part" | sed -n '3p' | cut -d' ' -f 1)
 
-  if [[ ${SELECTED_SECOND_DISK} != "ignore" ]]; then
+  if [[ ${SELECTED_SECOND_DISK} != "ignore" ]]
+  then
     SECOND_DISK_FIRST_PART=$(lsblk -lnp --output PATH,TYPE "${SELECTED_SECOND_DISK}" | grep "part" | sed -n '1p' | cut -d' ' -f 1)
   else
     SECOND_DISK_FIRST_PART="/zzz/zzz"
@@ -926,7 +1022,8 @@ setup_encryption() {
   ENCRYPTION_FILE=""
   SECONDARY_FILE=""
 
-  if [[ ${AUTO_ENCRYPT_DISKS} == 1 ]]; then
+  if [[ ${AUTO_ENCRYPT_DISKS} == 1 ]]
+  then
     print_info "Setting up encryption"
 
     case "${AUTO_DISK_PWD}" in
@@ -944,7 +1041,8 @@ setup_encryption() {
     esac
   fi
 
-  if [[ ${SELECTED_SECOND_DISK} != "ignore" ]]; then
+  if [[ ${SELECTED_SECOND_DISK} != "ignore" ]]
+  then
     print_status "    Generating keyfile for second disk"
     SECONDARY_FILE=$(mktemp)
     openssl genrsa -out "${SECONDARY_FILE}" 4096
@@ -994,11 +1092,13 @@ encrypt_main_passphrase() {
 }
 
 setup_lvm() {
-  if [[ ${SELECTED_SECOND_DISK} != "ignore" ]]; then
+  if [[ ${SELECTED_SECOND_DISK} != "ignore" ]]
+  then
     print_info "Setting up LVM"
 
     local pv_volume
-    if [[ ${AUTO_ENCRYPT_DISKS} == 1 ]]; then
+    if [[ ${AUTO_ENCRYPT_DISKS} == 1 ]]
+    then
       pv_volume="/dev/mapper/cryptdata"
     else
       pv_volume="${SECOND_DISK_FIRST_PART}"
@@ -1007,7 +1107,8 @@ setup_lvm() {
     pvcreate "${pv_volume}"
     vgcreate "vg_data" "${pv_volume}"
 
-    if [[ "${AUTO_USE_DATA_FOLDER}" == 1 ]]; then
+    if [[ "${AUTO_USE_DATA_FOLDER}" == 1 ]]
+    then
       lvcreate -l 80%VG "vg_data" -n lv_home
       lvcreate -l 10%VG "vg_data" -n lv_data
     else
@@ -1019,7 +1120,8 @@ setup_lvm() {
 format_partitions() {
   print_info "Formatting partitions"
 
-  if [[ ${UEFI} == 1 ]]; then
+  if [[ ${UEFI} == 1 ]]
+  then
     # Format the EFI partition
     mkfs.vfat -n EFI "${MAIN_DISK_FIRST_PART}"
   fi
@@ -1029,7 +1131,8 @@ format_partitions() {
 
   # Now root...
   local root_volume
-  if [[ ${AUTO_ENCRYPT_DISKS} == 1 ]]; then
+  if [[ ${AUTO_ENCRYPT_DISKS} == 1 ]]
+  then
     root_volume="/dev/mapper/cryptroot"
   else
     root_volume="${MAIN_DISK_THIRD_PART}"
@@ -1037,9 +1140,11 @@ format_partitions() {
 
   mkfs.ext4 "${root_volume}"
 
-  if [[ ${SELECTED_SECOND_DISK} != "ignore" ]]; then
+  if [[ ${SELECTED_SECOND_DISK} != "ignore" ]]
+  then
     mkfs.xfs "/dev/mapper/vg_data-lv_home"
-    if [[ "${AUTO_USE_DATA_FOLDER}" == 1 ]]; then
+    if [[ "${AUTO_USE_DATA_FOLDER}" == 1 ]]
+    then
       mkfs.xfs "/dev/mapper/vg_data-lv_data"
     fi
   fi
@@ -1050,7 +1155,8 @@ mount_partitions() {
 
   # First root
   local root_volume
-  if [[ ${AUTO_ENCRYPT_DISKS} == 1 ]]; then
+  if [[ ${AUTO_ENCRYPT_DISKS} == 1 ]]
+  then
     root_volume="/dev/mapper/cryptroot"
   else
     root_volume="${MAIN_DISK_THIRD_PART}"
@@ -1061,22 +1167,26 @@ mount_partitions() {
   mkdir /mnt/boot
   mount -t ext4 "${MAIN_DISK_SECOND_PART}" /mnt/boot
 
-  if [[ ${UEFI} == 1 ]]; then
+  if [[ ${UEFI} == 1 ]]
+  then
     # And EFI
     mkdir /mnt/boot/efi
     mount -t vfat "${MAIN_DISK_FIRST_PART}" /mnt/boot/efi
   fi
 
-  if [[ ${SELECTED_SECOND_DISK} != "ignore" ]]; then
+  if [[ ${SELECTED_SECOND_DISK} != "ignore" ]]
+  then
     mkdir /mnt/home
     mount -t xfs "/dev/mapper/vg_data-lv_home" /mnt/home
 
-    if [[ "${AUTO_USE_DATA_FOLDER}" == 1 ]]; then
+    if [[ "${AUTO_USE_DATA_FOLDER}" == 1 ]]
+    then
       mkdir /mnt/data
       mount -t xfs "/dev/mapper/vg_data-lv_data" /mnt/data
     fi
   else
-    if [[ "${AUTO_USE_DATA_FOLDER}" == 1 ]]; then
+    if [[ "${AUTO_USE_DATA_FOLDER}" == 1 ]]
+    then
       # Just make a data directory on the root
       mkdir /mnt/data
     fi
@@ -1129,11 +1239,18 @@ install_base_system_debian() {
 
   # Kernel & Firmware
   local kernel_to_install="default"
-  if [[ "${AUTO_KERNEL_VERSION}" == "backport" ]]; then
+  if [[ "${AUTO_KERNEL_VERSION}" == "backport" ]]
+  then
     local dont_support_backports=("sid" "unstable" "rc-buggy" "experimental")
-    if ! contains_element "${AUTO_INSTALL_EDITION}" "${dont_support_backports[@]}"; then
+    EXIT_CODE=0
+    get_exit_code contains_element "${AUTO_INSTALL_EDITION}" "${dont_support_backports[@]}"
+    if [[ ! ${EXIT_CODE} -eq 0 ]]
+    then
       # Check to see the package exists in backports, if not we'll just install the default kernel
-      if package_exists "linux-image-${DPKG_ARCH}/${edition}-backports"; then
+      local exists
+      exists=$(package_exists "linux-image-${DPKG_ARCH}/${edition}-backports")
+      if ${exists}
+      then
         kernel_to_install="backport"
       else
         write_log "Backport kernel was requested, but no backport kernel found.  Falling back to default kernel."
@@ -1182,18 +1299,28 @@ install_base_system_ubuntu() {
   local release_ver
   release_ver=$(arch-chroot /mnt lsb_release -r -s)
 
+  local hwe_edge_exists
+  local hwe_exists
+  hwe_edge_exists=$(package_exists "linux-generic-hwe-${release_ver}-edge")
+  hwe_exists=$(package_exists "linux-generic-hwe-${release_ver}")
+
   local kernel_to_install="default"
-  if [[ "${AUTO_KERNEL_VERSION}" == "hwe-edge" ]]; then
-    if package_exists "linux-generic-hwe-${release_ver}-edge"; then
+  if [[ "${AUTO_KERNEL_VERSION}" == "hwe-edge" ]]
+  then
+    if ${hwe_edge_exists}
+    then
       kernel_to_install="hwe-edge"
-    elif package_exists "linux-generic-hwe-${release_ver}"; then
+    elif ${hwe_exists}
+    then
       kernel_to_install="hwe"
       write_log "The hwe-edge kernel was requested, but the package was not found.  Found a standard hwe kernel instead and choosing that for install."
     else
       write_log "The hwe-edge kernel was requested, but no hwe packages were found.  Falling back to the default kernel."
     fi
-  elif [[ "${AUTO_KERNEL_VERSION}" == "hwe" ]]; then
-    if package_exists "linux-generic-hwe-${release_ver}"; then
+  elif [[ "${AUTO_KERNEL_VERSION}" == "hwe" ]]
+  then
+    if ${hwe_exists}
+    then
       kernel_to_install="hwe"
     else
       write_log "The hwe kernel was requested, but no hwe package was found.  Falling back to the default kernel."
@@ -1228,7 +1355,8 @@ install_bootloader() {
 
   # TODO: Suport for ARM UEIF?
 
-  if [[ ${UEFI} == 1 ]]; then
+  if [[ ${UEFI} == 1 ]]
+  then
     chroot_install os-prober efibootmgr grub-efi-amd64 grub-efi-amd64-signed shim-signed shim-helpers-amd64-signed mokutil
 
     arch-chroot /mnt grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=debian --recheck --no-nvram "${SELECTED_MAIN_DISK}"
@@ -1275,7 +1403,10 @@ configure_apt_debian() {
 
   # Install backports source
   local dont_support_backports=("sid" "unstable" "rc-buggy" "experimental")
-  if ! contains_element "${AUTO_INSTALL_EDITION}" "${dont_support_backports[@]}"; then
+  EXIT_CODE=0
+  get_exit_code contains_element "${AUTO_INSTALL_EDITION}" "${dont_support_backports[@]}"
+  if [[ ! ${EXIT_CODE} -eq 0 ]]
+  then
     # Can't use branches like "stable" or "oldstable" must convert to the codename like "bullseye" or "bookworm"
     local edition
     edition=$(arch-chroot /mnt lsb_release -c -s)
@@ -1319,13 +1450,15 @@ configure_keymap() {
 }
 
 configure_encryption() {
-  if [[ ${AUTO_ENCRYPT_DISKS} == 1 ]]; then
+  if [[ ${AUTO_ENCRYPT_DISKS} == 1 ]]
+  then
     print_info "Configuring encryption"
 
     mkdir -p /mnt/etc/keys
 
     local main_keyfile="none"
-    if [[ ${ENCRYPTION_FILE} != "" ]]; then
+    if [[ ${ENCRYPTION_FILE} != "" ]]
+    then
       main_keyfile="/mnt/boot/root.key"
       mv "${ENCRYPTION_FILE}" "${main_keyfile}"
       chmod 0400 "${main_keyfile}"
@@ -1339,7 +1472,8 @@ configure_encryption() {
 
     fix_systemd_encryption_bug
 
-    if [[ ${SELECTED_SECOND_DISK} != "ignore" && ${SECONDARY_FILE} != "" ]]; then
+    if [[ ${SELECTED_SECOND_DISK} != "ignore" && ${SECONDARY_FILE} != "" ]]
+    then
       local second_key="/etc/keys/secondary.key"
       mv "${SECONDARY_FILE}" "/mnt${second_key}"
       chmod 0400 "/mnt${second_key}"
@@ -1380,7 +1514,8 @@ EOF
 
 # Run the generator
 /lib/systemd/system-generators/systemd-cryptsetup-generator
-if [[ ! -f "/tmp/systemd-cryptsetup@cryptroot.service" ]]; then
+if [[ ! -f "/tmp/systemd-cryptsetup@cryptroot.service" ]]
+then
   exit 1
 fi
 
@@ -1414,20 +1549,23 @@ configure_hostname() {
 
   local hostname
   hostname=${AUTO_HOSTNAME}
-  if [[ ${hostname} == "" ]]; then
+  if [[ ${hostname} == "" ]]
+  then
     hostname=${AUTO_INSTALL_OS}
   fi
 
   echo "${AUTO_HOSTNAME}" > /mnt/etc/hostname
 
   local the_line
-  if [[ ${AUTO_DOMAIN} == "" ]]; then
+  if [[ ${AUTO_DOMAIN} == "" ]]
+  then
     the_line="127.0.1.1 ${AUTO_HOSTNAME}"
   else
     the_line="127.0.1.1 ${AUTO_HOSTNAME}.${AUTO_DOMAIN} ${AUTO_HOSTNAME}"
   fi
 
-  if grep -q '^127.0.1.1[[:blank:]]' /mnt/etc/hosts; then
+  if grep -q '^127.0.1.1[[:blank:]]' /mnt/etc/hosts
+  then
     # Update the line
     sed -i "/^127.0.1.1[[:blank:]]/ c\\${the_line}" /mnt/etc/hosts
   else
@@ -1481,7 +1619,8 @@ configure_swap() {
   size=$(printf "%0.f\n" "${avail_ram_sqrt}")
 
   # Make sure the minimum is 2gb
-  if [[ "${size}" -lt "1" ]]; then
+  if [[ "${size}" -lt "1" ]]
+  then
     size="2"
   fi
 
@@ -1512,12 +1651,16 @@ EOF
 }
 
 configure_virtualization() {
-  if [[ $(systemd-detect-virt) == "oracle" && "${UEFI}" = 1 && "${AUTO_INSTALL_OS}" == "debian" ]]; then
+  local detected_virt
+  detected_virt=$(systemd-detect-virt)
+  if [[ ${detected_virt} == "oracle" && "${UEFI}" = 1 && "${AUTO_INSTALL_OS}" == "debian" ]]
+  then
     # On virtualbox we MUST configure this or the system won't boot correctly.  I am doing the absolute minimum I can here to get things working.  Any other virtualization configurations should be done post bootstrap.
 
     print_info "Setting up Virtualbox EFI"
 
-    if [[ ! -f "/mnt/boot/efi/startup.nsh" ]]; then
+    if [[ ! -f "/mnt/boot/efi/startup.nsh" ]]
+    then
       echo "FS0:" > /mnt/boot/efi/startup.nsh
       echo "\EFI\debian\grubx64.efi" >> /mnt/boot/efi/startup.nsh
     fi
@@ -1553,7 +1696,8 @@ install_applications_common() {
 }
 
 install_applications_debian() {
-  if [[ ${AUTO_INSTALL_OS} == "debian" ]]; then
+  if [[ ${AUTO_INSTALL_OS} == "debian" ]]
+  then
     print_info "Installing Debian specific applications"
 
     chroot_install task-ssh-server task-english firmware-linux
@@ -1561,7 +1705,8 @@ install_applications_debian() {
 }
 
 install_applications_ubuntu() {
-  if [[ ${AUTO_INSTALL_OS} == "ubuntu" ]]; then
+  if [[ ${AUTO_INSTALL_OS} == "ubuntu" ]]
+  then
     print_info "Installing Ubuntu specific applications"
 
     chroot_install openssh-server openssh-client linux-firmware
@@ -1573,7 +1718,8 @@ install_applications_ubuntu() {
 ### START: User Configuration
 
 setup_root() {
-  if [[ ${AUTO_ROOT_DISABLED} == "0" ]]; then
+  if [[ ${AUTO_ROOT_DISABLED} == "0" ]]
+  then
     print_info "Setting up root"
 
     # Unlock the root account
@@ -1582,8 +1728,10 @@ setup_root() {
     local root_pwd
     root_pwd=${AUTO_ROOT_PWD}
     # If they did not pass a password, default it to the install os
-    if [[ "${root_pwd}" == "" ]]; then
-      if [[ ${AUTO_CREATE_USER} == "1" && ${AUTO_USER_PWD} != "" ]]; then
+    if [[ "${root_pwd}" == "" ]]
+    then
+      if [[ ${AUTO_CREATE_USER} == "1" && ${AUTO_USER_PWD} != "" ]]
+      then
         root_pwd=${AUTO_USER_PWD}
       else
         root_pwd=${AUTO_INSTALL_OS}
@@ -1591,23 +1739,28 @@ setup_root() {
     fi
 
     # Check if the password is encrypted
-    if echo "${root_pwd}" | grep -q '^\$[[:digit:]]\$.*$'; then
+    if echo "${root_pwd}" | grep -q '^\$[[:digit:]]\$.*$'
+    then
       # Password is encrypted
       arch-chroot /mnt usermod --password "${root_pwd}" root
     else
       # Password is plaintext
-      arch-chroot /mnt usermod --password "$(echo "${root_pwd}" | openssl passwd -6 -stdin)" root
+      local encrypted
+      encrypted=$(echo "${root_pwd}" | openssl passwd -6 -stdin)
+      arch-chroot /mnt usermod --password "${encrypted}" root
     fi
 
     # If root is the only user, allow login with root through SSH.  Users can of course (and should) change this after initial boot, this just allows a remote connection to start things off.
-    if [[ ${AUTO_CREATE_USER} == "0" ]]; then
+    if [[ ${AUTO_CREATE_USER} == "0" ]]
+    then
       sed -i '/PermitRootLogin[[:blank:]]/ c\PermitRootLogin yes' /mnt/etc/ssh/sshd_config
     fi
   fi
 }
 
 setup_user() {
-  if [[ ${AUTO_CREATE_USER} == "1" ]]; then
+  if [[ ${AUTO_CREATE_USER} == "1" ]]
+  then
     print_info "Setting up user"
 
     local user_name
@@ -1615,22 +1768,27 @@ setup_user() {
     user_name=${AUTO_USERNAME}
     user_pwd=${AUTO_USER_PWD}
     # If they did not pass a username, default it to the install os
-    if [[ "${user_name}" == "" ]]; then
+    if [[ "${user_name}" == "" ]]
+    then
       user_name=${AUTO_INSTALL_OS}
     fi
     # If they did not pass a password, default it to the install os
-    if [[ "${user_pwd}" == "" ]]; then
+    if [[ "${user_pwd}" == "" ]]
+    then
       user_pwd=${AUTO_INSTALL_OS}
     fi
 
     arch-chroot /mnt adduser --quiet --disabled-password --gecos "${user_name}" "${user_name}"
     # Check if the password is encrypted
-    if echo "${user_pwd}" | grep -q '^\$[[:digit:]]\$.*$'; then
+    if echo "${user_pwd}" | grep -q '^\$[[:digit:]]\$.*$'
+    then
       # Password is encrypted
       arch-chroot /mnt usermod --password "${user_pwd}" "${user_name}"
     else
       # Password is plaintext
-      arch-chroot /mnt usermod --password "$(echo "${user_pwd}" | openssl passwd -6 -stdin)" "${user_name}"
+      local encrypted
+      encrypted=$(echo "${user_pwd}" | openssl passwd -6 -stdin)
+      arch-chroot /mnt usermod --password "${encrypted}" "${user_name}"
     fi
 
     # NOTE: I added _ssh as a group because it seems that Debian testing is currently not creating the standard ssh group but instead naming it _ssh, need to investigate further.
@@ -1638,7 +1796,8 @@ setup_user() {
     for groupToAdd in "${groupsToAdd[@]}"
     do
       group_exists=$(arch-chroot /mnt getent group "${groupToAdd}" | wc -l || true)
-      if [ "${group_exists}" -eq 1 ]; then
+      if [[ "${group_exists}" -eq 1 ]]
+      then
         arch-chroot /mnt usermod -a -G "${groupToAdd}" "${user_name}"
       fi
     done
@@ -1664,10 +1823,12 @@ stamp_build() {
   print_info "Stamping build"
 
   local stamp_path="${AUTO_STAMP_FOLDER}"
-  if [[ ${stamp_path} == "" ]]; then
+  if [[ ${stamp_path} == "" ]]
+  then
     stamp_path="/srv"
 
-    if [[ ${AUTO_USE_DATA_FOLDER} == 1 ]]; then
+    if [[ ${AUTO_USE_DATA_FOLDER} == 1 ]]
+    then
       stamp_path="/data"
     fi
   fi
@@ -1676,15 +1837,19 @@ stamp_build() {
   stamp_path="/mnt${stamp_path}"
   mkdir -p "${stamp_path}"
 
-  echo "Build Time: $(date -Is)" | sudo tee "${stamp_path}/install-time.txt"
+  local the_date
+  the_date=$(date -Is)
+  echo "Build Time: ${the_date}" | sudo tee "${stamp_path}/install-time.txt"
 
   cp "${LOG}" "${stamp_path}/install-log.txt"
 
-  if [[ -f "${WORKING_DIR}/install-inputs.txt" ]]; then
+  if [[ -f "${WORKING_DIR}/install-inputs.txt" ]]
+  then
     cp "${WORKING_DIR}/install-inputs.txt" "${stamp_path}/install-inputs.txt"
   fi
 
-  if [[ -f "${WORKING_DIR}/install-inputs.sh" ]]; then
+  if [[ -f "${WORKING_DIR}/install-inputs.sh" ]]
+  then
     cp "${WORKING_DIR}/install-inputs.sh" "${stamp_path}/install-inputs.sh"
     chmod +x "${stamp_path}/install-inputs.sh"
   fi
@@ -1743,7 +1908,8 @@ verify_parameters() {
 }
 
 setup_disks() {
-  if [[ "${AUTO_SKIP_PARTITIONING}" == 1 ]]; then
+  if [[ "${AUTO_SKIP_PARTITIONING}" == 1 ]]
+  then
     # Just bail, nothing to do
     return
   fi
@@ -1824,7 +1990,8 @@ main() {
   # Finished
   wrap_up
 
-  if [[ "${AUTO_REBOOT}" == "1" ]]; then
+  if [[ "${AUTO_REBOOT}" == "1" ]]
+  then
     umount -R /mnt
     systemctl reboot
   fi
