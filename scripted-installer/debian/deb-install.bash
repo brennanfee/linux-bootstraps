@@ -470,6 +470,7 @@ setup_installer_environment() {
 }
 
 get_exit_code() {
+  EXIT_CODE=0
   # We first disable errexit in the current shell
   set +e
   (
@@ -667,7 +668,6 @@ normalize_parameters() {
 
 verify_install_os() {
   print_info "Verifying Install OS"
-  EXIT_CODE=0
   get_exit_code contains_element "${AUTO_INSTALL_OS}" "${SUPPORTED_OSES[@]}"
   if [[ ! ${EXIT_CODE} -eq 0 ]]
   then
@@ -681,7 +681,6 @@ verify_kernel_version() {
   case "${AUTO_INSTALL_OS}" in
     debian)
       options=('default' 'backport')
-      EXIT_CODE=0
       get_exit_code contains_element "${AUTO_KERNEL_VERSION}" "${options[@]}"
       if [[ ! ${EXIT_CODE} -eq 0 ]]
       then
@@ -691,7 +690,6 @@ verify_kernel_version() {
 
     ubuntu)
       options=('default' 'hwe' 'hwe-edge' 'hwe_edge')
-      EXIT_CODE=0
       get_exit_code contains_element "${AUTO_KERNEL_VERSION}" "${options[@]}"
       if [[ ! ${EXIT_CODE} -eq 0 ]]
       then
@@ -738,7 +736,6 @@ verify_disk_input() {
       echo "Invalid device selection option: '${input}'"
     fi
   else
-    EXIT_CODE=0
     get_exit_code contains_element "${input}" "$@"
     if [[ ! ${EXIT_CODE} -eq 0 ]]
     then
@@ -1242,7 +1239,6 @@ install_base_system_debian() {
   if [[ "${AUTO_KERNEL_VERSION}" == "backport" ]]
   then
     local dont_support_backports=("sid" "unstable" "rc-buggy" "experimental")
-    EXIT_CODE=0
     get_exit_code contains_element "${AUTO_INSTALL_EDITION}" "${dont_support_backports[@]}"
     if [[ ! ${EXIT_CODE} -eq 0 ]]
     then
@@ -1353,7 +1349,7 @@ install_base_system_ubuntu() {
 install_bootloader() {
   print_info "Installing bootloader"
 
-  # TODO: Suport for ARM UEIF?
+  # TODO: Suport for ARM UEFI?
 
   if [[ ${UEFI} == 1 ]]
   then
@@ -1403,7 +1399,6 @@ configure_apt_debian() {
 
   # Install backports source
   local dont_support_backports=("sid" "unstable" "rc-buggy" "experimental")
-  EXIT_CODE=0
   get_exit_code contains_element "${AUTO_INSTALL_EDITION}" "${dont_support_backports[@]}"
   if [[ ! ${EXIT_CODE} -eq 0 ]]
   then
