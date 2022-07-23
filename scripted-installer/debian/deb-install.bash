@@ -1621,7 +1621,7 @@ configure_virtualization() {
 
     local boot_imgs
     boot_imgs=$(arch-chroot /mnt efibootmgr)
-    if ! "${boot_imgs}" | grep -i -q '\* debian'
+    if ! echo "${boot_imgs}" | grep -i -q '\* debian'
     then
       efi_disk=$(lsblk -np -o PKNAME,MOUNTPOINT | grep -i "/mnt/boot/efi" | cut -d' ' -f 1)
       efi_device=$(lsblk -np -o PATH,MOUNTPOINT | grep -i "/mnt/boot/efi" | cut -d' ' -f 1)
@@ -1779,16 +1779,16 @@ stamp_build() {
   local stamp_path="${AUTO_STAMP_FOLDER}"
   if [[ ${stamp_path} == "" ]]
   then
-    stamp_path="/srv"
+    stamp_path="srv"
 
     if [[ ${AUTO_USE_DATA_FOLDER} == 1 ]]
     then
-      stamp_path="/data"
+      stamp_path="data"
     fi
   fi
 
   # Prepend the /mnt to it and create it if it doesn't exist
-  stamp_path="/mnt${stamp_path}"
+  stamp_path="/mnt/${stamp_path}"
   mkdir -p "${stamp_path}"
 
   local the_date
@@ -1919,7 +1919,7 @@ wrap_up() {
 
 ### START: The Main Function
 
-main() {
+do_install() {
   export DEBIAN_FRONTEND=noninteractive
   setup_installer_environment
 
@@ -1942,8 +1942,21 @@ main() {
 
   # Finished
   wrap_up
+}
 
-  if [[ "${AUTO_REBOOT}" == "1" ]]
+do_install_debug() {
+  do_install | tee "${WORKING_DIR}/output.log"
+}
+
+main() {
+  if [[ ${IS_DEBUG} -eq 1 ]]
+  then
+    do_install_debug
+  else
+    do_install
+  fi
+
+  if [[ "${AUTO_REBOOT}" -eq 1 && "${IS_DEBUG}" -eq 0 ]]
   then
     umount -R /mnt
     systemctl reboot
