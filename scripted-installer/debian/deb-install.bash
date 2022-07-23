@@ -879,7 +879,7 @@ wipe_disks() {
 
   local sector_count
   sector_count=$(blockdev --getsz "${SELECTED_MAIN_DISK}")
-  sector_count=$(${sector_count} - 100)
+  sector_count=$((sector_count - 100))
 
   dd if=/dev/zero of="${SELECTED_MAIN_DISK}" bs=512 count=100 conv=notrunc
   dd if=/dev/zero of="${SELECTED_MAIN_DISK}" bs=512 seek="${sector_count}" count=100 conv=notrunc
@@ -894,7 +894,7 @@ wipe_disks() {
 
     local second_sector_count
     second_sector_count=$(blockdev --getsz "${SELECTED_SECOND_DISK}")
-    second_sector_count=$(${second_sector_count} - 100)
+    second_sector_count=$((second_sector_count - 100))
 
     dd if=/dev/zero of="${SELECTED_SECOND_DISK}" bs=512 count=100 conv=notrunc
     dd if=/dev/zero of="${SELECTED_SECOND_DISK}" bs=512 seek="${second_sector_count}" count=100 conv=notrunc
