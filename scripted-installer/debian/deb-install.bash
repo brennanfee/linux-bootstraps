@@ -35,7 +35,7 @@ fi
 ### Start: Constants & Global Variables
 
 # Should only be on during testing.  Primarly this turns on the output of passwords.
-IS_DEBUG=${AUTO_IS_DEBUG:=1}
+IS_DEBUG=${AUTO_IS_DEBUG:=0}
 
 # Paths
 WORKING_DIR=$(pwd)
@@ -595,10 +595,10 @@ normalize_variable_boolean() {
   local input
   local output
   input=${!1}
-  if [[ "${input}" == "yes" || "${input}" == "true" || "${input}" == "y" || "${input}" == "t" || "${input}" -eq 1 ]]
+  if [[ "${input}" == "yes" || "${input}" == "true" || "${input}" == "y" || "${input}" == "t" || "${input}" == "1" ]]
   then
     output="1"
-  elif [[ "${input}" == "no" || "${input}" == "false" || "${input}" == "n" || "${input}" == "f" || "${input}" -eq 0 ]]
+  elif [[ "${input}" == "no" || "${input}" == "false" || "${input}" == "n" || "${input}" == "f" || "${input}" == "0" ]]
   then
     output="0"
   else
@@ -1960,7 +1960,7 @@ do_install() {
 main() {
   if [[ ${IS_DEBUG} -eq 1 ]]
   then
-    do_install | tee "${OUTPUT_LOG}"
+    do_install | tee -a "${OUTPUT_LOG}"
   else
     do_install
   fi
