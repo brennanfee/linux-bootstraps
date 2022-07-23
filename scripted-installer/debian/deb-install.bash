@@ -40,10 +40,17 @@ IS_DEBUG=1
 # Paths
 WORKING_DIR=$(pwd)
 LOG="${WORKING_DIR}/install.log"
+OUTPUT_LOG="${WORKING_DIR}/install-output.log"
 [[ -f ${LOG} ]] && rm -f "${LOG}"
+[[ -f ${OUTPUT_LOG} ]] && rm -f "${OUTPUT_LOG}"
 the_date=$(date -Is)
 echo "Start log: ${the_date}" >> "${LOG}"
 echo "------------" >> "${LOG}"
+if [[ ${IS_DEBUG} -eq 1 ]]
+then
+  echo "Start log: ${the_date}" >> "${OUTPUT_LOG}"
+  echo "------------" >> "${OUTPUT_LOG}"
+fi
 unset the_date
 
 # Auto detected flags and variables
@@ -161,30 +168,34 @@ SECONDARY_FILE=""
 
 write_log() {
   echo "LOG: ${1}" >> "${LOG}"
+  if [[ ${IS_DEBUG} -eq 1 ]]
+  then
+    echo "LOG: ${1}" >> "${OUTPUT_LOG}"
+  fi
 }
 
 write_log_and_inputs() {
-  echo "LOG: ${1}" >> "${LOG}"
+  write_log "${1}"
   echo "${1}" >> "${WORKING_DIR}/install-inputs.txt"
 }
 
 write_log_password() {
   if [[ ${IS_DEBUG} -eq 1 ]]
   then
-    echo "LOG: ${1}" >> "${LOG}"
+    write_log "${1}"
   else
     local val
     val=${1//:*/: ******}
-    echo -e "LOG: ${val}" >> "${LOG}"
+    write_log "${val}"
   fi
 }
 
 write_log_blank() {
-  echo "" >> "${LOG}"
+  write_log ""
 }
 
 write_log_spacer() {
-  echo "------" >> "${LOG}"
+  write_log "------"
 }
 
 log_values() {
@@ -333,7 +344,7 @@ print_title() {
   clear
   print_line
   echo -e "# ${BOLD}$1${RESET}"
-  echo -e "SECTION: ${1}" >> "${LOG}"
+  write_log "SECTION: ${1}"
   print_line
   blank_line
 }
@@ -343,18 +354,19 @@ print_title_info() {
   T_COLS=$(tput cols)
   T_COLS=$((T_COLS - 10))
   echo -e "${BOLD}$1${RESET}\n" | fold -sw "${T_COLS}" | sed 's/^/\t/'
-  echo -e "TITLE: ${1}" >> "${LOG}"
+  write_log "TITLE: ${1}"
 }
 
 print_line() {
   local T_COLS
   T_COLS=$(tput cols)
   printf "%${T_COLS}s\n" | tr ' ' '-'
-  echo -e "------" >> "${LOG}"
+  write_log_spacer
 }
 
 blank_line() {
-  echo "" |& tee -a "${LOG}"
+  echo ""
+  write_log_blank
 }
 
 print_status() {
@@ -362,7 +374,7 @@ print_status() {
   T_COLS=$(tput cols)
   T_COLS=$((T_COLS - 1))
   echo -e "$1${RESET}" | fold -sw "${T_COLS}"
-  echo -e "STATUS: ${1}" >> "${LOG}"
+  write_log "STATUS: ${1}"
 }
 
 print_info() {
@@ -370,7 +382,7 @@ print_info() {
   T_COLS=$(tput cols)
   T_COLS=$((T_COLS - 1))
   echo -e "${BOLD}$1${RESET}" | fold -sw "${T_COLS}"
-  echo -e "INFO: ${1}" >> "${LOG}"
+  write_log "INFO: ${1}"
 }
 
 print_warning() {
@@ -380,7 +392,7 @@ print_warning() {
   T_COLS=$(tput cols)
   T_COLS=$((T_COLS - 1))
   echo -e "${YELLOW}$1${RESET}" | fold -sw "${T_COLS}"
-  echo -e "WARN: ${1}" >> "${LOG}"
+  write_log "WARN: ${1}"
 }
 
 print_success() {
@@ -390,7 +402,7 @@ print_success() {
   T_COLS=$(tput cols)
   T_COLS=$((T_COLS - 1))
   echo -e "${GREEN}$1${RESET}" | fold -sw "${T_COLS}"
-  echo -e "SUCCESS: ${1}" >> "${LOG}"
+  write_log "SUCCESS: ${1}"
 }
 
 pause_output() {
@@ -405,7 +417,7 @@ error_msg() {
   T_COLS=$(tput cols)
   T_COLS=$((T_COLS - 1))
   echo -e "${RED}$1${RESET}\n" | fold -sw "${T_COLS}"
-  echo -e "ERROR: ${1}" >> "${LOG}"
+  write_log "ERROR: ${1}"
   exit 1
 }
 
@@ -1797,9 +1809,9 @@ stamp_build() {
 
   cp "${LOG}" "${stamp_path}/install-log.txt"
 
-  if [[ -f "${WORKING_DIR}/install-output.txt" ]]
+  if [[ -f "${OUTPUT_LOG}" ]]
   then
-    cp "${WORKING_DIR}/install-output.txt" "${stamp_path}/install-output.txt"
+    cp "${OUTPUT_LOG}" "${stamp_path}/install-output.txt"
   fi
 
   if [[ -f "${WORKING_DIR}/install-inputs.txt" ]]
@@ -1944,7 +1956,7 @@ do_install() {
 }
 
 do_install_debug() {
-  do_install | tee -i "${WORKING_DIR}/install-output.log"
+  do_install | tee "${OUTPUT_LOG}"
 }
 
 main() {
