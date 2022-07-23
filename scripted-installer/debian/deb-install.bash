@@ -169,7 +169,7 @@ write_log_and_inputs() {
 }
 
 write_log_password() {
-  if [[ ${IS_DEBUG} == "1" ]]
+  if [[ ${IS_DEBUG} -eq 1 ]]
   then
     echo "LOG: ${1}" >> "${LOG}"
   else
@@ -246,12 +246,12 @@ log_values() {
 }
 
 confirm_with_user() {
-  if [[ "${AUTO_CONFIRM_SETTINGS}" == "1" || "${IS_DEBUG}" == "1" ]]
+  if [[ ${AUTO_CONFIRM_SETTINGS} -eq 1 || ${IS_DEBUG} -eq 1 ]]
   then
     print_title "Install Summary"
     print_title_info "Below is a summary of your selections and any detected system information.  If anything is wrong cancel out now with Ctrl-C.  Otherwise press any key to continue installation."
     print_line
-    if [[ ${UEFI} == 1 ]]
+    if [[ ${UEFI} -eq 1 ]]
     then
       print_status "The architecture is ${SYS_ARCH}, dpkg ${DPKG_ARCH}, and UEFI has been found."
     else
@@ -283,14 +283,14 @@ confirm_with_user() {
     print_status "The timezone to use is '${AUTO_TIMEZONE}'."
 
     blank_line
-    if [[ ${AUTO_ROOT_DISABLED} == 1 ]]
+    if [[ ${AUTO_ROOT_DISABLED} -eq 1 ]]
     then
       print_status "The root account will be disabled."
     else
       print_status "The root account will be activated."
     fi
 
-    if [[ ${AUTO_CREATE_USER} == 1 ]]
+    if [[ ${AUTO_CREATE_USER} -eq 1 ]]
     then
       if [[ ${AUTO_USERNAME} == "" ]]
       then
@@ -307,7 +307,7 @@ confirm_with_user() {
 
     print_status "The secondary disk option was '${AUTO_SECOND_DISK}', the selection method was '${SECOND_DISK_METHOD}', and the selected main disk is '${SELECTED_SECOND_DISK}'."
 
-    if [[ ${AUTO_ENCRYPT_DISKS} == 1 ]]
+    if [[ ${AUTO_ENCRYPT_DISKS} -eq 1 ]]
     then
       print_status "The disks will be encrypted."
     else
@@ -583,10 +583,10 @@ normalize_variable_boolean() {
   local input
   local output
   input=${!1}
-  if [[ "${input}" == "yes" || "${input}" == "true" || "${input}" == "y" || "${input}" == "t" || "${input}" == "1" ]]
+  if [[ "${input}" == "yes" || "${input}" == "true" || "${input}" == "y" || "${input}" == "t" || ${input} -eq 1 ]]
   then
     output="1"
-  elif [[ "${input}" == "no" || "${input}" == "false" || "${input}" == "n" || "${input}" == "f" || "${input}" == "0" ]]
+  elif [[ "${input}" == "no" || "${input}" == "false" || "${input}" == "n" || "${input}" == "f" || ${input} -eq 0 ]]
   then
     output="0"
   else
@@ -669,7 +669,7 @@ verify_kernel_version() {
 
 verify_user_configuration() {
   # If the root user is disabled, we need to force the normal user to be created
-  if [[ ${AUTO_ROOT_DISABLED} == 1 ]]
+  if [[ ${AUTO_ROOT_DISABLED} -eq 1 ]]
   then
     AUTO_CREATE_USER=1
   fi
@@ -706,7 +706,7 @@ verify_disk_input() {
 
 verify_disk_inputs() {
   print_info "Verifying disk inputs"
-  if [[ "${AUTO_SKIP_PARTITIONING}" == 1 ]]
+  if [[ ${AUTO_SKIP_PARTITIONING} -eq 1 ]]
   then
     verify_mount_point
 
@@ -736,7 +736,7 @@ parse_main_disk() {
     MAIN_DISK_METHOD="direct"
     SELECTED_MAIN_DISK=${AUTO_MAIN_DISK}
   else
-    if [[ "${AUTO_SKIP_PARTITIONING}" == 1 ]]
+    if [[ ${AUTO_SKIP_PARTITIONING} -eq 1 ]]
     then
       # This should never happen, but here just in case
       error_msg "An error in configuration regarding partition has been found. Exiting."
@@ -790,7 +790,7 @@ parse_second_disk() {
   fi
 
   write_log "checking for second disk"
-  if [[ "${AUTO_SKIP_PARTITIONING}" == 1 || ${#devices_list[@]} == 0 || "${SELECTED_MAIN_DISK}" == "ignore" ]]
+  if [[ ${AUTO_SKIP_PARTITIONING} -eq 1 || ${#devices_list[@]} -eq 0 || "${SELECTED_MAIN_DISK}" == "ignore" ]]
   then
     # There is only 1 disk in the system or the user has chosen to ignore the main disk (bypassing partitioning), so regardless of what they asked for on second disk it should be ignored
     SECOND_DISK_METHOD="forced"
@@ -913,7 +913,7 @@ create_main_partitions() {
   # the third partition (such as /dev/sda3) will ALWAYS be the main data partition.
 
   print_status "    Boot partitions"
-  if [[ ${UEFI} == 1 ]]
+  if [[ ${UEFI} -eq 1 ]]
   then
     # EFI partition (512mb)
     parted --script -a optimal "${SELECTED_MAIN_DISK}" mkpart "esp" fat32 0% 512MB
@@ -948,7 +948,7 @@ create_secondary_partitions() {
 
     print_status "    Secondary Partition"
     parted --script -a optimal "${SELECTED_SECOND_DISK}" mkpart "data" xfs 0% 100%
-    if [[ ${AUTO_ENCRYPT_DISKS} == 0 ]]
+    if [[ ${AUTO_ENCRYPT_DISKS} -eq 0 ]]
     then
       parted --script -a optimal "${SELECTED_SECOND_DISK}" set 1 lvm on
     fi
@@ -978,7 +978,7 @@ setup_encryption() {
   ENCRYPTION_FILE=""
   SECONDARY_FILE=""
 
-  if [[ ${AUTO_ENCRYPT_DISKS} == 1 ]]
+  if [[ ${AUTO_ENCRYPT_DISKS} -eq 1 ]]
   then
     print_info "Setting up encryption"
 
@@ -1053,7 +1053,7 @@ setup_lvm() {
     print_info "Setting up LVM"
 
     local pv_volume
-    if [[ ${AUTO_ENCRYPT_DISKS} == 1 ]]
+    if [[ ${AUTO_ENCRYPT_DISKS} -eq 1 ]]
     then
       pv_volume="/dev/mapper/cryptdata"
     else
@@ -1063,7 +1063,7 @@ setup_lvm() {
     pvcreate "${pv_volume}"
     vgcreate "vg_data" "${pv_volume}"
 
-    if [[ "${AUTO_USE_DATA_FOLDER}" == 1 ]]
+    if [[ ${AUTO_USE_DATA_FOLDER} -eq 1 ]]
     then
       lvcreate -l 80%VG "vg_data" -n lv_home
       lvcreate -l 10%VG "vg_data" -n lv_data
@@ -1076,7 +1076,7 @@ setup_lvm() {
 format_partitions() {
   print_info "Formatting partitions"
 
-  if [[ ${UEFI} == 1 ]]
+  if [[ ${UEFI} -eq 1 ]]
   then
     # Format the EFI partition
     mkfs.vfat -n EFI "${MAIN_DISK_FIRST_PART}"
@@ -1087,7 +1087,7 @@ format_partitions() {
 
   # Now root...
   local root_volume
-  if [[ ${AUTO_ENCRYPT_DISKS} == 1 ]]
+  if [[ ${AUTO_ENCRYPT_DISKS} -eq 1 ]]
   then
     root_volume="/dev/mapper/cryptroot"
   else
@@ -1099,7 +1099,7 @@ format_partitions() {
   if [[ ${SELECTED_SECOND_DISK} != "ignore" ]]
   then
     mkfs.xfs "/dev/mapper/vg_data-lv_home"
-    if [[ "${AUTO_USE_DATA_FOLDER}" == 1 ]]
+    if [[ ${AUTO_USE_DATA_FOLDER} -eq 1 ]]
     then
       mkfs.xfs "/dev/mapper/vg_data-lv_data"
     fi
@@ -1111,7 +1111,7 @@ mount_partitions() {
 
   # First root
   local root_volume
-  if [[ ${AUTO_ENCRYPT_DISKS} == 1 ]]
+  if [[ ${AUTO_ENCRYPT_DISKS} -eq 1 ]]
   then
     root_volume="/dev/mapper/cryptroot"
   else
@@ -1123,7 +1123,7 @@ mount_partitions() {
   mkdir /mnt/boot
   mount -t ext4 "${MAIN_DISK_SECOND_PART}" /mnt/boot
 
-  if [[ ${UEFI} == 1 ]]
+  if [[ ${UEFI} -eq 1 ]]
   then
     # And EFI
     mkdir /mnt/boot/efi
@@ -1135,13 +1135,13 @@ mount_partitions() {
     mkdir /mnt/home
     mount -t xfs "/dev/mapper/vg_data-lv_home" /mnt/home
 
-    if [[ "${AUTO_USE_DATA_FOLDER}" == 1 ]]
+    if [[ ${AUTO_USE_DATA_FOLDER} -eq 1 ]]
     then
       mkdir /mnt/data
       mount -t xfs "/dev/mapper/vg_data-lv_data" /mnt/data
     fi
   else
-    if [[ "${AUTO_USE_DATA_FOLDER}" == 1 ]]
+    if [[ ${AUTO_USE_DATA_FOLDER} -eq 1 ]]
     then
       # Just make a data directory on the root
       mkdir /mnt/data
@@ -1310,7 +1310,7 @@ install_bootloader() {
 
   # TODO: Suport for ARM UEFI?
 
-  if [[ ${UEFI} == 1 ]]
+  if [[ ${UEFI} -eq 1 ]]
   then
     chroot_install os-prober efibootmgr grub-efi-amd64 grub-efi-amd64-signed shim-signed shim-helpers-amd64-signed mokutil
 
@@ -1404,7 +1404,7 @@ configure_keymap() {
 }
 
 configure_encryption() {
-  if [[ ${AUTO_ENCRYPT_DISKS} == 1 ]]
+  if [[ ${AUTO_ENCRYPT_DISKS} -eq 1 ]]
   then
     print_info "Configuring encryption"
 
@@ -1672,7 +1672,7 @@ install_applications_ubuntu() {
 ### START: User Configuration
 
 setup_root() {
-  if [[ ${AUTO_ROOT_DISABLED} == "0" ]]
+  if [[ ${AUTO_ROOT_DISABLED} -eq 0 ]]
   then
     print_info "Setting up root"
 
@@ -1684,7 +1684,7 @@ setup_root() {
     # If they did not pass a password, default it to the install os
     if [[ "${root_pwd}" == "" ]]
     then
-      if [[ ${AUTO_CREATE_USER} == "1" && ${AUTO_USER_PWD} != "" ]]
+      if [[ ${AUTO_CREATE_USER} -eq 1 && ${AUTO_USER_PWD} != "" ]]
       then
         root_pwd=${AUTO_USER_PWD}
       else
@@ -1705,7 +1705,7 @@ setup_root() {
     fi
 
     # If root is the only user, allow login with root through SSH.  Users can of course (and should) change this after initial boot, this just allows a remote connection to start things off.
-    if [[ ${AUTO_CREATE_USER} == "0" ]]
+    if [[ ${AUTO_CREATE_USER} -eq 0 ]]
     then
       sed -i '/PermitRootLogin[[:blank:]]/ c\PermitRootLogin yes' /mnt/etc/ssh/sshd_config
     fi
@@ -1713,7 +1713,7 @@ setup_root() {
 }
 
 setup_user() {
-  if [[ ${AUTO_CREATE_USER} == "1" ]]
+  if [[ ${AUTO_CREATE_USER} -eq 1 ]]
   then
     print_info "Setting up user"
 
@@ -1750,7 +1750,7 @@ setup_user() {
     for groupToAdd in "${groupsToAdd[@]}"
     do
       group_exists=$(arch-chroot /mnt getent group "${groupToAdd}" | wc -l || true)
-      if [[ "${group_exists}" -eq 1 ]]
+      if [[ ${group_exists} -eq 1 ]]
       then
         arch-chroot /mnt usermod -a -G "${groupToAdd}" "${user_name}"
       fi
@@ -1781,7 +1781,7 @@ stamp_build() {
   then
     stamp_path="srv"
 
-    if [[ ${AUTO_USE_DATA_FOLDER} == 1 ]]
+    if [[ ${AUTO_USE_DATA_FOLDER} -eq 1 ]]
     then
       stamp_path="data"
     fi
@@ -1797,15 +1797,14 @@ stamp_build() {
 
   cp "${LOG}" "${stamp_path}/install-log.txt"
 
+  if [[ -f "${WORKING_DIR}/install-output.txt" ]]
+  then
+    cp "${WORKING_DIR}/install-output.txt" "${stamp_path}/install-output.txt"
+  fi
+
   if [[ -f "${WORKING_DIR}/install-inputs.txt" ]]
   then
     cp "${WORKING_DIR}/install-inputs.txt" "${stamp_path}/install-inputs.txt"
-  fi
-
-  if [[ -f "${WORKING_DIR}/install-inputs.sh" ]]
-  then
-    cp "${WORKING_DIR}/install-inputs.sh" "${stamp_path}/install-inputs.sh"
-    chmod +x "${stamp_path}/install-inputs.sh"
   fi
 }
 
@@ -1861,7 +1860,7 @@ verify_parameters() {
 }
 
 setup_disks() {
-  if [[ "${AUTO_SKIP_PARTITIONING}" == 1 ]]
+  if [[ ${AUTO_SKIP_PARTITIONING} -eq 1 ]]
   then
     # Just bail, nothing to do
     return
@@ -1945,7 +1944,7 @@ do_install() {
 }
 
 do_install_debug() {
-  do_install | tee "${WORKING_DIR}/output.log"
+  do_install | tee "${WORKING_DIR}/install-output.log"
 }
 
 main() {
@@ -1956,7 +1955,7 @@ main() {
     do_install
   fi
 
-  if [[ "${AUTO_REBOOT}" -eq 1 && "${IS_DEBUG}" -eq 0 ]]
+  if [[ ${AUTO_REBOOT} -eq 1 && ${IS_DEBUG} -eq 0 ]]
   then
     umount -R /mnt
     systemctl reboot
