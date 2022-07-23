@@ -6,7 +6,7 @@
 #
 # For the development version: TBD
 #
-# Github URL: https://raw.githubusercontent.com/brennanfee/linux-bootstraps/main/scripted-installer/debian/my-configs/confirm-desktop-single-disk.bash
+# Github URL: https://raw.githubusercontent.com/brennanfee/linux-bootstraps/main/scripted-installer/debian/my-configs/confirm-testing-multiDisk.bash
 #
 # This script uses the deb-install script to install Debian/Ubuntu the "Arch"
 # way.  The config script sets some values for a specific type of installation
@@ -15,7 +15,7 @@
 # This version of the scripts prepares for this configuration:
 #   - Will confirm settings with the user before executing.
 #   - Main disk using the "smallest" selection option.
-#   - Any secondary disks will be ignored.
+#   - Secondary disk using the "largest" selection option.
 #   - The disk(s) will be encrypted.
 #   - The data folder will be configured.
 #   - Debian testing will be installed
@@ -42,7 +42,7 @@ fi
 ## Set the variables here, make sure to export them
 export AUTO_CONFIRM_SETTINGS=1
 export AUTO_MAIN_DISK=smallest
-export AUTO_SECOND_DISK=ignore
+export AUTO_SECOND_DISK=largest
 export AUTO_ENCRYPT_DISKS=1
 export AUTO_USE_DATA_FOLDER=1
 

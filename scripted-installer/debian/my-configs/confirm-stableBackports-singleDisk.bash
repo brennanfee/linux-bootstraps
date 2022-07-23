@@ -6,18 +6,19 @@
 #
 # For the development version: TBD
 #
-# Github URL: https://raw.githubusercontent.com/brennanfee/linux-bootstraps/main/scripted-installer/debian/my-configs/auto-desktop-single-disk.bash
+# Github URL: https://raw.githubusercontent.com/brennanfee/linux-bootstraps/main/scripted-installer/debian/my-configs/confirm-stableBackports-singleDisk.bash
 #
 # This script uses the deb-install script to install Debian/Ubuntu the "Arch"
 # way.  The config script sets some values for a specific type of installation
 # and then automatically calls the deb-install script.
 #
 # This version of the scripts prepares for this configuration:
+#   - Will confirm settings with the user before executing.
 #   - Main disk using the "smallest" selection option.
 #   - Any secondary disks will be ignored.
 #   - The disk(s) will be encrypted.
 #   - The data folder will be configured.
-#   - Debian testing will be installed
+#   - Debian stable will be installed and the "backports" kernel will be used.
 #   - Domain of bfee.org and a default use of brennan will be created.
 #
 # Bash strict mode
@@ -39,13 +40,14 @@ fi
 # END Bash scrict mode
 
 ## Set the variables here, make sure to export them
-export AUTO_CONFIRM_SETTINGS=0
+export AUTO_CONFIRM_SETTINGS=1
 export AUTO_MAIN_DISK=smallest
 export AUTO_SECOND_DISK=ignore
 export AUTO_ENCRYPT_DISKS=1
 export AUTO_USE_DATA_FOLDER=1
 
-export AUTO_INSTALL_EDITION=testing
+export AUTO_INSTALL_EDITION=stable
+export AUTO_KERNEL_VERSION=backport
 
 export AUTO_DOMAIN=bfee.org
 export AUTO_USERNAME=brennan
