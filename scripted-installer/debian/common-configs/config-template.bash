@@ -32,7 +32,7 @@ fi
 # END Bash scrict mode
 
 ## Set the variables here, make sure to export them
-export AUTO_MAIN_DISK=smallest
+export AUTO_MAIN_DISK=${AUTO_MAIN_DISK:=smallest}
 
 #
 ## This downloads and runs the script.

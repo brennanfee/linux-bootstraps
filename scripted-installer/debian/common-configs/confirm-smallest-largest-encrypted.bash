@@ -36,11 +36,11 @@ fi
 # END Bash scrict mode
 
 ## Set the variables here, make sure to export them
-export AUTO_CONFIRM_SETTINGS=1
-export AUTO_MAIN_DISK=smallest
-export AUTO_SECOND_DISK=largest
-export AUTO_ENCRYPT_DISKS=1
-export AUTO_USE_DATA_FOLDER=1
+export AUTO_CONFIRM_SETTINGS=${AUTO_CONFIRM_SETTINGS:=1}
+export AUTO_MAIN_DISK=${AUTO_MAIN_DISK:=smallest}
+export AUTO_SECOND_DISK=${AUTO_SECOND_DISK:=largest}
+export AUTO_ENCRYPT_DISKS=${AUTO_ENCRYPT_DISKS:=1}
+export AUTO_USE_DATA_FOLDER=${AUTO_USE_DATA_FOLDER:=1}
 
 #
 ## This downloads and runs the script.
