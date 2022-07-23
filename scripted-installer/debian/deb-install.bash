@@ -595,10 +595,10 @@ normalize_variable_boolean() {
   local input
   local output
   input=${!1}
-  if [[ "${input}" == "yes" || "${input}" == "true" || "${input}" == "y" || "${input}" == "t" || ${input} -eq 1 ]]
+  if [[ "${input}" == "yes" || "${input}" == "true" || "${input}" == "y" || "${input}" == "t" || "${input}" -eq 1 ]]
   then
     output="1"
-  elif [[ "${input}" == "no" || "${input}" == "false" || "${input}" == "n" || "${input}" == "f" || ${input} -eq 0 ]]
+  elif [[ "${input}" == "no" || "${input}" == "false" || "${input}" == "n" || "${input}" == "f" || "${input}" -eq 0 ]]
   then
     output="0"
   else
