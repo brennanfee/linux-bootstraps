@@ -1944,7 +1944,7 @@ do_install() {
 }
 
 do_install_debug() {
-  do_install | tee "${WORKING_DIR}/install-output.log"
+  do_install | tee -i "${WORKING_DIR}/install-output.log"
 }
 
 main() {
