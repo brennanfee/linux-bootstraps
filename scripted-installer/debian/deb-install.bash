@@ -35,7 +35,7 @@ fi
 ### Start: Constants & Global Variables
 
 # Should only be on during testing.  Primarly this turns on the output of passwords.
-IS_DEBUG=1
+IS_DEBUG=${AUTO_IS_DEBUG:=1}
 
 # Paths
 WORKING_DIR=$(pwd)
@@ -1013,6 +1013,7 @@ setup_encryption() {
   then
     print_status "    Generating keyfile for second disk"
     SECONDARY_FILE=$(mktemp)
+    #TODO: Convert to genpkey
     openssl genrsa -out "${SECONDARY_FILE}" 4096
 
     print_status "    Encrypting second disk"
@@ -1029,6 +1030,7 @@ encrypt_main_generated_file() {
   ENCRYPTION_FILE=$(mktemp)
   write_log "ENCRYPTION_FILE=${ENCRYPTION_FILE}"
 
+  #TODO: Convert to genpkey
   openssl genrsa -out "${ENCRYPTION_FILE}" 4096
 
   print_status "    Encrypting main disk"
@@ -1807,11 +1809,11 @@ stamp_build() {
   the_date=$(date -Is)
   echo "Build Time: ${the_date}" | sudo tee "${stamp_path}/install-time.txt"
 
-  cp "${LOG}" "${stamp_path}/install-log.txt"
+  cp "${LOG}" "${stamp_path}/install-log.log"
 
   if [[ -f "${OUTPUT_LOG}" ]]
   then
-    cp "${OUTPUT_LOG}" "${stamp_path}/install-output.txt"
+    cp "${OUTPUT_LOG}" "${stamp_path}/install-output.log"
   fi
 
   if [[ -f "${WORKING_DIR}/install-inputs.txt" ]]
@@ -1955,19 +1957,15 @@ do_install() {
   wrap_up
 }
 
-do_install_debug() {
-  do_install | tee "${OUTPUT_LOG}"
-}
-
 main() {
   if [[ ${IS_DEBUG} -eq 1 ]]
   then
-    do_install_debug
+    do_install | tee "${OUTPUT_LOG}"
   else
     do_install
   fi
 
-  if [[ ${AUTO_REBOOT} -eq 1 && ${IS_DEBUG} -eq 0 ]]
+  if [[ ${AUTO_REBOOT:-0} -eq 1 && ${IS_DEBUG:-0} -eq 0 ]]
   then
     umount -R /mnt
     systemctl reboot
