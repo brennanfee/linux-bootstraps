@@ -501,7 +501,7 @@ detect_if_eufi() {
   if [[ -d "/sys/firmware/efi/" ]]
   then
     ## Mount efivarfs if it is not already mounted
-    if mount | grep -q /sys/firmware/efi/efivars
+    if [[ ! -d "/sys/firmware/efi/efivars" ]]
     then
       mount -t efivarfs efivarfs /sys/firmware/efi/efivars
     fi
