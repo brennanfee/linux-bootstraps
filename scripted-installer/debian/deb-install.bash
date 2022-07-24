@@ -48,8 +48,8 @@ echo "Start log: ${the_date}" >> "${LOG}"
 echo "------------" >> "${LOG}"
 if [[ ${IS_DEBUG} == "1" ]]
 then
-  echo "Start log: ${the_date}" | tee "${OUTPUT_LOG}"
-  echo "------------" | tee "${OUTPUT_LOG}"
+  echo "Start log: ${the_date}" | tee -a "${OUTPUT_LOG}"
+  echo "------------" | tee -a "${OUTPUT_LOG}"
 fi
 unset the_date
 
@@ -170,7 +170,7 @@ write_log() {
   echo "LOG: ${1}" >> "${LOG}"
   if [[ ${IS_DEBUG} == "1" ]]
   then
-    echo "LOG: ${1}" | tee "${OUTPUT_LOG}"
+    echo "LOG: ${1}" | tee -a "${OUTPUT_LOG}"
   fi
 }
 
@@ -1807,7 +1807,7 @@ stamp_build() {
 
   local the_date
   the_date=$(date -Is)
-  echo "Build Time: ${the_date}" | sudo tee "${stamp_path}/install-time.txt"
+  echo "Build Time: ${the_date}" | tee -a "${stamp_path}/install-time.txt"
 
   cp "${LOG}" "${stamp_path}/install-log.log"
 
