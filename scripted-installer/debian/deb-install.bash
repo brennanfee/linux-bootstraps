@@ -1014,8 +1014,8 @@ setup_encryption() {
   then
     print_status "    Generating keyfile for second disk"
     SECONDARY_FILE=$(mktemp)
-    #TODO: Convert to genpkey
-    openssl genrsa -out "${SECONDARY_FILE}" 4096
+
+    openssl genpkey -quiet -algorithm RSA -pkeyopt rsa_keygen_bits:4096 -out "${SECONDARY_FILE}"
 
     print_status "    Encrypting second disk"
     cryptsetup --batch-mode -s 512 --iter-time 5000 --type luks2 luksFormat "${SECOND_DISK_FIRST_PART}" "${SECONDARY_FILE}"
@@ -1031,8 +1031,7 @@ encrypt_main_generated_file() {
   ENCRYPTION_FILE=$(mktemp)
   write_log "ENCRYPTION_FILE=${ENCRYPTION_FILE}"
 
-  #TODO: Convert to genpkey
-  openssl genrsa -out "${ENCRYPTION_FILE}" 4096
+  openssl genpkey -quiet -algorithm RSA -pkeyopt rsa_keygen_bits:4096 -out "${ENCRYPTION_FILE}"
 
   print_status "    Encrypting main disk"
   cryptsetup --batch-mode -s 512 --iter-time 5000 --type luks2 luksFormat "${MAIN_DISK_THIRD_PART}" "${ENCRYPTION_FILE}"
