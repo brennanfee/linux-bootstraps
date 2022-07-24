@@ -9,10 +9,13 @@ IFS=$(printf '\n\t')
 # END POSIX scrict mode
 
 # Must be root
-if [ "$(id -u)" -ne 0 ]; then
+cur_user=$(id -u)
+if [ ${cur_user} -ne 0 ]
+then
   echo "This script must be run as root."
   exit 1
 fi
+unset cur_user
 
 ## Reboot
 systemctl reboot

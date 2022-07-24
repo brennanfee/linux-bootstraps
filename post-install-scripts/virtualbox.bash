@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
 # Bash strict mode
-# shellcheck disable=SC2154
-([[ -n ${ZSH_EVAL_CONTEXT} && ${ZSH_EVAL_CONTEXT} =~ :file$ ]] ||
- [[ -n ${BASH_VERSION} ]] && (return 0 2>/dev/null)) && sourced=true || sourced=false
-if ! ${sourced}; then
+([[ -n ${ZSH_EVAL_CONTEXT:-} && ${ZSH_EVAL_CONTEXT:-} =~ :file$ ]] ||
+ [[ -n ${BASH_VERSION:-} ]] && (return 0 2>/dev/null)) && SOURCED=true || SOURCED=false
+if ! ${SOURCED}
+then
   set -o errexit # same as set -e
   set -o nounset # same as set -u
   set -o errtrace # same as set -E
@@ -12,23 +12,29 @@ if ! ${sourced}; then
   set -o posix
   #set -o xtrace # same as set -x, turn on for debugging
 
+  shopt -s inherit_errexit
   shopt -s extdebug
   IFS=$(printf '\n\t')
 fi
 # END Bash scrict mode
 
 # Must be root
-if [ "$(id -u)" -ne 0 ]; then
+cur_user=$(id -u)
+if [[ ${cur_user} -ne 0 ]]
+then
   echo "This script must be run as root."
   exit 1
 fi
+unset cur_user
 
-in_virtualbox=$(lspci | grep VirtualBox | wc -l)
+in_virtualbox=$(lspci | grep -c VirtualBox)
 
-if [ "${in_virtualbox}" -ge 1 ]; then
+if [[ "${in_virtualbox}" -ge 1 ]]
+then
   distro=$(lsb_release -i -s | tr '[:upper:]' '[:lower:]')
 
-  if [ "${distro}" = "debian" ]; then
+  if [[ "${distro}" = "debian" ]]
+  then
     # Need to ensure the linux headers are installed so it can compile the module
     DEBIAN_FRONTEND=noninteractive apt-get install -y -q --no-install-recommends linux-image-amd64 linux-headers-amd64
 
@@ -60,7 +66,8 @@ if [ "${in_virtualbox}" -ge 1 ]; then
   current_user=$(logname)
 
   # Determine if we need to download the ISO and do so if needed
-  if [ ! -f "/home/${current_user}/VBoxGuestAdditions.iso" ]; then
+  if [[ ! -f "/home/${current_user}/VBoxGuestAdditions.iso" ]]
+  then
     # Figure out which version to download
     /usr/bin/wget --output-document "/home/${current_user}/LATEST-STABLE.TXT" https://download.virtualbox.org/virtualbox/LATEST-STABLE.TXT
     vb_version=$(cat "/home/${current_user}/LATEST-STABLE.TXT")
@@ -80,13 +87,15 @@ if [ "${in_virtualbox}" -ge 1 ]; then
   rm /home/"${current_user}"/VBoxGuestAdditions.iso
 
   # Add user to the vboxsf group
-  if [ "$(getent group vboxsf | wc -l || true)" -eq 1 ]; then
+  if [[ "$(getent group vboxsf | wc -l || true)" -eq 1 ]]
+  then
     usersToAdd=("${current_user}" svcacct ansible vagrant)
 
     for userToAdd in "${usersToAdd[@]}"
     do
       user_exists=$(getent passwd "${userToAdd}" | wc -l || true)
-      if [ "${user_exists}" -eq 1 ]; then
+      if [[ "${user_exists}" -eq 1 ]]
+      then
         usermod -a -G vboxsf "${userToAdd}"
       fi
     done
