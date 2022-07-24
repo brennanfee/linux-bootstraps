@@ -46,11 +46,8 @@ OUTPUT_LOG="${WORKING_DIR}/install-output.log"
 the_date=$(date -Is)
 echo "Start log: ${the_date}" >> "${LOG}"
 echo "------------" >> "${LOG}"
-if [[ ${IS_DEBUG} == "1" ]]
-then
-  echo "Start log: ${the_date}" | tee -a "${OUTPUT_LOG}"
-  echo "------------" | tee -a "${OUTPUT_LOG}"
-fi
+echo "Start log: ${the_date}" | tee -a "${OUTPUT_LOG}"
+echo "------------" | tee -a "${OUTPUT_LOG}"
 unset the_date
 
 # Auto detected flags and variables
@@ -1659,8 +1656,7 @@ install_applications_common() {
   # Packages to true up with a standard server installation
   chroot_install apparmor dictionaries-common iamerican ibritish discover discover-data laptop-detect installation-report usbutils eject util-linux-locales
 
-  # TODO: Trim and tweak these
-  chroot_install apt-transport-https ca-certificates curl wget gnupg lsb-release build-essential dkms sudo acl git vim-nox python3-dev python3-setuptools python3-wheel python3-keyring python3-venv python3-pip python-is-python3 software-properties-common
+  chroot_install apt-transport-https ca-certificates curl wget gnupg lsb-release build-essential dkms sudo acl git vim-nox python3-dev python3-setuptools python3-wheel python3-keyring python3-venv python3-pip python-is-python3 software-properties-common ansible
 }
 
 install_applications_debian() {
@@ -1958,14 +1954,9 @@ do_install() {
 }
 
 main() {
-  if [[ ${IS_DEBUG} == "1" ]]
-  then
-    do_install | tee -a "${OUTPUT_LOG}"
-  else
-    do_install
-  fi
+  do_install | tee -a "${OUTPUT_LOG}"
 
-  if [[ ${AUTO_REBOOT:-0} == "1" && ${IS_DEBUG:-0} == "0" ]]
+  if [[ ${AUTO_REBOOT} == "1" ]]
   then
     umount -R /mnt
     systemctl reboot
