@@ -1,12 +1,22 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
-# POSIX strict mode (may produce issues in sourced scenarios)
-set -o errexit
-set -o nounset
-#set -o xtrace # same as set -x, turn on for debugging
+# Bash strict mode
+([[ -n ${ZSH_EVAL_CONTEXT:-} && ${ZSH_EVAL_CONTEXT:-} =~ :file$ ]] ||
+ [[ -n ${BASH_VERSION:-} ]] && (return 0 2>/dev/null)) && SOURCED=true || SOURCED=false
+if ! ${SOURCED}
+then
+  set -o errexit # same as set -e
+  set -o nounset # same as set -u
+  set -o errtrace # same as set -E
+  set -o pipefail
+  set -o posix
+  #set -o xtrace # same as set -x, turn on for debugging
 
-IFS=$(printf '\n\t')
-# END POSIX scrict mode
+  shopt -s inherit_errexit
+  shopt -s extdebug
+  IFS=$(printf '\n\t')
+fi
+# END Bash scrict mode
 
 # Start with disabling ssh
 systemctl stop ssh
@@ -22,7 +32,7 @@ AUTO_PASSWORD=$(sed -n 's|^.*AUTO_PASSWORD=\([^ ]\+\).*$|\1|p' /proc/cmdline)
 AUTO_MAIN_DISK=$(sed -n 's|^.*AUTO_MAIN_DISK=\([^ ]\+\).*$|\1|p' /proc/cmdline)
 
 {
-  echo "CMDLINE=$(cat /proc/cmdline)"
+  echo "CMDLINE=$(cat /proc/cmdline || true)"
   echo "HOSTNAME=${AUTO_HOSTNAME}"
   echo "USERNAME=${AUTO_USERNAME}"
   echo "PASSWORD=${AUTO_PASSWORD}"
@@ -56,23 +66,29 @@ fi
 
 # Use the values
 
-if [ -n "${AUTO_HOSTNAME}" ]; then
+if [[ -n "${AUTO_HOSTNAME}" ]]
+then
   sed -i -r "/hostname:/ s|:.*$|: ${AUTO_HOSTNAME}|" /autoinstall.yaml
 fi
 
-if [ -n "${AUTO_USERNAME}" ]; then
+if [[ -n "${AUTO_USERNAME}" ]]
+then
   sed -i -r "/username:/ s|:.*$|: ${AUTO_USERNAME}|" /autoinstall.yaml
 fi
 
-if [ -n "${AUTO_PASSWORD}" ]; then
+if [[ -n "${AUTO_PASSWORD}" ]]
+then
   sed -i -r "/password:/ s|:.*$|: ${AUTO_PASSWORD}|" /autoinstall.yaml
 fi
 
-if [ -n "${AUTO_MAIN_DISK}" ]; then
-  if [ "${AUTO_MAIN_DISK}" = "smallest" ]; then
+if [[ -n "${AUTO_MAIN_DISK}" ]]
+then
+  if [[ "${AUTO_MAIN_DISK}" = "smallest" ]]
+  then
     # Replace the "size" designator
     sed -i -r "s|size: smallest$|size: ${AUTO_MAIN_DISK}|" /autoinstall.yaml
-  elif [ "${AUTO_MAIN_DISK}" = "largest" ]; then
+  elif [[ "${AUTO_MAIN_DISK}" = "largest" ]]
+  then
     # Replace the "size" designator
     sed -i -r "s|size: smallest$|size: ${AUTO_MAIN_DISK}|" /autoinstall.yaml
   else

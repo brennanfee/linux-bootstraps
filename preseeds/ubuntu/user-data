@@ -12,8 +12,8 @@ autoinstall:
     username: ubuntu
   early-commands:
     - systemctl stop ssh
-    - wget -q -O /tmp/ubuntu-early-command.sh $(sed 's|.*s=\([^ ]\+\).*|\1|' /proc/cmdline)/ubuntu-early-command.sh
-    - sh /tmp/ubuntu-early-command.sh
+    - wget -q -O /tmp/ubuntu-early-command.bash $(sed 's|.*s=\([^ ]\+\).*|\1|' /proc/cmdline)/ubuntu-early-command.bash
+    - bash /tmp/ubuntu-early-command.bash
   ssh:
     install-server: true
   user-data:
@@ -75,8 +75,8 @@ autoinstall:
         passno: 1
         options: "umask=0077"
   late-commands:
-    - wget -q -O /tmp/ubuntu-late-command.sh $(sed 's|.*s=\([^ ]\+\).*|\1|' /proc/cmdline)/ubuntu-late-command.sh
-    - sh /tmp/ubuntu-late-command.sh
+    - wget -q -O /tmp/ubuntu-late-command.bash $(sed 's|.*s=\([^ ]\+\).*|\1|' /proc/cmdline)/ubuntu-late-command.bash
+    - bash /tmp/ubuntu-late-command.bash
   refresh-installer:
     update: true
   packages:
