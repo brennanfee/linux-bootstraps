@@ -48,8 +48,8 @@ echo "Start log: ${the_date}" >> "${LOG}"
 echo "------------" >> "${LOG}"
 if [[ ${IS_DEBUG} -eq 1 ]]
 then
-  echo "Start log: ${the_date}" >> "${OUTPUT_LOG}"
-  echo "------------" >> "${OUTPUT_LOG}"
+  echo "Start log: ${the_date}" | tee "${OUTPUT_LOG}"
+  echo "------------" | tee "${OUTPUT_LOG}"
 fi
 unset the_date
 
@@ -170,7 +170,7 @@ write_log() {
   echo "LOG: ${1}" >> "${LOG}"
   if [[ ${IS_DEBUG} -eq 1 ]]
   then
-    echo "LOG: ${1}" >> "${OUTPUT_LOG}"
+    echo "LOG: ${1}" | tee "${OUTPUT_LOG}"
   fi
 }
 
@@ -218,6 +218,7 @@ log_values() {
   write_log_and_inputs "AUTO_TIMEZONE: ${AUTO_TIMEZONE}"
   write_log_and_inputs "AUTO_CONFIRM_SETTINGS: ${AUTO_CONFIRM_SETTINGS}"
   write_log_and_inputs "AUTO_REBOOT: ${AUTO_REBOOT}"
+  write_log_and_inputs "IS_DEBUG: ${IS_DEBUG}"
   write_log_blank
 
   write_log_and_inputs "AUTO_ROOT_DISABLED: ${AUTO_ROOT_DISABLED}"
