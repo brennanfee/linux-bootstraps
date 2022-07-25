@@ -27,11 +27,18 @@ then
 fi
 unset cur_user
 
-if [[ "$(getent passwd svcacct | wc -l || true)" -eq 1 ]]
-then
-  runuser --shell=/bin/bash svcacct -c "/usr/bin/python3 -m pip install --user --no-warn-script-location pipx"
+main() {
+  local user_exists
+  user_exists=$(getent passwd svcacct | wc -l)
 
-  runuser --shell=/bin/bash svcacct -c "/home/svcacct/.local/bin/pipx install --include-deps ansible"
-  runuser --shell=/bin/bash svcacct -c "/home/svcacct/.local/bin/pipx inject ansible cryptography"
-  runuser --shell=/bin/bash svcacct -c "/home/svcacct/.local/bin/pipx inject ansible paramiko"
-fi
+  if [[ ${user_exists} == "1" ]]
+  then
+    runuser --shell=/bin/bash svcacct -c "/usr/bin/python3 -m pip install --user --no-warn-script-location pipx"
+
+    runuser --shell=/bin/bash svcacct -c "/home/svcacct/.local/bin/pipx install --include-deps ansible"
+    runuser --shell=/bin/bash svcacct -c "/home/svcacct/.local/bin/pipx inject ansible cryptography"
+    runuser --shell=/bin/bash svcacct -c "/home/svcacct/.local/bin/pipx inject ansible paramiko"
+  fi
+}
+
+main

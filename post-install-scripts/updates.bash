@@ -27,14 +27,18 @@ then
 fi
 unset cur_user
 
-if command -v apt-get &> /dev/null
-then
-  DEBIAN_FRONTEND=noninteractive apt-get -y -q update
-  DEBIAN_FRONTEND=noninteractive apt-get -y -q full-upgrade
-  DEBIAN_FRONTEND=noninteractive apt-get -y -q autoremove
-fi
+main() {
+  if command -v apt-get &> /dev/null
+  then
+    DEBIAN_FRONTEND=noninteractive apt-get -y -q update
+    DEBIAN_FRONTEND=noninteractive apt-get -y -q full-upgrade
+    DEBIAN_FRONTEND=noninteractive apt-get -y -q autoremove
+  fi
 
-if command -v pacman &> /dev/null
-then
-  pacman -noconfirm -noprogressbar -Syyu
-fi
+  if command -v pacman &> /dev/null
+  then
+    pacman -noconfirm -noprogressbar -Syyu
+  fi
+}
+
+main

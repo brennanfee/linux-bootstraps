@@ -27,39 +27,47 @@ then
 fi
 unset cur_user
 
-if [[ "$(getent passwd vagrant | wc -l || true)" -eq 1 ]]
-then
-  echo 'Setting up vagrant user'
+main() {
+  local user_exists
+  user_exists=$(getent passwd vagrant | wc -l)
 
-  # Install vagrant ssh key
-  if [[ ! -f /home/vagrant/.ssh/authorized_keys ]]
+  if [[ ${user_exists} == "1" ]]
   then
-    mkdir -p /home/vagrant/.ssh
-    wget -nv --no-check-certificate -O /home/vagrant/.ssh/authorized_keys 'https://raw.githubusercontent.com/hashicorp/vagrant/master/keys/vagrant.pub'
-    chown -R vagrant /home/vagrant/.ssh
-    chmod -R go-rwsx /home/vagrant/.ssh
-  fi
+    echo 'Setting up vagrant user'
 
-  # Add vagrant user to passwordless sudo
-  if [[ ! -f /etc/sudoers.d/vagrant ]]
-  then
-    cat << EOF > /etc/sudoers.d/vagrant
+    # Install vagrant ssh key
+    if [[ ! -f /home/vagrant/.ssh/authorized_keys ]]
+    then
+      mkdir -p /home/vagrant/.ssh
+      wget -nv --no-check-certificate -O /home/vagrant/.ssh/authorized_keys 'https://raw.githubusercontent.com/hashicorp/vagrant/master/keys/vagrant.pub'
+      chown -R vagrant /home/vagrant/.ssh
+      chmod -R go-rwsx /home/vagrant/.ssh
+    fi
+
+    # Add vagrant user to passwordless sudo
+    if [[ ! -f /etc/sudoers.d/vagrant ]]
+    then
+      cat << EOF > /etc/sudoers.d/vagrant
 Defaults:svcacct !requiretty
 svcacct ALL=(ALL) NOPASSWD: ALL
 EOF
 
-    chmod 440 /etc/sudoers.d/vagrant
-  fi
-
-  # Add the user to some groups
-  groupsToAdd=(sudo ssh _ssh users data-user vboxsf)
-
-  for groupToAdd in "${groupsToAdd[@]}"
-  do
-    group_exists=$(getent group "${groupToAdd}" | wc -l || true)
-    if [[ "${group_exists}" -eq 1 ]]
-    then
-      usermod -a -G "${groupToAdd}" vagrant
+      chmod 440 /etc/sudoers.d/vagrant
     fi
-  done
-fi
+
+    # Add the user to some groups
+    local groupsToAdd=(sudo ssh _ssh users data-user vboxsf)
+
+    for groupToAdd in "${groupsToAdd[@]}"
+    do
+      local group_exists
+      group_exists=$(getent group "${groupToAdd}" | wc -l)
+      if [[ "${group_exists}" -eq 1 ]]
+      then
+        usermod -a -G "${groupToAdd}" vagrant
+      fi
+    done
+  fi
+}
+
+main

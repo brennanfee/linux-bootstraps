@@ -55,42 +55,52 @@ package_exists() {
   return $?
 }
 
-distro=$(lsb_release -i -s | tr '[:upper:]' '[:lower:]')
-DPKG_ARCH=$(dpkg --print-architecture) # Something like amd64, arm64
+main () {
+  local distro
+  local DPKG_ARCH
+  distro=$(lsb_release -i -s | tr '[:upper:]' '[:lower:]')
+  DPKG_ARCH=$(dpkg --print-architecture) # Something like amd64, arm64
 
-# For Ubuntu, install HWE kernels if they are available
-if [[ "${distro}" = "ubuntu" ]]
-then
-  release_version=$(lsb_release -r -s)
-  HWE_KERNEL_EDGE_PKG="linux-generic-hwe-${release_version}-edge"
-  HWE_KERNEL_PKG="linux-generic-hwe-${release_version}"
-
-  EDGE_PKG_EXISTS=$(apt-cache search --names-only "^${HWE_KERNEL_EDGE_PKG}$" | wc -l)
-  HWE_PKG_EXISTS=$(apt-cache search --names-only "^${HWE_KERNEL_PKG}$" | wc -l)
-
-  if [[ "${EDGE_PKG_EXISTS}" -eq 1 ]]
+  # For Ubuntu, install HWE kernels if they are available
+  if [[ "${distro}" = "ubuntu" ]]
   then
-    DEBIAN_FRONTEND=noninteractive apt-get -y -q --no-install-recommends install "${HWE_KERNEL_EDGE_PKG}"
-  elif [[ "${HWE_PKG_EXISTS}" -eq 1 ]]
-  then
-    DEBIAN_FRONTEND=noninteractive apt-get -y -q --no-install-recommends install "${HWE_KERNEL_PKG}"
-  fi
-fi
+    local release_version
+    release_version=$(lsb_release -r -s)
+    local HWE_KERNEL_EDGE_PKG="linux-generic-hwe-${release_version}-edge"
+    local HWE_KERNEL_PKG="linux-generic-hwe-${release_version}"
 
-# For Debian, check to see if there is a backports kernel
-if [[ "${distro}" = "debian" ]]
-then
-  dont_support_backports=("sid" "unstable" "rc-buggy" "experimental")
-  # Can't use lsb_release codename here as it always gives the named codename and not the installed edition (so bullseye instead of stable for instance).
-  edition=$(sed -rn 's/deb http[^ ]* ([^ ]*) .*/\1/p' /etc/apt/sources.list | head -n 1)
-  get_exit_code contains_element "${edition}" "${dont_support_backports[@]}"
-  if [[ ! ${EXIT_CODE} == "0" ]]
-  then
-    # Check to see the package exists in backports, if not we'll just install the default kernel
-    get_exit_code package_exists "linux-image-${DPKG_ARCH}/${edition}-backports"
-    if [[ ${EXIT_CODE} == "0" ]]
+    local EDGE_PKG_EXISTS
+    local HWE_PKG_EXISTS
+    EDGE_PKG_EXISTS=$(apt-cache search --names-only "^${HWE_KERNEL_EDGE_PKG}$" | wc -l)
+    HWE_PKG_EXISTS=$(apt-cache search --names-only "^${HWE_KERNEL_PKG}$" | wc -l)
+
+    if [[ "${EDGE_PKG_EXISTS}" -eq 1 ]]
     then
-      DEBIAN_FRONTEND=noninteractive apt-get -y -q --no-install-recommends -t "${edition}-backports" "linux-image-${DPKG_ARCH}" "linux-headers-${DPKG_ARCH}"
+      DEBIAN_FRONTEND=noninteractive apt-get -y -q --no-install-recommends install "${HWE_KERNEL_EDGE_PKG}"
+    elif [[ "${HWE_PKG_EXISTS}" -eq 1 ]]
+    then
+      DEBIAN_FRONTEND=noninteractive apt-get -y -q --no-install-recommends install "${HWE_KERNEL_PKG}"
     fi
   fi
-fi
+
+  # For Debian, check to see if there is a backports kernel
+  if [[ "${distro}" = "debian" ]]
+  then
+    dont_support_backports=("sid" "unstable" "rc-buggy" "experimental")
+    # Can't use lsb_release codename here as it always gives the named codename and not the installed edition (so bullseye instead of stable for instance).
+    local edition
+    edition=$(sed -rn 's/deb http[^ ]* ([^ ]*) .*/\1/p' /etc/apt/sources.list | head -n 1)
+    get_exit_code contains_element "${edition}" "${dont_support_backports[@]}"
+    if [[ ! ${EXIT_CODE} == "0" ]]
+    then
+      # Check to see the package exists in backports, if not we'll just install the default kernel
+      get_exit_code package_exists "linux-image-${DPKG_ARCH}/${edition}-backports"
+      if [[ ${EXIT_CODE} == "0" ]]
+      then
+        DEBIAN_FRONTEND=noninteractive apt-get -y -q --no-install-recommends -t "${edition}-backports" "linux-image-${DPKG_ARCH}" "linux-headers-${DPKG_ARCH}"
+      fi
+    fi
+  fi
+}
+
+main

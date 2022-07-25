@@ -27,42 +27,46 @@ then
 fi
 unset cur_user
 
-# Local Services Account
-## What is this?  On my systems I like to have a background services user account.  It is not an account that you can log into locally but it can support incoming ssh, can execute scheduled jobs, has a group that others can be added to for access to service files and data, and does not require a password for its use of sudo.
+main () {
+  # Local Services Account
+  ## What is this?  On my systems I like to have a background services user account.  It is not an account that you can log into locally but it can support incoming ssh, can execute scheduled jobs, has a group that others can be added to for access to service files and data, and does not require a password for its use of sudo.
 
-if [[ "$(getent passwd svcacct | wc -l || true)" -eq 0 ]]
-then
-  adduser --system --quiet --group --disabled-password --gecos "Services Account" svcacct
-fi
+  local user_exists
+  user_exists=$(getent passwd svcacct | wc -l)
 
-# The skel files don't seem to get copied in for "system" users.  Do that manually
-[[ -f /etc/skel/.bashrc ]] && cp /etc/skel/.bashrc /home/svcacct/.bashrc && chown svcacct:svcacct /home/svcacct/.bashrc
-[[ -f /etc/skel/.profile ]] && cp /etc/skel/.profile /home/svcacct/.profile && chown svcacct:svcacct /home/svcacct/.profile
-[[ -f /etc/skel/.bash_logout ]] && cp /etc/skel/.bash_logout /home/svcacct/.bash_logout && chown svcacct:svcacct /home/svcacct/.bash_logout
-
-# Add the ~/.local/bin folder to the path
-# shellcheck disable=SC2016
-[[ -f /home/svcacct/.bashrc ]] && echo 'export PATH="$PATH:/home/svcacct/.local/bin"' >> /home/svcacct/.bashrc
-
-# Add the user to some groups
-groupsToAdd=(sudo ssh _ssh users data-user vboxsf)
-
-for groupToAdd in "${groupsToAdd[@]}"
-do
-  group_exists=$(getent group "${groupToAdd}" | wc -l || true)
-  if [[ "${group_exists}" -eq 1 ]]
+  if [[ ${user_exists} == "0" ]]
   then
-    usermod -a -G "${groupToAdd}" svcacct
+    adduser --system --quiet --group --disabled-password --gecos "Services Account" svcacct
   fi
-done
 
-cat << EOF > /etc/sudoers.d/svcacct
+  # The skel files don't seem to get copied in for "system" users.  Do that manually
+  [[ -f /etc/skel/.bashrc ]] && cp /etc/skel/.bashrc /home/svcacct/.bashrc && chown svcacct:svcacct /home/svcacct/.bashrc
+  [[ -f /etc/skel/.profile ]] && cp /etc/skel/.profile /home/svcacct/.profile && chown svcacct:svcacct /home/svcacct/.profile
+  [[ -f /etc/skel/.bash_logout ]] && cp /etc/skel/.bash_logout /home/svcacct/.bash_logout && chown svcacct:svcacct /home/svcacct/.bash_logout
+
+  # Add the ~/.local/bin folder to the path
+  # shellcheck disable=SC2016
+  [[ -f /home/svcacct/.bashrc ]] && echo 'export PATH="$PATH:/home/svcacct/.local/bin"' >> /home/svcacct/.bashrc
+
+  # Add the user to some groups
+  local groupsToAdd=(sudo ssh _ssh users data-user vboxsf)
+
+  for groupToAdd in "${groupsToAdd[@]}"
+  do
+    local group_exists
+    group_exists=$(getent group "${groupToAdd}" | wc -l)
+    if [[ "${group_exists}" -eq 1 ]]
+    then
+      usermod -a -G "${groupToAdd}" svcacct
+    fi
+  done
+
+  cat << EOF > /etc/sudoers.d/svcacct
 Defaults:svcacct !requiretty
 svcacct ALL=(ALL) NOPASSWD: ALL
 EOF
 
-chmod 440 /etc/sudoers.d/svcacct
+  chmod 440 /etc/sudoers.d/svcacct
+}
 
-# Pip
-[[ ! -f "/tmp/get-pip.py" ]] && curl -sSL https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py
-runuser --shell=/bin/bash svcacct -c "/usr/bin/python3 /tmp/get-pip.py --user --no-warn-script-location"
+main

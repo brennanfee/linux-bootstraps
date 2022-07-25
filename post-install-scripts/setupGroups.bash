@@ -27,24 +27,31 @@ then
 fi
 unset cur_user
 
-# Can't use $USER as we are running this script as root/sudo
-current_user=$(logname)
+main () {
+  # Can't use $USER as we are running this script as root/sudo
+  local current_user
+  current_user=$(logname)
 
-usersToAdd=("${current_user}" svcacct ansible vagrant)
-groupsToAdd=(sudo ssh _ssh users data-user vboxsf)
+  local usersToAdd=("${current_user}" svcacct ansible vagrant)
+  local groupsToAdd=(sudo ssh _ssh users data-user vboxsf)
 
-for userToAdd in "${usersToAdd[@]}"
-do
-  user_exists=$(getent passwd "${userToAdd}" | wc -l || true)
-  if [[ "${user_exists}" -eq 1 ]]
-  then
-    for groupToAdd in "${groupsToAdd[@]}"
-    do
-      group_exists=$(getent group "${groupToAdd}" | wc -l || true)
-      if [[ "${group_exists}" -eq 1 ]]
-      then
-        usermod -a -G "${groupToAdd}" "${userToAdd}"
-      fi
-    done
-  fi
-done
+  for userToAdd in "${usersToAdd[@]}"
+  do
+    local user_exists
+    user_exists=$(getent passwd "${userToAdd}" | wc -l)
+    if [[ "${user_exists}" -eq 1 ]]
+    then
+      for groupToAdd in "${groupsToAdd[@]}"
+      do
+        local group_exists
+        group_exists=$(getent group "${groupToAdd}" | wc -l)
+        if [[ "${group_exists}" -eq 1 ]]
+        then
+          usermod -a -G "${groupToAdd}" "${userToAdd}"
+        fi
+      done
+    fi
+  done
+}
+
+main

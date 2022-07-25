@@ -27,42 +27,49 @@ then
 fi
 unset cur_user
 
-stamp_path="/srv"
-if [[ -d "/data/" ]]; then
-  stamp_path="/data"
-fi
+main() {
+  local stamp_path="/srv"
+  if [[ -d "/data" ]]; then
+    stamp_path="/data"
+  fi
 
-the_date=$(date -Is)
-echo "Build Time: ${the_date}" | sudo tee "${stamp_path}/image_build_info"
-unset the_date
+  local the_date
+  the_date=$(date -Is)
+  echo "Build Time: ${the_date}" | sudo tee "${stamp_path}/image_build_info"
 
-set +o nounset
-if [[ -n "${PACKER_BUILD_NAME}" ]]
-then
-  echo "Packer Build Name: ${PACKER_BUILD_NAME}" | sudo tee -a "${stamp_path}/image_build_info"
-fi
+  if [[ -n "${PACKER_BUILD_NAME:-}" ]]
+  then
+    echo "Packer Build Name: ${PACKER_BUILD_NAME}" | sudo tee -a "${stamp_path}/image_build_info"
+  fi
 
-if [[ -n "${PACKER_BUILDER_TYPE}" ]]
-then
-  echo "Packer Builder Type: ${PACKER_BUILDER_TYPE}" | sudo tee -a "${stamp_path}/image_build_info"
-fi
-set -o nounset
+  if [[ -n "${PACKER_BUILDER_TYPE:-}" ]]
+  then
+    echo "Packer Builder Type: ${PACKER_BUILDER_TYPE}" | sudo tee -a "${stamp_path}/image_build_info"
+  fi
 
-# Can't use $USER here because we are running this script as root
-current_user=$(logname)
-echo "Installed User: ${current_user}" | sudo tee -a "${stamp_path}/image_build_info"
+  # Can't use $USER here because we are running this script as root
+  local current_user
+  current_user=$(logname)
+  echo "Installed User: ${current_user}" | sudo tee -a "${stamp_path}/image_build_info"
 
-if [[ -f /home/"${current_user}"/.vbox_version ]]
-then
-  vbox_version=$(cat /home/"${current_user}"/.vbox_version)
-  echo "VirtualBox Version: ${vbox_version}" | sudo tee -a "${stamp_path}/image_build_info"
-  rm /home/"${current_user}"/.vbox_version
-fi
+  if [[ -f /home/"${current_user}"/.vbox_version ]]
+  then
+    local vbox_version
+    vbox_version=$(cat /home/"${current_user}"/.vbox_version)
+    echo "VirtualBox Version: ${vbox_version}" | sudo tee -a "${stamp_path}/image_build_info"
+    rm /home/"${current_user}"/.vbox_version
+  fi
 
-if [[ "$(getent group data-user | wc -l || true)" -eq 1 ]]
-then
-  chown root:data-user "${stamp_path}/image_build_info"
-else
-  chown root:users "${stamp_path}/image_build_info"
-fi
-chmod g+w "${stamp_path}/image_build_info"
+  local group_exists
+  group_exists=$(getent group data-user | wc -l)
+
+  if [[ ${group_exists} == "1" ]]
+  then
+    chown root:data-user "${stamp_path}/image_build_info"
+  else
+    chown root:users "${stamp_path}/image_build_info"
+  fi
+  chmod g+w "${stamp_path}/image_build_info"
+}
+
+main

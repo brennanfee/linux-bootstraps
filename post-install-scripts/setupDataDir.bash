@@ -27,32 +27,41 @@ then
 fi
 unset cur_user
 
-# Data folder and data-user group
-## On all my systems I create a /data folder.  Sometimes this is on the same disk as root other times it might be mounted from a secondary disk.  This is where I put all "server" files or files that are not user specific to my home folder.
+main () {
+  # Data folder and data-user group
+  ## On all my systems I create a /data folder.  Sometimes this is on the same disk as root other times it might be mounted from a secondary disk.  This is where I put all "server" files or files that are not user specific to my home folder.
 
-# Add the data-user group if it does not exist
-if [[ "$(getent group data-user | wc -l || true)" -eq 0 ]]
-then
-  groupadd --system data-user
-fi
+  # Add the data-user group if it does not exist
+  local group_exists
+  group_exists=$(getent group data-user | wc -l)
 
-if [[ ! -d /data ]]
-then
-  mkdir -p /data
-fi
-
-chown -R root:data-user /data
-chmod -R g+w /data
-
-# Add some users to the group, we can't use $USER here because we are running this script as root
-current_user=$(logname)
-usersToAdd=("${current_user}" svcacct ansible vagrant)
-
-for userToAdd in "${usersToAdd[@]}"
-do
-  user_exists=$(getent passwd "${userToAdd}" | wc -l || true)
-  if [[ "${user_exists}" -eq 1 ]]
+  if [[ "${group_exists}" -eq 0 ]]
   then
-    usermod -a -G data-user "${userToAdd}"
+    groupadd --system data-user
   fi
-done
+
+  if [[ ! -d /data ]]
+  then
+    mkdir -p /data
+  fi
+
+  chown -R root:data-user /data
+  chmod -R g+w /data
+
+  # Add some users to the group, we can't use $USER here because we are running this script as root
+  local current_user
+  current_user=$(logname)
+  local usersToAdd=("${current_user}" svcacct ansible vagrant)
+
+  for userToAdd in "${usersToAdd[@]}"
+  do
+    local user_exists
+    user_exists=$(getent passwd "${userToAdd}" | wc -l)
+    if [[ "${user_exists}" -eq 1 ]]
+    then
+      usermod -a -G data-user "${userToAdd}"
+    fi
+  done
+}
+
+main
