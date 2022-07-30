@@ -1723,6 +1723,12 @@ setup_root() {
 }
 
 setup_user() {
+  if [[ ${AUTO_USE_DATA_FOLDER} == "1" ]]
+  then
+    arch-chroot /mnt groupadd --system data-user
+    arch-chroot /mnt chown -R root:data-user /data
+  fi
+
   if [[ ${AUTO_CREATE_USER} == "1" ]]
   then
     print_info "Setting up user"

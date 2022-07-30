@@ -29,7 +29,8 @@ unset cur_user
 
 main() {
   local stamp_path="/srv"
-  if [[ -d "/data" ]]; then
+  if [[ -d "/data" ]]
+  then
     stamp_path="/data"
   fi
 
@@ -52,7 +53,7 @@ main() {
   current_user=$(logname)
   echo "Installed User: ${current_user}" | sudo tee -a "${stamp_path}/image_build_info"
 
-  if [[ -f /home/"${current_user}"/.vbox_version ]]
+  if [[ -f "/home/${current_user}/.vbox_version" ]]
   then
     local vbox_version
     vbox_version=$(cat /home/"${current_user}"/.vbox_version)
@@ -61,7 +62,7 @@ main() {
   fi
 
   local group_exists
-  group_exists=$(getent group data-user | wc -l)
+  group_exists=$(getent group data-user | wc -l || true)
 
   if [[ ${group_exists} == "1" ]]
   then
