@@ -1654,7 +1654,7 @@ install_applications_common() {
   chroot_install cryptsetup cryptsetup-initramfs xfsprogs lvm2
 
   # Packages to true up with a standard server installation
-  chroot_install apparmor dictionaries-common iamerican ibritish discover discover-data laptop-detect installation-report usbutils eject util-linux-locales
+  chroot_install apparmor dictionaries-common iamerican ibritish discover discover-data laptop-detect installation-report usbutils eject util-linux-locales task-english ssh
 
   chroot_install apt-transport-https ca-certificates curl wget gnupg lsb-release build-essential dkms sudo acl git vim-nox python3-dev python3-setuptools python3-wheel python3-keyring python3-venv python3-pip python-is-python3 software-properties-common ansible
 }
@@ -1664,7 +1664,7 @@ install_applications_debian() {
   then
     print_info "Installing Debian specific applications"
 
-    chroot_install task-ssh-server task-english firmware-linux
+    chroot_install firmware-linux
   fi
 }
 
@@ -1673,7 +1673,7 @@ install_applications_ubuntu() {
   then
     print_info "Installing Ubuntu specific applications"
 
-    chroot_install openssh-server openssh-client linux-firmware
+    chroot_install linux-firmware
   fi
 }
 
