@@ -100,3 +100,26 @@ autoinstall:
     - python3-pip
     - python-is-python3
     - software-properties-common
+    - os-prober
+    - apparmor
+    - ssh
+    - ansible
+    - locales
+    - console-setup
+    - lz4
+    - network-manager
+    - netplan.io
+    - cryptsetup
+    - cryptsetup-initramfs
+    - xfsprogs
+    - lvm2
+    - dictionaries-common
+    - iamerican
+    - ibritish
+    - discover
+    - discover-data
+    - laptop-detect
+    - installation-report
+    - usbutils
+    - eject
+    - util-linux-locales
