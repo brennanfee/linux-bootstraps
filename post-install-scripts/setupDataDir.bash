@@ -33,7 +33,7 @@ main () {
 
   # Add the data-user group if it does not exist
   local group_exists
-  group_exists=$(getent group data-user | wc -l)
+  group_exists=$(getent group data-user | wc -l || true)
 
   if [[ "${group_exists}" -eq 0 ]]
   then
@@ -56,7 +56,7 @@ main () {
   for userToAdd in "${usersToAdd[@]}"
   do
     local user_exists
-    user_exists=$(getent passwd "${userToAdd}" | wc -l)
+    user_exists=$(getent passwd "${userToAdd}" | wc -l || true)
     if [[ "${user_exists}" -eq 1 ]]
     then
       usermod -a -G data-user "${userToAdd}"

@@ -93,7 +93,7 @@ main() {
 
     # Add user to the vboxsf group
     local group_exists
-    group_exists=$(getent group vboxsf-user | wc -l)
+    group_exists=$(getent group vboxsf-user | wc -l || true)
 
     if [[ ${group_exists} == "1" ]]
     then
@@ -102,7 +102,7 @@ main() {
       for userToAdd in "${usersToAdd[@]}"
       do
         local user_exists
-        user_exists=$(getent passwd "${userToAdd}" | wc -l)
+        user_exists=$(getent passwd "${userToAdd}" | wc -l || true)
         if [[ "${user_exists}" -eq 1 ]]
         then
           usermod -a -G vboxsf "${userToAdd}"

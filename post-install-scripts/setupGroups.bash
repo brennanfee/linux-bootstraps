@@ -38,13 +38,13 @@ main () {
   for userToAdd in "${usersToAdd[@]}"
   do
     local user_exists
-    user_exists=$(getent passwd "${userToAdd}" | wc -l)
+    user_exists=$(getent passwd "${userToAdd}" | wc -l || true)
     if [[ "${user_exists}" -eq 1 ]]
     then
       for groupToAdd in "${groupsToAdd[@]}"
       do
         local group_exists
-        group_exists=$(getent group "${groupToAdd}" | wc -l)
+        group_exists=$(getent group "${groupToAdd}" | wc -l || true)
         if [[ "${group_exists}" -eq 1 ]]
         then
           usermod -a -G "${groupToAdd}" "${userToAdd}"

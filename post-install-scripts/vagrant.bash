@@ -29,7 +29,7 @@ unset cur_user
 
 main() {
   local user_exists
-  user_exists=$(getent passwd vagrant | wc -l)
+  user_exists=$(getent passwd vagrant | wc -l || true)
 
   if [[ ${user_exists} == "1" ]]
   then
@@ -61,7 +61,7 @@ EOF
     for groupToAdd in "${groupsToAdd[@]}"
     do
       local group_exists
-      group_exists=$(getent group "${groupToAdd}" | wc -l)
+      group_exists=$(getent group "${groupToAdd}" | wc -l || true)
       if [[ "${group_exists}" -eq 1 ]]
       then
         usermod -a -G "${groupToAdd}" vagrant
