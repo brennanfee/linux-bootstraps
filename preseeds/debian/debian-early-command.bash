@@ -31,6 +31,11 @@ main() {
 
   AUTO_MAIN_DISK=$(sed -n 's|^.*AUTO_MAIN_DISK=\([^ ]\+\).*$|\1|p' /proc/cmdline)
 
+  if [[ -z "${AUTO_HOSTNAME}" ]]
+  then
+    AUTO_HOSTNAME="debian-$((1 + RANDOM % 10000))"
+  fi
+
   {
     echo "CMDLINE=$(cat /proc/cmdline || true)"
     echo "EDITION=${AUTO_EDITION}"
