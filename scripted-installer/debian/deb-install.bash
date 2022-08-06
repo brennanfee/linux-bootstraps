@@ -1803,6 +1803,19 @@ stamp_build() {
   then
     cp "${OUTPUT_LOG}" "${stamp_path}/install-output.log"
   fi
+
+  echo "Build Time: ${INSTALL_DATE}" | sudo tee "${stamp_path}/image_build_info"
+  if [[ ${AUTO_CREATE_USER} == "1" ]]
+  then
+    user_name=${AUTO_USERNAME}
+    if [[ "${user_name}" == "" ]]
+    then
+      user_name=${AUTO_INSTALL_OS}
+    fi
+    echo "Installed User: ${user_name}" | sudo tee -a "${stamp_path}/image_build_info"
+  else
+    echo "Installed User: (root only)" | sudo tee -a "${stamp_path}/image_build_info"
+  fi
 }
 
 show_complete_screen() {
