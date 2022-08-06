@@ -43,12 +43,11 @@ LOG="${WORKING_DIR}/install.log"
 OUTPUT_LOG="${WORKING_DIR}/install-output.log"
 [[ -f ${LOG} ]] && rm -f "${LOG}"
 [[ -f ${OUTPUT_LOG} ]] && rm -f "${OUTPUT_LOG}"
-the_date=$(date -Is)
-echo "Start log: ${the_date}" >> "${LOG}"
+INSTALL_DATE=$(date -Is)
+echo "Start log: ${INSTALL_DATE}" >> "${LOG}"
 echo "------------" >> "${LOG}"
-echo "Start log: ${the_date}" | tee -a "${OUTPUT_LOG}"
+echo "Start log: ${INSTALL_DATE}" | tee -a "${OUTPUT_LOG}"
 echo "------------" | tee -a "${OUTPUT_LOG}"
-unset the_date
 
 # Auto detected flags and variables
 SYS_ARCH=$(uname -m) # Architecture (x86_64)
@@ -171,11 +170,6 @@ write_log() {
   fi
 }
 
-write_log_and_inputs() {
-  write_log "${1}"
-  echo "${1}" >> "${WORKING_DIR}/install-inputs.txt"
-}
-
 write_log_password() {
   if [[ ${IS_DEBUG} == "1" ]]
   then
@@ -200,43 +194,44 @@ log_values() {
   write_log "Post Validation Values"
 
   write_log_blank
+  write_log "INSTALL_DATE: ${INSTALL_DATE}"
   write_log "INSTALLER_DISTRO: ${INSTALLER_DISTRO}"
   write_log "SYS_ARCH: ${SYS_ARCH}"
   write_log "DPKG_ARCH: ${DPKG_ARCH}"
   write_log "UEFI: ${UEFI}"
+  write_log "IS_DEBUG: ${IS_DEBUG}"
   write_log_blank
 
-  write_log_and_inputs "AUTO_KEYMAP: ${AUTO_KEYMAP}"
-  write_log_and_inputs "AUTO_INSTALL_OS: ${AUTO_INSTALL_OS}"
-  write_log_and_inputs "AUTO_INSTALL_EDITION: ${AUTO_INSTALL_EDITION}"
-  write_log_and_inputs "AUTO_KERNEL_VERSION: ${AUTO_KERNEL_VERSION}"
-  write_log_and_inputs "AUTO_HOSTNAME: ${AUTO_HOSTNAME}"
-  write_log_and_inputs "AUTO_DOMAIN: ${AUTO_DOMAIN}"
-  write_log_and_inputs "AUTO_TIMEZONE: ${AUTO_TIMEZONE}"
-  write_log_and_inputs "AUTO_CONFIRM_SETTINGS: ${AUTO_CONFIRM_SETTINGS}"
-  write_log_and_inputs "AUTO_REBOOT: ${AUTO_REBOOT}"
-  write_log_and_inputs "IS_DEBUG: ${IS_DEBUG}"
+  write_log "AUTO_KEYMAP: ${AUTO_KEYMAP}"
+  write_log "AUTO_INSTALL_OS: ${AUTO_INSTALL_OS}"
+  write_log "AUTO_INSTALL_EDITION: ${AUTO_INSTALL_EDITION}"
+  write_log "AUTO_KERNEL_VERSION: ${AUTO_KERNEL_VERSION}"
+  write_log "AUTO_HOSTNAME: ${AUTO_HOSTNAME}"
+  write_log "AUTO_DOMAIN: ${AUTO_DOMAIN}"
+  write_log "AUTO_TIMEZONE: ${AUTO_TIMEZONE}"
+  write_log "AUTO_CONFIRM_SETTINGS: ${AUTO_CONFIRM_SETTINGS}"
+  write_log "AUTO_REBOOT: ${AUTO_REBOOT}"
   write_log_blank
 
-  write_log_and_inputs "AUTO_ROOT_DISABLED: ${AUTO_ROOT_DISABLED}"
+  write_log "AUTO_ROOT_DISABLED: ${AUTO_ROOT_DISABLED}"
   write_log_password "AUTO_ROOT_PWD: ${AUTO_ROOT_PWD}"
-  write_log_and_inputs "AUTO_CREATE_USER: ${AUTO_CREATE_USER}"
-  write_log_and_inputs "AUTO_USERNAME: ${AUTO_USERNAME}"
+  write_log "AUTO_CREATE_USER: ${AUTO_CREATE_USER}"
+  write_log "AUTO_USERNAME: ${AUTO_USERNAME}"
   write_log_password "AUTO_USER_PWD: ${AUTO_USER_PWD}"
   write_log_blank
 
-  write_log_and_inputs "AUTO_SKIP_PARTITIONING: ${AUTO_SKIP_PARTITIONING}"
-  write_log_and_inputs "AUTO_MAIN_DISK: ${AUTO_MAIN_DISK}"
-  write_log_and_inputs "AUTO_SECOND_DISK: ${AUTO_SECOND_DISK}"
-  write_log_and_inputs "AUTO_USE_DATA_FOLDER: ${AUTO_USE_DATA_FOLDER}"
-  write_log_and_inputs "AUTO_STAMP_FOLDER: ${AUTO_STAMP_FOLDER}"
-  write_log_and_inputs "AUTO_ENCRYPT_DISKS: ${AUTO_ENCRYPT_DISKS}"
+  write_log "AUTO_SKIP_PARTITIONING: ${AUTO_SKIP_PARTITIONING}"
+  write_log "AUTO_MAIN_DISK: ${AUTO_MAIN_DISK}"
+  write_log "AUTO_SECOND_DISK: ${AUTO_SECOND_DISK}"
+  write_log "AUTO_USE_DATA_FOLDER: ${AUTO_USE_DATA_FOLDER}"
+  write_log "AUTO_STAMP_FOLDER: ${AUTO_STAMP_FOLDER}"
+  write_log "AUTO_ENCRYPT_DISKS: ${AUTO_ENCRYPT_DISKS}"
   case "${AUTO_DISK_PWD}" in
     file)
-      write_log_and_inputs "AUTO_DISK_PWD: file"
+      write_log "AUTO_DISK_PWD: file"
       ;;
     /*)
-      write_log_and_inputs "AUTO_DISK_PWD: ${AUTO_DISK_PWD}"
+      write_log "AUTO_DISK_PWD: ${AUTO_DISK_PWD}"
       ;;
     *)
       write_log_password "AUTO_DISK_PWD: ${AUTO_DISK_PWD}"
@@ -244,9 +239,9 @@ log_values() {
   esac
   write_log_blank
   write_log "MAIN_DISK_METHOD: '${MAIN_DISK_METHOD}'"
-  write_log_and_inputs "SELECTED_MAIN_DISK: '${SELECTED_MAIN_DISK}'"
+  write_log "SELECTED_MAIN_DISK: '${SELECTED_MAIN_DISK}'"
   write_log "SECOND_DISK_METHOD: '${SECOND_DISK_METHOD}'"
-  write_log_and_inputs "SELECTED_SECOND_DISK: '${SELECTED_SECOND_DISK}'"
+  write_log "SELECTED_SECOND_DISK: '${SELECTED_SECOND_DISK}'"
   write_log "ENCRYPTION_FILE: '${ENCRYPTION_FILE}'"
   write_log "SECONDARY_FILE: '${SECONDARY_FILE}'"
 
@@ -1802,20 +1797,11 @@ stamp_build() {
   stamp_path="/mnt/${stamp_path}"
   mkdir -p "${stamp_path}"
 
-  local the_date
-  the_date=$(date -Is)
-  echo "Build Time: ${the_date}" | tee -a "${stamp_path}/install-time.txt"
-
   cp "${LOG}" "${stamp_path}/install-log.log"
 
   if [[ -f "${OUTPUT_LOG}" ]]
   then
     cp "${OUTPUT_LOG}" "${stamp_path}/install-output.log"
-  fi
-
-  if [[ -f "${WORKING_DIR}/install-inputs.txt" ]]
-  then
-    cp "${WORKING_DIR}/install-inputs.txt" "${stamp_path}/install-inputs.txt"
   fi
 }
 
