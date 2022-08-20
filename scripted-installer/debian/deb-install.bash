@@ -551,9 +551,20 @@ install_prereqs() {
 
   # Things they both need
   print_status "    Installing common prerequisites"
-  DEBIAN_FRONTEND=noninteractive apt-get -y -q --no-install-recommends install vim debootstrap arch-install-scripts parted bc cryptsetup lvm2 xfsprogs laptop-detect
+  DEBIAN_FRONTEND=noninteractive apt-get -y -q --no-install-recommends install vim debootstrap arch-install-scripts parted bc cryptsetup lvm2 xfsprogs laptop-detect ntp
 
   DEBIAN_FRONTEND=noninteractive apt-get -y -q autoremove || true
+}
+
+setup_clock() {
+  print_info "Setting up system clock"
+
+  hwclock --systohc --utc --update-drift
+  timedatectl set-local-rtc 0
+  timedatectl set-timezone "${AUTO_TIMEZONE}"
+
+  # Set the time with ntp once
+  ntpd -gq || true
 }
 
 install_debian_prereqs() {
@@ -1939,6 +1950,7 @@ do_install() {
   # Verifications
   system_verifications
   install_prereqs
+  setup_clock
   verify_parameters
 
   # Setup the core system
