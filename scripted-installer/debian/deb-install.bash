@@ -1611,8 +1611,9 @@ EOF
 }
 
 configure_virtualization() {
+  print_info "Checking virtualization"
   local detected_virt
-  detected_virt=$(systemd-detect-virt)
+  detected_virt=$(systemd-detect-virt || true)
   if [[ ${detected_virt} == "oracle" && "${UEFI}" = 1 && "${AUTO_INSTALL_OS}" == "debian" ]]
   then
     # On virtualbox we MUST configure this or the system won't boot correctly.  I am doing the absolute minimum I can here to get things working.  Any other virtualization configurations should be done post bootstrap.
