@@ -1329,7 +1329,7 @@ install_bootloader() {
 
   if [[ ${UEFI} == "1" ]]
   then
-    chroot_install os-prober efibootmgr grub-efi-amd64 grub-efi-amd64-signed shim-signed shim-helpers-amd64-signed mokutil
+    chroot_install efibootmgr grub-efi-amd64 grub-efi-amd64-signed shim-signed shim-helpers-amd64-signed mokutil
 
     arch-chroot /mnt grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=debian --recheck --no-nvram "${SELECTED_MAIN_DISK}"
 
@@ -1337,7 +1337,7 @@ install_bootloader() {
   else
     print_warning "BIOS support is EXPERIMENTAL and not well tested"
 
-    chroot_install os-prober grub-pc
+    chroot_install grub-pc
 
     arch-chroot /mnt grub-install "${SELECTED_MAIN_DISK}"
 
@@ -1658,7 +1658,7 @@ install_applications_common() {
   print_info "Installing common applications"
 
   # Required in all environments, many to true up standard server installation
-  chroot_install apt-transport-https ca-certificates curl wget gnupg lsb-release build-essential dkms sudo acl git vim-nox python3-dev python3-setuptools python3-wheel python3-keyring python3-venv python3-pip python-is-python3 software-properties-common os-prober apparmor ssh ansible locales console-setup lz4 network-manager netplan.io cryptsetup cryptsetup-initramfs xfsprogs dictionaries-common iamerican ibritish discover discover-data laptop-detect installation-report usbutils eject util-linux-locales
+  chroot_install apt-transport-https ca-certificates curl wget gnupg lsb-release build-essential dkms sudo acl git vim-nox python3-dev python3-setuptools python3-wheel python3-keyring python3-venv python3-pip python-is-python3 software-properties-common apparmor ssh ansible locales console-setup lz4 network-manager netplan.io cryptsetup cryptsetup-initramfs xfsprogs dictionaries-common iamerican ibritish discover discover-data laptop-detect installation-report usbutils eject util-linux-locales
 
   if [[ "${SELECTED_SECOND_DISK}" != "ignore" ]]
   then
