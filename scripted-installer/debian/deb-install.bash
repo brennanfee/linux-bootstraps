@@ -795,8 +795,16 @@ parse_second_disk() {
   print_info "Reading Second Disk Selection"
 
   print_status "    Collecting disks..."
-  local devices_list
-  mapfile -t devices_list < <(lsblk -ndpl --output NAME --include "${BLOCK_DISKS}" | grep -v "${SELECTED_MAIN_DISK}")
+  local devices
+  devices=$(lsblk -ndpl --output NAME --include "${BLOCK_DISKS}" | grep -v "${SELECTED_MAIN_DISK}" || true)
+  write_log "Secondary devices: ${devices}"
+
+  local devices_list=()
+  while read -r line
+  do
+    devices_list+=("${line}")
+  done <<< "${devices[@]}"
+  write_log "Secondary devices array: ${devices_list[*]}"
 
   local ventoy_disk
   ventoy_disk=$(lsblk -np -o PKNAME,LABEL | grep -i "ventoy" | cut -d' ' -f 1 || true)
@@ -874,16 +882,8 @@ parse_second_disk() {
 
 unmount_partitions() {
   print_info "Unmounting partitions"
-  # NOTE: Cannot use umount -R here as it is a hard failure if the path requested is not mounted
-
-  local mounted_partitions
-  mapfile -t mounted_partitions < <(lsblk --output MOUNTPOINT | grep "^/mnt" | sort -r)
-
   swapoff -a
-  for i in "${mounted_partitions[@]}"
-  do
-    umount "${i}"
-  done
+  umount -R "/mnt" || true
 }
 
 wipe_disks() {
@@ -1011,20 +1011,20 @@ setup_encryption() {
         encrypt_main_passphrase
         ;;
     esac
-  fi
 
-  if [[ ${SELECTED_SECOND_DISK} != "ignore" ]]
-  then
-    print_status "    Generating keyfile for second disk"
-    SECONDARY_FILE=$(mktemp)
+    if [[ ${SELECTED_SECOND_DISK} != "ignore" ]]
+    then
+      print_status "    Generating keyfile for second disk"
+      SECONDARY_FILE=$(mktemp)
 
-    openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:4096 -out "${SECONDARY_FILE}"
+      openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:4096 -out "${SECONDARY_FILE}"
 
-    print_status "    Encrypting second disk"
-    cryptsetup --batch-mode -s 512 --iter-time 5000 --type luks2 luksFormat "${SECOND_DISK_FIRST_PART}" "${SECONDARY_FILE}"
+      print_status "    Encrypting second disk"
+      cryptsetup --batch-mode -s 512 --iter-time 5000 --type luks2 luksFormat "${SECOND_DISK_FIRST_PART}" "${SECONDARY_FILE}"
 
-    print_status "    Opening second disk"
-    cryptsetup open --type luks --key-file "${SECONDARY_FILE}" "${SECOND_DISK_FIRST_PART}" cryptdata
+      print_status "    Opening second disk"
+      cryptsetup open --type luks --key-file "${SECONDARY_FILE}" "${SECOND_DISK_FIRST_PART}" cryptdata
+    fi
   fi
 }
 
@@ -1971,7 +1971,7 @@ main() {
 
   if [[ ${AUTO_REBOOT} == "1" ]]
   then
-    umount -R /mnt
+    umount -R /mnt || true
     systemctl reboot
   fi
 }
