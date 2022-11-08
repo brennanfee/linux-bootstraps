@@ -1439,7 +1439,16 @@ configure_encryption() {
     local boot_uuid
     main_uuid=$(blkid -o value -s UUID "${MAIN_DISK_THIRD_PART}")
     boot_uuid=$(blkid -o value -s UUID "${MAIN_DISK_SECOND_PART}")
-    echo "cryptroot UUID=${main_uuid} /dev/disk/by-uuid/${boot_uuid}:root.key luks,initramfs,keyscript=/lib/cryptsetup/scripts/passdev,tries=3" >> /mnt/etc/crypttab
+
+    local discard_option=""
+    local disk_gran
+    disk_gran=$(lsblk -ndpl --output NAME,DISC-GRAN | grep -i "${SELECTED_MAIN_DISK}" | tr -s ' ' | cut -d' ' -f 2 || true)
+    if [[ "${disk_gran}" != "0B" ]]
+    then
+      local discard_option=",discard"
+    fi
+
+    echo "cryptroot UUID=${main_uuid} /dev/disk/by-uuid/${boot_uuid}:root.key luks,initramfs,keyscript=/lib/cryptsetup/scripts/passdev,tries=3${discard_option}" >> /mnt/etc/crypttab
 
     fix_systemd_encryption_bug
 
@@ -1452,9 +1461,26 @@ configure_encryption() {
       local second_uuid
       second_uuid=$(blkid -o value -s UUID "${SECOND_DISK_FIRST_PART}")
 
-      echo "cryptdata UUID=${second_uuid} ${second_key} luks,tries=3" >> /mnt/etc/crypttab
+      local discard_option=""
+      local disk_gran
+      disk_gran=$(lsblk -ndpl --output NAME,DISC-GRAN | grep -i "${SELECTED_SECOND_DISK}" | tr -s ' ' | cut -d' ' -f 2 || true)
+      if [[ "${disk_gran}" != "0B" ]]
+      then
+        local discard_option=",discard"
+      fi
+
+      echo "cryptdata UUID=${second_uuid} ${second_key} luks,tries=3${discard_option}" >> /mnt/etc/crypttab
     fi
   fi
+
+  # If a multi-disk system, configure LVM to issue discards, regardless of encryption
+  if [[ "${SELECTED_SECOND_DISK}" != "ignore" ]]
+  then
+    sed -i 's/issue_discards = 0/issue_discards = 1/g' /mnt/etc/lvm/lvm.conf
+  fi
+
+  # Ensure the fstrim timer is enabled
+  arch-chroot /mnt systemctl enable fstrim.timer
 }
 
 fix_systemd_encryption_bug() {
@@ -1556,8 +1582,8 @@ configure_timezone() {
   arch-chroot /mnt timedatectl set-timezone "${AUTO_TIMEZONE}"
 }
 
-configure_initramfs() {
-  print_info "Configuring initramfs"
+configure_boot() {
+  print_info "Configuring boot"
 
   # Make sure lz4 is installed
   chroot_install lz4
@@ -1565,7 +1591,18 @@ configure_initramfs() {
   # Set that as the compression to use
   sed -i '/^COMPRESS=/ c\COMPRESS=lz4' /mnt/etc/initramfs-tools/initramfs.conf
 
-  # Run update
+  # Update grub
+  local grub_cmdline_linux_default='GRUB_CMDLINE_LINUX_DEFAULT="quiet splash iommu=pt"'
+  if [[ ${AUTO_ENCRYPT_DISKS} == "1" ]]
+  then
+    grub_cmdline_linux_default='GRUB_CMDLINE_LINUX_DEFAULT="quiet splash iommu=pt rd.luks.options=discard"'
+  fi
+  sed -i "s/^GRUB_CMDLINE_LINUX_DEFAULT=.*$/${grub_cmdline_linux_default}/g" /mnt/etc/default/grub
+
+  sed -i 's/^#?GRUB_GFXMODE=.*$/GRUB_GFXMODE=1920x1080/g' /mnt/etc/default/grub
+
+  # Run updates
+  arch-chroot /mnt update-grub
   arch-chroot /mnt update-initramfs -u
 }
 
@@ -1930,7 +1967,7 @@ do_system_configurations() {
   configure_fstab
   configure_hostname
   configure_timezone
-  configure_initramfs
+  configure_boot
   configure_swap
   configure_networking
   configure_virtualization
