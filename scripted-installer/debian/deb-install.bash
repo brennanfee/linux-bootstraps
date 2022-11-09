@@ -149,6 +149,9 @@ AUTO_CONFIRM_SETTINGS="${AUTO_CONFIRM_SETTINGS:=0}"
 # Whether to automatically reboot after the script has completed.   Default is not to reboot.  Automated environments such as Packer should turn this on.
 AUTO_REBOOT="${AUTO_REBOOT:=0}"
 
+# A list of 'other' packages to install during the setup.
+AUTO_EXTRA_PACKAGES="${AUTO_EXTRA_PACKAGES:=}"
+
 ### END: Options & User Overrideable Parameters
 
 ### START: Params created during verification
@@ -211,6 +214,7 @@ log_values() {
   write_log "AUTO_TIMEZONE: ${AUTO_TIMEZONE}"
   write_log "AUTO_CONFIRM_SETTINGS: ${AUTO_CONFIRM_SETTINGS}"
   write_log "AUTO_REBOOT: ${AUTO_REBOOT}"
+  write_log "AUTO_EXTRA_PACKAGES: ${AUTO_EXTRA_PACKAGES}"
   write_log_blank
 
   write_log "AUTO_ROOT_DISABLED: ${AUTO_ROOT_DISABLED}"
@@ -1408,7 +1412,7 @@ configure_apt_ubuntu() {
 configure_keymap() {
   print_info "Configure keymap"
 
-  chroot_install console-setup
+  chroot_install console-setup console-data
 
   echo "KEYMAP=${AUTO_KEYMAP}" > /mnt/etc/vconsole.conf
   echo "FONT=Lat15-Terminus${CONSOLE_FONT_SIZE}" >> /mnt/etc/vconsole.conf
@@ -1695,7 +1699,7 @@ install_applications_common() {
   print_info "Installing common applications"
 
   # Required in all environments, many to true up standard server installation
-  chroot_install apt-transport-https ca-certificates curl wget gnupg lsb-release build-essential dkms sudo acl git vim-nox python3-dev python3-setuptools python3-wheel python3-keyring python3-venv python3-pip python-is-python3 software-properties-common apparmor ssh ansible locales console-setup lz4 network-manager netplan.io cryptsetup cryptsetup-initramfs xfsprogs dictionaries-common iamerican ibritish discover discover-data laptop-detect installation-report usbutils eject util-linux-locales
+  chroot_install apt-transport-https ca-certificates curl wget gnupg lsb-release build-essential dkms sudo acl git vim-nox python3-dev python3-keyring python3-pip python-is-python3 pipx software-properties-common apparmor ssh locales console-setup console-data lz4 network-manager netplan.io cryptsetup cryptsetup-initramfs xfsprogs dictionaries-common iamerican ibritish discover discover-data laptop-detect installation-report usbutils eject util-linux-locales
 
   if [[ "${SELECTED_SECOND_DISK}" != "ignore" ]]
   then
@@ -1719,6 +1723,15 @@ install_applications_ubuntu() {
     print_info "Installing Ubuntu specific applications"
 
     chroot_install linux-firmware
+  fi
+}
+
+install_applications_extra_packages() {
+  if [[ ${AUTO_EXTRA_PACKAGES} != "" ]]
+  then
+    print_info "Installing extra packages requested"
+
+    chroot_install "${AUTO_EXTRA_PACKAGES}"
   fi
 }
 
@@ -1953,6 +1966,8 @@ install_applications() {
   install_applications_debian
   install_applications_ubuntu
   install_applications_common
+
+  install_applications_extra_packages
 }
 
 setup_users() {
