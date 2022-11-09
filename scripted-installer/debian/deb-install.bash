@@ -504,7 +504,7 @@ detect_if_eufi() {
   then
     modprobe -r -q efivars || true # if MAC
   else
-    modprobe -q efivarfs # all others
+    modprobe -q efivarfs || true # all others
   fi
 
   if [[ -d "/sys/firmware/efi/" ]]
