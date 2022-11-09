@@ -149,6 +149,10 @@ AUTO_CONFIRM_SETTINGS="${AUTO_CONFIRM_SETTINGS:=0}"
 # Whether to automatically reboot after the script has completed.   Default is not to reboot.  Automated environments such as Packer should turn this on.
 AUTO_REBOOT="${AUTO_REBOOT:=0}"
 
+# Install a configuration management system, helpful to have here so that on first boot it can already be installed ready to locally or remotely configure the instance.  Default is "none".  Options are: none, ansible, ansible-pip, saltStack, saltStack-repo, puppet, puppet-repo
+## Yes, I don't support puppet and chef because they are hot garbage
+AUTO_CONFIG_MANAGEMENT="${AUTO_CONFIG_MANAGEMENT:=none}"
+
 # A list of 'other' packages to install during the setup.
 AUTO_EXTRA_PACKAGES="${AUTO_EXTRA_PACKAGES:=}"
 
@@ -214,6 +218,7 @@ log_values() {
   write_log "AUTO_TIMEZONE: ${AUTO_TIMEZONE}"
   write_log "AUTO_CONFIRM_SETTINGS: ${AUTO_CONFIRM_SETTINGS}"
   write_log "AUTO_REBOOT: ${AUTO_REBOOT}"
+  write_log "AUTO_CONFIG_MANAGEMENT: ${AUTO_CONFIG_MANAGEMENT}"
   write_log "AUTO_EXTRA_PACKAGES: ${AUTO_EXTRA_PACKAGES}"
   write_log_blank
 
@@ -630,6 +635,7 @@ normalize_parameters() {
   normalize_variable_string "AUTO_SECOND_DISK"
   normalize_variable_string "AUTO_USERNAME"
   normalize_variable_string "AUTO_STAMP_FOLDER"
+  normalize_variable_string "AUTO_CONFIG_MANAGEMENT"
 
   normalize_variable_boolean "AUTO_SKIP_PARTITIONING"
   normalize_variable_boolean "AUTO_USE_DATA_FOLDER"
@@ -1735,6 +1741,82 @@ install_applications_extra_packages() {
   fi
 }
 
+install_configuration_management() {
+  print_info "Installing configuration management software (if requested)"
+  case "${AUTO_CONFIG_MANAGEMENT}" in
+    ansible)
+      chroot_install ansible
+      ;;
+    ansible-pip)
+      arch-chroot /mnt pipx install --include-deps ansible
+      arch-chroot /mnt pipx inject ansible cryptography
+      arch-chroot /mnt pipx inject ansible paramiko
+      ;;
+    salt)
+      chroot_install salt-minion
+      ;;
+    salt-repo)
+      install_salt_from_repo
+      ;;
+    puppet)
+      chroot_install puppet-agent
+      ;;
+    puppet-repo)
+      install_puppet_from_repo
+      ;;
+    none)
+      print_info "Skipping configuration management software installation, none selected."
+      ;;
+    *)
+      print_info "Skipping configuration management software installation, invalid option."
+      ;;
+  esac
+}
+
+install_salt_from_repo() {
+  mkdir -p /mnt/usr/local/share/keyrings
+
+  local salt_version="latest" # alternatively something like 3005
+  local distro
+  distro=$(arch-chroot /mnt lsb_release -i -s | tr "[:upper:]" "[:lower:]")
+  local release
+  release=$(arch-chroot /mnt lsb_release -r -s)
+  local codename
+  codename=$(arch-chroot /mnt lsb_release -c -s | tr "[:upper:]" "[:lower:]")
+
+  #TODO: Figure out a better codename normalizer
+  # Bookworm should use bullseye
+  if [[ ${codename} == "bookworm" ]]
+  then
+    codename="bullseye"
+  fi
+
+  sudo curl -fsSL -o /mnt/usr/local/share/keyrings/salt-archive-keyring.gpg "https://repo.saltproject.io/py3/${distro}/${release}/${DPKG_ARCH}/${salt_version}/salt-archive-keyring.gpg"
+
+  echo "deb [signed-by=/usr/local/share/keyrings/salt-archive-keyring.gpg arch=${DPKG_ARCH}] https://repo.saltproject.io/py3/${distro}/${release}/${DPKG_ARCH}/${salt_version} ${codename} main" | sudo tee /mnt/etc/apt/sources.list.d/salt.list
+
+  arch-chroot /mnt apt-get update
+  chroot_install salt-minion
+}
+
+install_puppet_from_repo() {
+  local codename
+  codename=$(arch-chroot /mnt lsb_release -c -s)
+
+  #TODO: Figure out a better codename normalizer
+  # Bookworm should use bullseye
+  if [[ ${codename} == "bookworm" ]]
+  then
+    codename="bullseye"
+  fi
+
+  wget "https://apt.puppet.com/puppet7-release-${codename}.deb"
+  arch-chroot /mnt dpkg -i "puppet7-release-${codename}.deb"
+  arch-chroot /mnt apt-get update
+  chroot_install puppet-agent
+  arch-chroot /mnt /opt/puppetlabs/bin/puppet resource service puppet ensure=running enable=true
+}
+
 ### END: Install Applications
 
 ### START: User Configuration
@@ -1968,6 +2050,7 @@ install_applications() {
   install_applications_common
 
   install_applications_extra_packages
+  install_configuration_management
 }
 
 setup_users() {
