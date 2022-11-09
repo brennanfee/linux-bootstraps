@@ -40,7 +40,13 @@ export AUTO_MAIN_DISK=${AUTO_MAIN_DISK:=smallest}
 script_file="${HOME}/deb-install.bash"
 if [[ ! -f "${script_file}" ]]
 then
-  curl -fsSL https://tinyurl.com/deb-install/deb-install.bash --output "${script_file}"
+  # To support testing of other versions of the install script (local versions, branches, etc.)
+  if [[ "${CONFIG_SCRIPT_SOURCE:=}" != "" ]]
+  then
+    curl -fsSL "${CONFIG_SCRIPT_SOURCE}" --output "${script_file}"
+  else
+    curl -fsSL https://tinyurl.com/deb-install/deb-install.bash --output "${script_file}"
+  fi
 fi
 
 bash "${script_file}"
