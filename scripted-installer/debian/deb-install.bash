@@ -55,7 +55,7 @@ DPKG_ARCH=$(dpkg --print-architecture) # Something like amd64, arm64
 UEFI=0
 
 # Disk to types to accept as install locations for the auto selection methods
-BLOCK_DISKS="3,8,9,22,33,34,65,66,67,202,253,259"
+BLOCK_DISKS="3,8,9,22,33,34,65,66,67,202,253,254,259"
 
 # This is not to be confused with the OS we are going to install, this is the OS that was booted to perform the install.  This script only supports Debian and Ubuntu Live Server installers images.
 INSTALLER_DISTRO=$(lsb_release -i -s | tr "[:upper:]" "[:lower:]")
