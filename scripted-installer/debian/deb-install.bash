@@ -1202,8 +1202,13 @@ install_base_system_debian() {
   print_status "    Installing Debian"
 
   # Bootstrap
-  debootstrap --arch "${DPKG_ARCH}" "${AUTO_INSTALL_EDITION}" /mnt "http://deb.debian.org/debian"
-  chroot_install lsb-release
+  local deboostrap_script="/usr/share/debootstrap/scripts/${AUTO_INSTALL_EDITION}"
+  if [[ ! -f "${deboostrap_script}" ]]
+  then
+    deboostrap_script="/usr/share/debootstrap/scripts/sid" # Debian fallback
+  fi
+
+  debootstrap --arch "${DPKG_ARCH}" --include=lsb-release "${AUTO_INSTALL_EDITION}" "/mnt" "https://deb.debian.org/debian" "${deboostrap_script}"
 
   # Configure apt for the rest of the installations
   configure_apt_debian
@@ -1264,7 +1269,13 @@ install_base_system_ubuntu() {
   print_status "    Installing Ubuntu"
 
   # Bootstrap
-  debootstrap --arch "${DPKG_ARCH}" "${AUTO_INSTALL_EDITION}" /mnt "http://us.archive.ubuntu.com/ubuntu"
+  local deboostrap_script="/usr/share/debootstrap/scripts/${AUTO_INSTALL_EDITION}"
+  if [[ ! -f "${deboostrap_script}" ]]
+  then
+    deboostrap_script="/usr/share/debootstrap/scripts/gutsy" # Ubuntu fallback
+  fi
+
+  debootstrap --arch "${DPKG_ARCH}" --include=lsb-release "${AUTO_INSTALL_EDITION}" "/mnt" "https://us.archive.ubuntu.com/ubuntu" "${deboostrap_script}"
 
   # Configure apt for the rest of the installations
   configure_apt_ubuntu
@@ -1378,9 +1389,9 @@ configure_apt_debian() {
 
   # Write out sources
   {
-    echo "deb http://deb.debian.org/debian ${AUTO_INSTALL_EDITION} main contrib non-free"
-    echo "deb http://deb.debian.org/debian-security ${AUTO_INSTALL_EDITION}-security main contrib non-free"
-    echo "deb http://deb.debian.org/debian ${AUTO_INSTALL_EDITION}-updates main contrib non-free"
+    echo "deb https://deb.debian.org/debian ${AUTO_INSTALL_EDITION} main contrib non-free"
+    echo "deb https://deb.debian.org/debian-security ${AUTO_INSTALL_EDITION}-security main contrib non-free"
+    echo "deb https://deb.debian.org/debian ${AUTO_INSTALL_EDITION}-updates main contrib non-free"
   } > /mnt/etc/apt/sources.list
 
   # Install backports source
@@ -1392,7 +1403,7 @@ configure_apt_debian() {
     local edition
     edition=$(arch-chroot /mnt lsb_release -c -s)
 
-    echo "deb http://deb.debian.org/debian ${edition}-backports main contrib non-free" > /mnt/etc/apt/sources.list.d/debian-backports.list
+    echo "deb https://deb.debian.org/debian ${edition}-backports main contrib non-free" > /mnt/etc/apt/sources.list.d/debian-backports.list
   fi
 
   arch-chroot /mnt apt-get update
@@ -1406,10 +1417,10 @@ configure_apt_ubuntu() {
 
   # Write out sources
   {
-    echo "deb http://us.archive.ubuntu.com/ubuntu ${AUTO_INSTALL_EDITION} main restricted universe multiverse"
-    echo "deb http://us.archive.ubuntu.com/ubuntu ${AUTO_INSTALL_EDITION}-updates main restricted universe multiverse"
-    echo "deb http://us.archive.ubuntu.com/ubuntu ${AUTO_INSTALL_EDITION}-backports main restricted universe multiverse"
-    echo "deb http://us.archive.ubuntu.com/ubuntu ${AUTO_INSTALL_EDITION}-security main restricted universe multiverse"
+    echo "deb https://us.archive.ubuntu.com/ubuntu ${AUTO_INSTALL_EDITION} main restricted universe multiverse"
+    echo "deb https://us.archive.ubuntu.com/ubuntu ${AUTO_INSTALL_EDITION}-updates main restricted universe multiverse"
+    echo "deb https://us.archive.ubuntu.com/ubuntu ${AUTO_INSTALL_EDITION}-backports main restricted universe multiverse"
+    echo "deb https://us.archive.ubuntu.com/ubuntu ${AUTO_INSTALL_EDITION}-security main restricted universe multiverse"
   } > /mnt/etc/apt/sources.list
 
   arch-chroot /mnt apt-get update
