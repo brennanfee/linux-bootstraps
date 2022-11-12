@@ -37,6 +37,10 @@ fi
 # Should only be on during testing.  Primarly this turns on the output of passwords.
 IS_DEBUG=${AUTO_IS_DEBUG:=0}
 
+# Should be updated whenever a new Debian stable is released
+CURRENT_DEB_STABLE_CODENAME="bullseye"
+CURRENT_DEB_TESTING_CODENAME="bookworm"
+
 # Paths
 WORKING_DIR=$(pwd)
 LOG="${WORKING_DIR}/install.log"
@@ -1826,12 +1830,14 @@ install_salt_from_repo() {
   local codename
   codename=$(arch-chroot /mnt lsb_release -c -s | tr "[:upper:]" "[:lower:]")
 
-  #TODO: Figure out a better codename normalizer
-  # Bookworm should use bullseye
-  if [[ ${codename} == "bookworm" ]]
-  then
-    codename="bullseye"
-  fi
+  # Salt only supports stable releases, not testing
+  case "${codename}" in
+    stable | testing | "${CURRENT_DEB_TESTING_CODENAME}")
+      codename="${CURRENT_DEB_STABLE_CODENAME}"
+      ;;
+    *)
+      ;;
+  esac
 
   sudo curl -fsSL -o /mnt/usr/local/share/keyrings/salt-archive-keyring.gpg "https://repo.saltproject.io/py3/${distro}/${release}/${DPKG_ARCH}/${salt_version}/salt-archive-keyring.gpg"
 
@@ -1845,12 +1851,14 @@ install_puppet_from_repo() {
   local codename
   codename=$(arch-chroot /mnt lsb_release -c -s)
 
-  #TODO: Figure out a better codename normalizer
-  # Bookworm should use bullseye
-  if [[ ${codename} == "bookworm" ]]
-  then
-    codename="bullseye"
-  fi
+  # Puppet only supports stable releases, not testing
+  case "${codename}" in
+    stable | testing | "${CURRENT_DEB_TESTING_CODENAME}")
+      codename="${CURRENT_DEB_STABLE_CODENAME}"
+      ;;
+    *)
+      ;;
+  esac
 
   wget "https://apt.puppet.com/puppet7-release-${codename}.deb"
   arch-chroot /mnt dpkg -i "puppet7-release-${codename}.deb"
