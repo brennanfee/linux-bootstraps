@@ -1346,24 +1346,55 @@ install_base_system_ubuntu() {
 install_bootloader() {
   print_info "Installing bootloader"
 
-  # TODO: Suport for ARM UEFI?
-
   if [[ ${UEFI} == "1" ]]
   then
-    chroot_install efibootmgr grub-efi-amd64 grub-efi-amd64-signed shim-signed shim-helpers-amd64-signed mokutil
-
-    arch-chroot /mnt grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=debian --recheck --no-nvram "${SELECTED_MAIN_DISK}"
-
-    arch-chroot /mnt update-grub
+    install_bootloader_efi
   else
-    print_warning "BIOS support is EXPERIMENTAL and not well tested"
-
-    chroot_install grub-pc
-
-    arch-chroot /mnt grub-install "${SELECTED_MAIN_DISK}"
-
-    arch-chroot /mnt update-grub
+    install_bootloader_bios
   fi
+}
+
+install_bootloader_efi(){
+  print_info "Installing bootloader (UEFI)"
+
+  chroot_install efibootmgr "grub-efi-${DPKG_ARCH}" "grub-efi-${DPKG_ARCH}-signed" shim-signed mokutil
+
+  if [[ ${AUTO_INSTALL_OS} == "debian" ]]
+  then
+    chroot_install "shim-helpers-${DPKG_ARCH}-signed"
+  fi
+
+  local target
+  case "${DPKG_ARCH}" in
+    i386)
+      target="i386-pc"
+      ;;
+    arm)
+      target="arm-efi"
+      ;;
+    arm64)
+      target="arm64-efi"
+      ;;
+    *)
+      target="x86_64-efi"
+      ;;
+  esac
+
+  arch-chroot /mnt grub-install "--target=${target}" --efi-directory=/boot/efi --bootloader-id=debian --recheck --no-nvram "${SELECTED_MAIN_DISK}"
+
+  arch-chroot /mnt update-grub
+}
+
+install_bootloader_bios(){
+  print_info "Installing bootloader (BIOS)"
+
+  print_warning "BIOS support is DEPRECATED and not well tested"
+
+  chroot_install grub-pc
+
+  arch-chroot /mnt grub-install "${SELECTED_MAIN_DISK}"
+
+  arch-chroot /mnt update-grub
 }
 
 ### END: Install System
