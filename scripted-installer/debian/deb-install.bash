@@ -183,6 +183,15 @@ AUTO_CONFIG_MANAGEMENT="${AUTO_CONFIG_MANAGEMENT:=none}"
 # A list of 'other' packages to install during the setup.
 AUTO_EXTRA_PACKAGES="${AUTO_EXTRA_PACKAGES:=}"
 
+# A script to run BEFORE the system setup.  This must be a URL where the script can be download or read from, ftp:// and file:// url's should be supported.
+AUTO_BEFORE_SCRIPT="${AUTO_BEFORE_SCRIPT:=}"
+
+# A script to run after the system setup prior to reboot (if AUTO_REBOOT).
+AUTO_AFTER_SCRIPT="${AUTO_AFTER_SCRIPT:=}"
+
+# A script to configure to run once on the system after initial boot.  Note, this script will run as root, before login of any user, and will ONLY RUN ONCE.
+AUTO_FIRST_BOOT_SCRIPT="${AUTO_FIRST_BOOT_SCRIPT:=}"
+
 ### END: Options & User Overrideable Parameters
 
 ### START: Params created during verification
@@ -1725,23 +1734,22 @@ fix_systemd_encryption_bug() {
   cat <<- 'EOF' > /mnt/etc/systemd/system/cryptsetup-first-boot.service
 [Unit]
 Description=First boot script to fix systemd encryption issue
+ConditionPathExists=/usr/local/sbin/fix-systemd-encryption-issue.sh
 
 [Service]
 Type=oneshot
-ExecStart=/srv/fix-systemd-encryption-issue.sh
+ExecStart=/usr/local/sbin/fix-systemd-encryption-issue.sh
 
 [Install]
 WantedBy=default.target
 EOF
 
-  arch-chroot /mnt systemctl enable cryptsetup-first-boot.service
-
-  cat <<- 'EOF' > /mnt/srv/fix-systemd-encryption-issue.sh
+  cat <<- 'EOF' > /mnt/usr/local/sbin/fix-systemd-encryption-issue.sh
 #!/usr/bin/env sh
 
 # Run the generator
 /lib/systemd/system-generators/systemd-cryptsetup-generator
-if [[ ! -f "/tmp/systemd-cryptsetup@cryptroot.service" ]]
+if [ ! -f "/tmp/systemd-cryptsetup@cryptroot.service" ]
 then
   exit 1
 fi
@@ -1762,7 +1770,8 @@ rm /etc/systemd/system/cryptsetup-first-boot.service
 rm $0
 EOF
 
-  chmod 0754 /mnt/srv/fix-systemd-encryption-issue.sh
+  chmod 0754 /mnt/usr/local/sbin/fix-systemd-encryption-issue.sh
+  arch-chroot /mnt systemctl enable cryptsetup-first-boot.service
 }
 
 configure_fstab() {
@@ -2087,6 +2096,7 @@ setup_root() {
 }
 
 setup_user() {
+  print_info "In Setup User"
   if [[ ${AUTO_USE_DATA_FOLDER} == "1" ]]
   then
     arch-chroot /mnt groupadd --system data-user
@@ -2142,6 +2152,81 @@ setup_user() {
 }
 
 ### END: User Configuration
+
+### START: Before, After, and First Boot Script Handling
+
+run_before_script() {
+  print_info "In Run Before Script"
+  if [[ ${AUTO_BEFORE_SCRIPT} != "" ]]
+  then
+    mkdir -p "/home/user/scripts"
+    wget -O "/home/user/scripts/before.script" "${AUTO_BEFORE_SCRIPT}"
+    chmod +x "/home/user/scripts/before.script"
+
+    /home/user/scripts/before.script
+  fi
+}
+
+run_after_script() {
+  print_info "In Run After Script"
+  if [[ ${AUTO_AFTER_SCRIPT} != "" ]]
+  then
+    mkdir -p "/home/user/scripts"
+    wget -O "/home/user/scripts/after.script" "${AUTO_AFTER_SCRIPT}"
+    chmod +x "/home/user/scripts/after.script"
+
+    /home/user/scripts/after.script
+  fi
+}
+
+setup_first_boot_script() {
+  print_info "In Setup First Boot Script"
+  if [[ ${AUTO_FIRST_BOOT_SCRIPT} != "" ]]
+  then
+    mkdir -p "/home/user/scripts"
+    wget -O "/home/user/scripts/first-boot.script" "${AUTO_FIRST_BOOT_SCRIPT}"
+    cp "/home/user/scripts/first-boot.script" "/mnt/usr/local/sbin/first-boot.script"
+
+    # TODO: Setup to run once
+    cat <<- 'EOF' > /mnt/etc/systemd/system/deb-install-first-boot.service
+[Unit]
+Description=Script to run on first boot of system.
+Wants=network-online.target
+After=network-online.target
+ConditionPathExists=/usr/local/sbin/first-boot-wrapper.sh
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/first-boot-wrapper.sh
+
+[Install]
+WantedBy=default.target
+EOF
+
+    cat <<- 'EOF' > /mnt/usr/local/sbin/first-boot-wrapper.sh
+#!/usr/bin/env sh
+
+# Run the users script
+if [ -f "/usr/local/sbin/first-boot.script" ]
+then
+  /usr/local/sbin/first-boot.script
+
+  # Clean up the systemctl service
+  systemctl disable deb-install-first-boot.service
+  rm /etc/systemd/system/deb-install-first-boot.service
+
+  # Clean up by deleting the wrapper script
+  rm $0
+fi
+EOF
+
+    chmod 0754 /mnt/usr/local/sbin/first-boot-wrapper.sh
+    chmod 0754 /mnt/usr/local/sbin/first-boot.script
+    arch-chroot /mnt systemctl enable deb-install-first-boot.service
+  fi
+}
+
+### END: Before, After, and First Boot Script Handling
 
 ### START: Wrapping Up
 
@@ -2314,6 +2399,8 @@ do_install() {
   # Preamble
   welcome_screen
 
+  run_before_script
+
   # Parameter Verifications
   verify_parameters
   log_and_confirm
@@ -2330,6 +2417,9 @@ do_install() {
   setup_users
   install_applications
   do_system_configurations
+
+  setup_first_boot_script
+  run_after_script
 
   # Finished
   wrap_up
