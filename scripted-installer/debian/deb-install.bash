@@ -38,8 +38,8 @@ fi
 
 SCRIPT_AUTHOR="Brennan Fee"
 SCRIPT_LICENSE="MIT License"
-SCRIPT_VERSION="0.4"
-SCRIPT_DATE="2022-11-12"
+SCRIPT_VERSION="0.5"
+SCRIPT_DATE="2022-11-15"
 
 # The supported target OSes to be installed
 SUPPORTED_OSES=('debian' 'ubuntu')
