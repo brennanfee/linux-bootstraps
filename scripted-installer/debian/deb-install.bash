@@ -2414,9 +2414,9 @@ do_install() {
   install_main_system
 
   # Configurations
-  setup_users
   install_applications
   do_system_configurations
+  setup_users
 
   setup_first_boot_script
   run_after_script
