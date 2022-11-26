@@ -1143,23 +1143,23 @@ create_main_partitions() {
   if [[ ${UEFI} == "1" ]]
   then
     # EFI partition (512mb)
-    parted --script -a optimal "${SELECTED_MAIN_DISK}" mkpart "esp" fat32 0% 512MB
+    parted --script -a optimal "${SELECTED_MAIN_DISK}" mkpart "esp" fat32 0 512MiB
     parted --script -a optimal "${SELECTED_MAIN_DISK}" set 1 esp on
     # Boot partition (1gb)
-    parted --script -a optimal "${SELECTED_MAIN_DISK}" mkpart "boot" ext4 512MB 1536MB
+    parted --script -a optimal "${SELECTED_MAIN_DISK}" mkpart "boot" ext4 512MiB 1536MiB
 
     print_status "    Main Partition"
-    parted --script -a optimal "${SELECTED_MAIN_DISK}" mkpart "os" ext4 1536MB 100%
+    parted --script -a optimal "${SELECTED_MAIN_DISK}" mkpart "os" ext4 1536MiB 100%
   else
     # BIOS Grub partition (1mb)
-    parted --script -a optimal "${SELECTED_MAIN_DISK}" mkpart "grub" fat32 0% 1MB
+    parted --script -a optimal "${SELECTED_MAIN_DISK}" mkpart "grub" fat32 0 1MiB
     parted --script -a optimal "${SELECTED_MAIN_DISK}" set 1 bios_grub on
     # Boot partition (1gb)
-    parted --script -a optimal "${SELECTED_MAIN_DISK}" mkpart "boot" ext4 1MB 1025MB
+    parted --script -a optimal "${SELECTED_MAIN_DISK}" mkpart "boot" ext4 1MiB 1025MiB
     parted --script -a optimal "${SELECTED_MAIN_DISK}" set 2 boot on
 
     print_status "    Main Partition"
-    parted --script -a optimal "${SELECTED_MAIN_DISK}" mkpart "os" ext4 1025MB 100%
+    parted --script -a optimal "${SELECTED_MAIN_DISK}" mkpart "os" ext4 1025MiB 100%
   fi
 
   partprobe "${SELECTED_MAIN_DISK}" 2>/dev/null || true
@@ -1174,7 +1174,7 @@ create_secondary_partitions() {
     parted --script -a optimal "${SELECTED_SECOND_DISK}" mklabel gpt
 
     print_status "    Secondary Partition"
-    parted --script -a optimal "${SELECTED_SECOND_DISK}" mkpart "data" xfs 0% 100%
+    parted --script -a optimal "${SELECTED_SECOND_DISK}" mkpart "data" xfs 0 100%
     if [[ ${AUTO_ENCRYPT_DISKS} == "0" ]]
     then
       parted --script -a optimal "${SELECTED_SECOND_DISK}" set 1 lvm on
