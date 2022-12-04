@@ -1648,7 +1648,8 @@ configure_apt_debian() {
   # Write out sources
   {
     echo "deb ${SELECTED_REPO_URL} ${AUTO_INSTALL_EDITION} main contrib non-free"
-    echo "deb ${SELECTED_REPO_URL}-security ${AUTO_INSTALL_EDITION}-security main contrib non-free"
+    # The security repo MUST come from the main sources as mirrors will not contain a copy
+    echo "deb http://deb.debian.org/debian-security ${AUTO_INSTALL_EDITION}-security main contrib non-free"
     echo "deb ${SELECTED_REPO_URL} ${AUTO_INSTALL_EDITION}-updates main contrib non-free"
   } > /mnt/etc/apt/sources.list
 
