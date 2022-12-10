@@ -14,12 +14,12 @@
 ## Set the deb-install variables\options you want here, make sure to export them.
 set_exports() {
   export AUTO_INSTALL_OS=${AUTO_INSTALL_OS:=debian}
-  export AUTO_INSTALL_EDITION=${AUTO_INSTALL_EDITION:=stable}
+  export AUTO_INSTALL_EDITION=${AUTO_INSTALL_EDITION:=testing}
   export AUTO_KERNEL_VERSION=${AUTO_KERNEL_VERSION:=default}
 
-  export AUTO_MAIN_DISK=${AUTO_MAIN_DISK:=largest}
-  export AUTO_SECOND_DISK=${AUTO_SECOND_DISK:=ignore}
-  export AUTO_ENCRYPT_DISKS=${AUTO_ENCRYPT_DISKS:=0}
+  export AUTO_MAIN_DISK=${AUTO_MAIN_DISK:=smallest}
+  export AUTO_SECOND_DISK=${AUTO_SECOND_DISK:=largest}
+  export AUTO_ENCRYPT_DISKS=${AUTO_ENCRYPT_DISKS:=1}
 
   export AUTO_USE_DATA_FOLDER=${AUTO_USE_DATA_FOLDER:=1}
 

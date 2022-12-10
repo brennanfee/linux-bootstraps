@@ -15,7 +15,7 @@
 set_exports() {
   export AUTO_INSTALL_OS=${AUTO_INSTALL_OS:=debian}
   export AUTO_INSTALL_EDITION=${AUTO_INSTALL_EDITION:=stable}
-  export AUTO_KERNEL_VERSION=${AUTO_KERNEL_VERSION:=default}
+  export AUTO_KERNEL_VERSION=${AUTO_KERNEL_VERSION:=backports}
 
   export AUTO_MAIN_DISK=${AUTO_MAIN_DISK:=largest}
   export AUTO_SECOND_DISK=${AUTO_SECOND_DISK:=ignore}

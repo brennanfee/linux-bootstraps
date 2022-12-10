@@ -1,13 +1,44 @@
 #!/usr/bin/env bash
+# Author:
+# License: MIT License
+#
 # This script uses the deb-install script to install Debian/Ubuntu the "Arch"
 # way.  The config script sets some values for a specific type of installation
 # and then automatically calls the deb-install script.
 #
+# Short URL:
+# Github URL:
+#
+#
+##################  MODIFY THIS SECTION
+## Set the deb-install variables\options you want here, make sure to export them.
+set_exports() {
+  # TODO: Complete this section, below is a sample
+  export AUTO_MAIN_DISK=${AUTO_MAIN_DISK:=smallest}
+}
+##################  DO NOT MODIFY BELOW THIS SECTION
 
-script_file="${HOME}/deb-install.bash"
+check_root() {
+  print_info "Checking root permissions..."
+
+  local user_id
+  user_id=$(id -u)
+  if [[ "${user_id}" != "0" ]]
+  then
+    local RED
+    local RESET
+    RED="$(tput setaf 1)"
+    RESET="$(tput sgr0)"
+    echo -e "${RED}ERROR! You must execute the script as the 'root' user.${RESET}\n"
+    exit 1
+  fi
+}
 
 download_deb_installer() {
+  local script_file=$1
+
   local script_url="https://raw.githubusercontent.com/brennanfee/linux-bootstraps/main/scripted-installer/debian/deb-install.bash"
+
   if [[ ! -f "${script_file}" ]]
   then
     # To support testing of other versions of the install script (local versions, branches, etc.)
@@ -20,19 +51,44 @@ download_deb_installer() {
   fi
 }
 
+read_input_options() {
+  while [[ "${1:-}" != "" ]]
+  do
+    case $1 in
+      -c | --confirm)
+        export AUTO_CONFIRM_SETTINGS=1
+        ;;
+      -d | --debug)
+        export AUTO_IS_DEBUG=1
+        ;;
+      -r | --reboot)
+        export AUTO_REBOOT=1
+        ;;
+      -s | --script)
+        shift
+        CONFIG_SCRIPT_SOURCE=$1
+        ;;
+      *)
+        noop
+        ;;
+    esac
+
+    shift
+  done
+}
+
 main() {
+  local script_file
+  script_file="/tmp/deb-install.bash"
+
+  check_root
   set_exports
-  download_deb_installer
+  read_input_options "$@"
+
+  download_deb_installer "${script_file}"
+
+  # Now run the script
   bash "${script_file}"
 }
 
-##################
-set_exports() {
-  ## Set the deb-install variables\options here, make sure to export them.
-  # TODO: Complete this section, below is a sample
-  export AUTO_MAIN_DISK=${AUTO_MAIN_DISK:=smallest}
-}
-##################
-
-main
-unset script_file
+main "$@"
