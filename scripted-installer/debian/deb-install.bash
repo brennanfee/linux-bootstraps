@@ -114,7 +114,7 @@ AUTO_INSTALL_OS="${AUTO_INSTALL_OS:=debian}"
 # The distro edition (sometimes called codename) to install.  For debian this is things like 'stable', 'bullesye', etc.  And for Ubuntu it is can be the codename 'jammy', 'kinetic', etc.  Ubuntu also supports the special values of 'lts' or 'rolling' for the latest LTS or rolling edition.For anything else that is "debian" based this is what should be placed into the APT sources.list.  If you do not provide a value, the default will be defined by each supported OS.  If left blank or the 'default' keyword is used this will always be the stable edition for Debian or the LTS edition for Ubuntu.
 AUTO_INSTALL_EDITION="${AUTO_INSTALL_EDITION:=stable}"
 
-# For all distro's "default" will install the default kernel for the edition requested.  However, some distributions support alternate kernels.  For those, other values may be supported.  For instance, for Debian stable you can pass "backport" to install the kernel from the backports repository (if available).  For Ubuntu LTS editions you can choose "hwe" and "hwe-edge" as alternatives.
+# For all distro's "default" will install the default kernel for the edition requested.  However, some distributions support alternate kernels.  For those, other values may be supported.  For instance, for Debian stable you can pass "backports" to install the kernel from the backports repository (if available).  For Ubuntu LTS editions you can choose "hwe" and "hwe-edge" as alternatives.
 AUTO_KERNEL_VERSION="${AUTO_KERNEL_VERSION:=default}"
 
 # Allows the user to override the repo where the files are pulled from.  This is especially useful for situations where a local Debian or Ubuntu repository is available.
@@ -823,7 +823,7 @@ verify_kernel_version() {
   local options
   case "${AUTO_INSTALL_OS}" in
     debian)
-      options=('default' 'backport')
+      options=('default' 'backport' 'backports')
       get_exit_code contains_element "${AUTO_KERNEL_VERSION}" "${options[@]}"
       if [[ ! ${EXIT_CODE} == "0" ]]
       then
@@ -1447,7 +1447,7 @@ install_base_system_debian() {
 
   # Kernel & Firmware
   local kernel_to_install="default"
-  if [[ "${AUTO_KERNEL_VERSION}" == "backport" ]]
+  if [[ "${AUTO_KERNEL_VERSION}" == "backport" || "${AUTO_KERNEL_VERSION}" == "backports" ]]
   then
     local dont_support_backports=("sid" "unstable" "rc-buggy" "experimental")
     get_exit_code contains_element "${AUTO_INSTALL_EDITION}" "${dont_support_backports[@]}"
@@ -1457,7 +1457,7 @@ install_base_system_debian() {
       get_exit_code package_exists "linux-image-${DPKG_ARCH}/${edition}-backports"
       if [[ ${EXIT_CODE} == "0" ]]
       then
-        kernel_to_install="backport"
+        kernel_to_install="backports"
       else
         write_log "Backport kernel was requested, but no backport kernel found.  Falling back to default kernel."
       fi
@@ -1476,7 +1476,7 @@ install_base_system_debian() {
       chroot_install "linux-image-${DPKG_ARCH}" "linux-headers-${DPKG_ARCH}"
       ;;
 
-    backport)
+    backports)
       arch-chroot /mnt apt-get -y -q --no-install-recommends install -t "${edition}-backports" "linux-image-${DPKG_ARCH}" "linux-headers-${DPKG_ARCH}"
       ;;
 
