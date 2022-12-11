@@ -1861,17 +1861,43 @@ configure_timezone() {
   # The timezone file
   echo "${AUTO_TIMEZONE}" | tee /mnt/etc/timezone
 
-  # The hardware clock
-  arch-chroot /mnt hwclock --systohc --utc --update-drift
+  # Ntp setup
+  sed -i -E 's/^#FallbackNTP=(.*)$/FallbackNTP=\1/' /mnt/etc/systemd/timesyncd.conf
 
-  # Configure the timezone
-  arch-chroot /mnt timedatectl set-local-rtc 0
-  arch-chroot /mnt timedatectl set-timezone "${AUTO_TIMEZONE}"
+  cat <<- 'EOF' > /mnt/etc/systemd/system/timezone-first-boot.service
+[Unit]
+Description=First boot script to setup timezone
+ConditionPathExists=/usr/local/sbin/setup-timezone.sh
 
-  arch-chroot /mnt dpkg-reconfigure --frontend=noninteractive tzdata
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/setup-timezone.sh
 
-  # Enable systemd-timesyncd
-  arch-chroot /mnt systemctl enable systemd-timesyncd
+[Install]
+WantedBy=default.target
+EOF
+
+  cat <<- 'EOF' > /mnt/usr/local/sbin/setup-timezone.sh
+#!/usr/bin/env sh
+
+the_timezone=$(cat /etc/timezone)
+
+hwclock --systohc --utc --update-drift
+
+timedatectl set-local-rtc 0
+timedatectl set-timezone "${the_timezone}"
+timedatectl set-ntp true
+
+# Clean up the systemctl service
+systemctl disable timezone-first-boot.service
+rm /etc/systemd/system/timezone-first-boot.service
+
+# Clean up by deleting this script
+rm $0
+EOF
+
+  chmod 0754 /mnt/usr/local/sbin/setup-timezone.sh
+  arch-chroot /mnt systemctl enable timezone-first-boot.service
 }
 
 configure_boot() {
