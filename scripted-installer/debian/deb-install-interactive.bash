@@ -36,9 +36,6 @@ SCRIPT_DATE="2022-11-15"
 SUPPORTED_OSES=('debian' 'ubuntu')
 SUPPORTED_OSES_DISPLAY=('Debian' 'Ubuntu')
 
-# Disk to types to accept as install locations for the auto selection methods
-BLOCK_DISKS="3,8,9,22,33,34,65,66,67,202,253,254,259"
-
 ### End: Data
 
 ### Start: Constants & Global Variables
@@ -92,8 +89,7 @@ DEFAULT_USERNAME=""
 DEFAULT_USER_PWD=""
 
 DEFAULT_USE_DATA_FOLDER="0"
-DEFAULT_STAMP_FOLDER=""
-
+DEFAULT_STAMP_LOCATION=""
 DEFAULT_CONFIG_MANAGEMENT="none"
 DEFAULT_EXTRA_PACKAGES=""
 
@@ -129,8 +125,7 @@ AUTO_USERNAME="${DEFAULT_USERNAME}"
 AUTO_USER_PWD="${DEFAULT_USER_PWD}"
 
 AUTO_USE_DATA_FOLDER="${DEFAULT_USE_DATA_FOLDER}"
-AUTO_STAMP_FOLDER="${DEFAULT_STAMP_FOLDER}"
-
+AUTO_STAMP_LOCATION="${DEFAULT_STAMP_LOCATION}"
 AUTO_CONFIG_MANAGEMENT="${DEFAULT_CONFIG_MANAGEMENT}"
 AUTO_EXTRA_PACKAGES="${DEFAULT_EXTRA_PACKAGES}"
 
@@ -140,6 +135,9 @@ AUTO_FIRST_BOOT_SCRIPT="${DEFAULT_FIRST_BOOT_SCRIPT}"
 
 AUTO_CONFIRM_SETTINGS="${DEFAULT_CONFIRM_SETTINGS}"
 AUTO_REBOOT="${DEFAULT_REBOOT}"
+
+SELECTED_ACTION="export"
+SELECTED_EXPORT_FILE="my-config.bash"
 
 ### END: Options
 
@@ -589,7 +587,7 @@ ask_for_debian_kernel_version() {
     print_section "Kernel Version To Install"
     print_section_info "Pick a Kernel Version to install.  Note that if the backport kernel is requested but it is not available, the default kernel will be installed."
 
-    local options=('default' 'backport')
+    local options=('default' 'backports')
 
     local input_version
     select input_version in "${options[@]}"
@@ -1163,6 +1161,234 @@ ask_for_user_password() {
   write_log_password "User password: ${AUTO_USER_PWD}"
 }
 
+ask_should_use_data_folder() {
+  write_log "In ask should use data folder."
+
+  print_section "Use Data Folder"
+  print_section_info "The script provides an option to use a 'data' folder.  This selection may influence the partition scheme, mostly with multi-disk scenarios.  The script will create a group with permissions to the 'data' folder and grant the installed user (if any) permissions through that group."
+
+  local yes_no=('No' 'Yes')
+  local option
+  select option in "${yes_no[@]}"
+  do
+    get_exit_code contains_element "${option}" "${yes_no[@]}"
+    if [[ ${EXIT_CODE} == "0" ]]
+    then
+      break
+    else
+      invalid_option
+    fi
+  done
+
+  option=$(echo "${option}" | tr "[:upper:]" "[:lower:]")
+  case "${option}" in
+    yes)
+      AUTO_USE_DATA_FOLDER=1
+      ;;
+    no)
+      AUTO_USE_DATA_FOLDER=0
+      ;;
+    *)
+      error_msg "Invalid selection for using data folder."
+      ;;
+  esac
+
+  write_log "Use data folder: ${AUTO_USE_DATA_FOLDER}"
+}
+
+ask_override_stamp_location() {
+  write_log "In ask override stamp location."
+
+  print_section "Stamp Location"
+  print_section_info "The script automatically 'stamps' some files into an auto-selected folder on the machine.  The file contains the date and time of the installation, the log files for the installation, and some other miscellaneous bits.  By default the /srv folder (or /data folder, if that option was selected) will be used.  You can enter a different location here.  If left blank, the default will be used."
+  local input
+  read -rp "Override Stamp Location: " input
+  if [[ ${input} != "" ]]; then
+    AUTO_STAMP_LOCATION=${input}
+  fi
+
+  write_log "Stamp location override: ${AUTO_STAMP_LOCATION}"
+}
+
+ask_install_configuration_management() {
+  #AUTO_CONFIG_MANAGEMENT
+  write_log "In ask to install change management."
+
+  print_section "Change Management"
+  print_section_info "The script supports installing some configuration management software.  This can be useful for situations where an agent needs to be installed after first boot in order for the machine to be configured automatically.  Some of the options are from the standard Apt repository, while others are alternative installation mechanisms which may be necessary to obtain the newest versions of the configuration management software.  Selecting 'none', the default, means no configuration management software will be installed."
+
+  local config_options=('None' 'Ansible (From Apt)' 'Ansible (Using Pip)' 'Salt (From Apt)' 'Salt (From Repo)' 'Puppet (From Apt)' 'Puppet (From Repo)')
+  local option
+  select option in "${config_options[@]}"
+  do
+    get_exit_code contains_element "${option}" "${config_options[@]}"
+    if [[ ${EXIT_CODE} == "0" ]]
+    then
+      break
+    else
+      invalid_option
+    fi
+  done
+
+  case "${option}" in
+    "None")
+      AUTO_CONFIG_MANAGEMENT="none"
+      ;;
+    "Ansible (From Apt)")
+      AUTO_CONFIG_MANAGEMENT="ansible"
+      ;;
+    "Ansible (Using Pip)")
+      AUTO_CONFIG_MANAGEMENT="ansible-pip"
+      ;;
+    "Salt (From Apt)")
+      AUTO_CONFIG_MANAGEMENT="salt"
+      ;;
+    "Salt (From Repo)")
+      AUTO_CONFIG_MANAGEMENT="salt-repo"
+      ;;
+    "Puppet (From Apt)")
+      AUTO_CONFIG_MANAGEMENT="puppet"
+      ;;
+    "Puppet (From Repo)")
+      AUTO_CONFIG_MANAGEMENT="puppet-repo"
+      ;;
+    *)
+      error_msg "Invalid option for configuration management."
+      ;;
+  esac
+
+  write_log "Configuration Management To Install: ${AUTO_CONFIG_MANAGEMENT}"
+}
+
+ask_install_extra_packages() {
+  write_log "In ask to install extra packages."
+
+  print_section "Install Extra Packages"
+  print_section_info "You can, optionally, provide a space separated list of Apt packages to be pre-installed."
+  local input
+  read -rp "Extra Packages To Install: " input
+  if [[ ${input} != "" ]]; then
+    AUTO_EXTRA_PACKAGES=${input}
+  fi
+
+  write_log "Extra packages to install: '${AUTO_EXTRA_PACKAGES}'"
+}
+
+ask_for_before_script() {
+  write_log "In ask for before script."
+
+  print_section "Execute A 'Before' Script"
+  print_section_info "You can, optionally, provide a script that will run before the installation script runs.  This 'before' script can perform advanced actions such as disk partitioning.  Note that the target environment is not yet mounted at /mnt and therefore you cannot perform any chroot functionality.  The script can also export script options (export AUTO_TIMEZONE='value') which will be respected by the main script.  So, if you want settings to be based on some kind of logic or based on machine inspection, you may use the 'before' script to perform that logic.  The script does not have to be a bash script, but MUST have a shebang that properly indicates how the script should be run.  Please note that you will need to investigate that your prefered script language is supported in the pre-installation envrionment.  The value provided should be a URL that will be accessible by the installation machine.  The script will be downloaded from that location using wget, so any URL supported by wget will work.  Leaving this blank will skip execution of any 'before' script."
+
+  local input
+  read -rp "'Before' script to execute: " input
+  if [[ ${input} != "" ]]; then
+    AUTO_BEFORE_SCRIPT=${input}
+  fi
+
+  write_log "'Before' script to execute: '${AUTO_BEFORE_SCRIPT}'"
+}
+
+ask_for_after_script() {
+  write_log "In ask for after script."
+
+  print_section "Execute A 'After' Script"
+  print_section_info "You can, optionally, provide a script that will run after the main installation but before the machine is rebooted (if reboot was requested).  This script can preform any extra configurations for the target installation.  The /mnt folder will still be available and chroot into that location is supported (you can even use the provided arch-chroot command to make tasks simpler).  The 'after' script SHOULD NOT unmount the /mnt folder.    The script does not have to be a bash script, but MUST have a shebang that properly indicates how the script should be run.  Please note that you will need to investigate that your prefered script language is supported in the pre-installation envrionment.  The value provided should be a URL that will be accessible by the installation machine.  The script will be downloaded from that location using wget, so any URL supported by wget will work.  Leaving this blank will skip execution of any 'after' script."
+
+  local input
+  read -rp "'After' script to execute: " input
+  if [[ ${input} != "" ]]; then
+    AUTO_AFTER_SCRIPT=${input}
+  fi
+
+  write_log "'After' script to execute: '${AUTO_AFTER_SCRIPT}'"
+}
+
+ask_for_first_boot_script() {
+  write_log "In ask for after first boot script."
+
+  print_section "Execute A 'First Boot' Script"
+  print_section_info "You can, optionally, provide a script that will run on the first boot of the machine.  This script will run only once.  It can be used to perform after installation steps or kick off some external configuraiton process or basically do any kind of post-installation steps you might want.  The script will be named '/usr/local/sbin/first-boot.script' and it will not be removed after execution.  The script does not have to be a bash script, but MUST have a shebang that properly indicates how the script should be run.  Please note that you will need to ensure that the script language used is installed and supported in your taget envrionment (for instance by using AUTO_EXTRA_PACKAGES).  The value provided should be a URL that will be accessible by the installation machine.  The script will be downloaded from that location using wget, so any URL supported by wget will work.  Leaving this blank will skip execution of any 'first boot' script."
+
+  local input
+  read -rp "'First Boot' script to execute: " input
+  if [[ ${input} != "" ]]; then
+    AUTO_FIRST_BOOT_SCRIPT=${input}
+  fi
+
+  write_log "'First Boot' script to execute: '${AUTO_FIRST_BOOT_SCRIPT}'"
+}
+
+ask_about_settings_confirmation() {
+  write_log "In ask about settings confirmation."
+
+  print_section "Pause Script And Confirm Settings With User"
+  print_section_info "Should the script pause and confirm the settings with the user before proceeding with installation?  Note that if you are trying to create a fully unattended and automatic installation this should be left off.  The default is to NOT confirm settings and proceed directly to installation."
+
+  local yes_no=('No' 'Yes')
+  local option
+  select option in "${yes_no[@]}"
+  do
+    get_exit_code contains_element "${option}" "${yes_no[@]}"
+    if [[ ${EXIT_CODE} == "0" ]]
+    then
+      break
+    else
+      invalid_option
+    fi
+  done
+
+  option=$(echo "${option}" | tr "[:upper:]" "[:lower:]")
+  case "${option}" in
+    yes)
+      AUTO_CONFIRM_SETTINGS=1
+      ;;
+    no)
+      AUTO_CONFIRM_SETTINGS=0
+      ;;
+    *)
+      error_msg "Invalid selection for settings confirmation."
+      ;;
+  esac
+
+  write_log "Pause for settings confirmation: ${AUTO_CONFIRM_SETTINGS}"
+}
+
+ask_about_auto_reboot() {
+  write_log "In ask about auto reboot."
+
+  print_section "Auto Reboot After Installation"
+  print_section_info "Should the script automatically reboot the machine after installation? Note that if you are trying to create a fully unattended and automatic installation this should be turned on.  The default is to NOT automatically reboot.  This gives the user the ability to run any manual steps and then reboot when they are ready."
+
+  local yes_no=('No' 'Yes')
+  local option
+  select option in "${yes_no[@]}"
+  do
+    get_exit_code contains_element "${option}" "${yes_no[@]}"
+    if [[ ${EXIT_CODE} == "0" ]]
+    then
+      break
+    else
+      invalid_option
+    fi
+  done
+
+  option=$(echo "${option}" | tr "[:upper:]" "[:lower:]")
+  case "${option}" in
+    yes)
+      AUTO_REBOOT=1
+      ;;
+    no)
+      AUTO_REBOOT=0
+      ;;
+    *)
+      error_msg "Invalid selection for auto reboot."
+      ;;
+  esac
+
+  write_log "Should auto reboot: ${AUTO_REBOOT}"
+}
+
 print_summary() {
   print_title
   print_summary_header "Install Summary (Part 1)" "Below is a summary of your selections.  Review them carefully."
@@ -1259,6 +1485,498 @@ print_summary() {
   blank_line
 
   pause_output
+
+  #### Second page
+  print_title
+  print_summary_header "Install Summary (Part 2)" "Below are more of your selections.  Review them carefully.  If anything is wrong cancel out now with Ctrl-C.  Otherwise press any key to continue."
+  print_line
+
+  if [[ ${AUTO_USE_DATA_FOLDER} == "1" ]]
+  then
+    print_status "The data folder and related configurations will be deployed."
+  else
+    print_status "The data folder and related configurations are being SKIPPED."
+  fi
+
+  if [[ ${AUTO_STAMP_LOCATION} == "" ]]
+  then
+    print_status "The default stamp location will be used."
+  else
+    print_status "The stamp location will be '${AUTO_STAMP_LOCATION}'."
+  fi
+
+  if [[ ${AUTO_CONFIG_MANAGEMENT} == "none" ]]
+  then
+    print_status "No configuration management software will be pre-installed."
+  else
+    print_status "Configuration management software will be pre-installed: '${AUTO_CONFIG_MANAGEMENT}'."
+  fi
+
+  if [[ ${AUTO_EXTRA_PACKAGES} == "" ]]
+  then
+    print_status "No extra packages have been requested to be pre-installed."
+  else
+    print_status "Extra packages have been selected to be pre-installed: '${AUTO_EXTRA_PACKAGES}'."
+  fi
+  blank_line
+
+  if [[ ${AUTO_BEFORE_SCRIPT} == "" ]]
+  then
+    print_status "No 'before' script has been provided."
+  else
+    print_status "'Before' script selected is '${AUTO_BEFORE_SCRIPT}'."
+  fi
+
+  if [[ ${AUTO_AFTER_SCRIPT} == "" ]]
+  then
+    print_status "No 'after' script has been provided."
+  else
+    print_status "'After' script selected is '${AUTO_AFTER_SCRIPT}'."
+  fi
+
+  if [[ ${AUTO_FIRST_BOOT_SCRIPT} == "" ]]
+  then
+    print_status "No 'first boot' script has been provided."
+  else
+    print_status "'First boot' script selected is '${AUTO_FIRST_BOOT_SCRIPT}'."
+  fi
+  blank_line
+
+  if [[ ${AUTO_CONFIRM_SETTINGS} == "1" ]]
+  then
+    print_status "The installation will pause and confirm settings with the user."
+  else
+    print_status "The system will NOT confirm settings with the user and will automatically proceed to installation."
+  fi
+
+  if [[ ${AUTO_REBOOT} == "1" ]]
+  then
+    print_status "The system will automatically boot after installation."
+  else
+    print_status "The system will NOT automatically boot after installation."
+  fi
+  blank_line
+
+  pause_output
+}
+
+ask_export_or_execute() {
+  write_log "In ask export or execute."
+
+  print_section "Export Config File Or Execute Now"
+  print_section_info "This interactive script can either export a script file that can be used to run the installation with the options selected.  The script created is useful for repeated installations with a similar configuration.  Alternatively, you can execute the installation now with the options selected.  Lastly, you can simply exit the script, losing all selected values."
+
+  local options=('Export' 'Execute' 'Exit')
+  local option
+  select option in "${options[@]}"
+  do
+    get_exit_code contains_element "${option}" "${options[@]}"
+    if [[ ${EXIT_CODE} == "0" ]]
+    then
+      break
+    else
+      invalid_option
+    fi
+  done
+
+  option=$(echo "${option}" | tr "[:upper:]" "[:lower:]")
+  SELECTED_ACTION="${option}"
+
+  write_log "Selected script action: ${SELECTED_ACTION}"
+}
+
+ask_for_export_file() {
+  write_log "In ask for export file."
+
+  print_section "Export A Configuration Script"
+  print_section_info "Enter a file name to export the configuration script?  Press enter to accept the default of 'my-config.bash'."
+
+  local input
+  read -rp "Export File Name [${SELECTED_EXPORT_FILE}]: " input
+  if [[ ${input} != "" ]]; then
+    SELECTED_EXPORT_FILE=${input}
+  fi
+
+  write_log "Export file selected: '${SELECTED_EXPORT_FILE}'"
+}
+
+output_exports() {
+  if [[ ${DEFAULT_KEYMAP} != "${AUTO_KEYMAP}" ]]
+  then
+    echo "  export AUTO_KEYMAP=${AUTO_KEYMAP}" >> "${SELECTED_EXPORT_FILE}"
+  fi
+  if [[ ${DEFAULT_LOCALE} != "${AUTO_LOCALE}" ]]
+  then
+    echo "  export AUTO_LOCALE=${AUTO_LOCALE}" >> "${SELECTED_EXPORT_FILE}"
+  fi
+  if [[ ${DEFAULT_TIMEZONE} != "${AUTO_TIMEZONE}" ]]
+  then
+    echo "  export AUTO_TIMEZONE=${AUTO_TIMEZONE}" >> "${SELECTED_EXPORT_FILE}"
+  fi
+
+  if [[ ${DEFAULT_INSTALL_OS} != "${AUTO_INSTALL_OS}" ]]
+  then
+    echo "  export AUTO_INSTALL_OS=${AUTO_INSTALL_OS}" >> "${SELECTED_EXPORT_FILE}"
+  fi
+  if [[ ${DEFAULT_INSTALL_EDITION} != "${AUTO_INSTALL_EDITION}" ]]
+  then
+    echo "  export AUTO_INSTALL_EDITION=${AUTO_INSTALL_EDITION}" >> "${SELECTED_EXPORT_FILE}"
+  fi
+  if [[ ${DEFAULT_KERNEL_VERSION} != "${AUTO_KERNEL_VERSION}" ]]
+  then
+    echo "  export AUTO_KERNEL_VERSION=${AUTO_KERNEL_VERSION}" >> "${SELECTED_EXPORT_FILE}"
+  fi
+  if [[ ${DEFAULT_REPO_OVERRIDE_URL} != "${AUTO_REPO_OVERRIDE_URL}" ]]
+  then
+    echo "  export AUTO_REPO_OVERRIDE_URL=${AUTO_REPO_OVERRIDE_URL}" >> "${SELECTED_EXPORT_FILE}"
+  fi
+
+  if [[ ${DEFAULT_HOSTNAME} != "${AUTO_HOSTNAME}" ]]
+  then
+    echo "  export AUTO_HOSTNAME=${AUTO_HOSTNAME}" >> "${SELECTED_EXPORT_FILE}"
+  fi
+  if [[ ${DEFAULT_DOMAIN} != "${AUTO_DOMAIN}" ]]
+  then
+    echo "  export AUTO_DOMAIN=${AUTO_DOMAIN}" >> "${SELECTED_EXPORT_FILE}"
+  fi
+
+  if [[ ${DEFAULT_SKIP_PARTITIONING} != "${AUTO_SKIP_PARTITIONING}" ]]
+  then
+    echo "  export AUTO_SKIP_PARTITIONING=${AUTO_SKIP_PARTITIONING}" >> "${SELECTED_EXPORT_FILE}"
+  fi
+  if [[ ${DEFAULT_MAIN_DISK} != "${AUTO_MAIN_DISK}" ]]
+  then
+    echo "  export AUTO_MAIN_DISK=${AUTO_MAIN_DISK}" >> "${SELECTED_EXPORT_FILE}"
+  fi
+  if [[ ${DEFAULT_SECOND_DISK} != "${AUTO_SECOND_DISK}" ]]
+  then
+    echo "  export AUTO_SECOND_DISK=${AUTO_SECOND_DISK}" >> "${SELECTED_EXPORT_FILE}"
+  fi
+  if [[ ${DEFAULT_ENCRYPT_DISKS} != "${AUTO_ENCRYPT_DISKS}" ]]
+  then
+    echo "  export AUTO_ENCRYPT_DISKS=${AUTO_ENCRYPT_DISKS}" >> "${SELECTED_EXPORT_FILE}"
+  fi
+  if [[ ${DEFAULT_DISK_PWD} != "${AUTO_DISK_PWD}" ]]
+  then
+    echo "  export AUTO_DISK_PWD=${AUTO_DISK_PWD}" >> "${SELECTED_EXPORT_FILE}"
+  fi
+
+  if [[ ${DEFAULT_ROOT_DISABLED} != "${AUTO_ROOT_DISABLED}" ]]
+  then
+    echo "  export AUTO_ROOT_DISABLED=${AUTO_ROOT_DISABLED}" >> "${SELECTED_EXPORT_FILE}"
+  fi
+  if [[ ${DEFAULT_ROOT_PWD} != "${AUTO_ROOT_PWD}" ]]
+  then
+    echo "  export AUTO_ROOT_PWD=${AUTO_ROOT_PWD}" >> "${SELECTED_EXPORT_FILE}"
+  fi
+  if [[ ${DEFAULT_CREATE_USER} != "${AUTO_CREATE_USER}" ]]
+  then
+    echo "  export AUTO_CREATE_USER=${AUTO_CREATE_USER}" >> "${SELECTED_EXPORT_FILE}"
+  fi
+  if [[ ${DEFAULT_USERNAME} != "${AUTO_USERNAME}" ]]
+  then
+    echo "  export AUTO_USERNAME=${AUTO_USERNAME}" >> "${SELECTED_EXPORT_FILE}"
+  fi
+  if [[ ${DEFAULT_USER_PWD} != "${AUTO_USER_PWD}" ]]
+  then
+    echo "  export AUTO_USER_PWD=${AUTO_USER_PWD}" >> "${SELECTED_EXPORT_FILE}"
+  fi
+
+  if [[ ${DEFAULT_USE_DATA_FOLDER} != "${AUTO_USE_DATA_FOLDER}" ]]
+  then
+    echo "  export AUTO_USE_DATA_FOLDER=${AUTO_USE_DATA_FOLDER}" >> "${SELECTED_EXPORT_FILE}"
+  fi
+  if [[ ${DEFAULT_STAMP_LOCATION} != "${AUTO_STAMP_LOCATION}" ]]
+  then
+    echo "  export AUTO_STAMP_LOCATION=${AUTO_STAMP_LOCATION}" >> "${SELECTED_EXPORT_FILE}"
+  fi
+  if [[ ${DEFAULT_CONFIG_MANAGEMENT} != "${AUTO_CONFIG_MANAGEMENT}" ]]
+  then
+    echo "  export AUTO_CONFIG_MANAGEMENT=${AUTO_CONFIG_MANAGEMENT}" >> "${SELECTED_EXPORT_FILE}"
+  fi
+  if [[ ${DEFAULT_EXTRA_PACKAGES} != "${AUTO_EXTRA_PACKAGES}" ]]
+  then
+    echo "  export AUTO_EXTRA_PACKAGES=${AUTO_EXTRA_PACKAGES}" >> "${SELECTED_EXPORT_FILE}"
+  fi
+
+  if [[ ${DEFAULT_BEFORE_SCRIPT} != "${AUTO_BEFORE_SCRIPT}" ]]
+  then
+    echo "  export AUTO_BEFORE_SCRIPT=${AUTO_BEFORE_SCRIPT}" >> "${SELECTED_EXPORT_FILE}"
+  fi
+  if [[ ${DEFAULT_AFTER_SCRIPT} != "${AUTO_AFTER_SCRIPT}" ]]
+  then
+    echo "  export AUTO_AFTER_SCRIPT=${AUTO_AFTER_SCRIPT}" >> "${SELECTED_EXPORT_FILE}"
+  fi
+  if [[ ${DEFAULT_FIRST_BOOT_SCRIPT} != "${AUTO_FIRST_BOOT_SCRIPT}" ]]
+  then
+    echo "  export AUTO_FIRST_BOOT_SCRIPT=${AUTO_FIRST_BOOT_SCRIPT}" >> "${SELECTED_EXPORT_FILE}"
+  fi
+
+  if [[ ${DEFAULT_CONFIRM_SETTINGS} != "${AUTO_CONFIRM_SETTINGS}" ]]
+  then
+    echo "  export AUTO_CONFIRM_SETTINGS=${AUTO_CONFIRM_SETTINGS}" >> "${SELECTED_EXPORT_FILE}"
+  fi
+  if [[ ${DEFAULT_REBOOT} != "${AUTO_REBOOT}" ]]
+  then
+    echo "  export AUTO_REBOOT=${AUTO_REBOOT}" >> "${SELECTED_EXPORT_FILE}"
+  fi
+}
+
+export_config() {
+  ask_for_export_file
+
+  # First part of file...
+  cat <<- 'EOF' > "${SELECTED_EXPORT_FILE}"
+#!/usr/bin/env bash
+# Author: Generated by deb-install-interactive.bash script
+# License: MIT License
+#
+# This script uses the deb-install script to install Debian/Ubuntu the "Arch"
+# way.  The config script sets some values for a specific type of installation
+# and then automatically calls the deb-install script.
+#
+# Short URL:
+# Github URL:
+#
+#
+##################  MODIFY THIS SECTION
+## Set the deb-install variables\options you want here, make sure to export them.
+set_exports() {
+EOF
+
+  output_exports
+
+  ## Remaining part of file
+  cat <<- 'EOF' >> "${SELECTED_EXPORT_FILE}"
+}
+##################  DO NOT MODIFY BELOW THIS SECTION
+
+check_root() {
+  print_info "Checking root permissions..."
+
+  local user_id
+  user_id=$(id -u)
+  if [[ "${user_id}" != "0" ]]
+  then
+    local RED
+    local RESET
+    RED="$(tput setaf 1)"
+    RESET="$(tput sgr0)"
+    echo -e "${RED}ERROR! You must execute the script as the 'root' user.${RESET}\n"
+    exit 1
+  fi
+}
+
+download_deb_installer() {
+  local script_file=$1
+
+  local script_url="https://raw.githubusercontent.com/brennanfee/linux-bootstraps/main/scripted-installer/debian/deb-install.bash"
+
+  if [[ ! -f "${script_file}" ]]
+  then
+    # To support testing of other versions of the install script (local versions, branches, etc.)
+    if [[ "${CONFIG_SCRIPT_SOURCE:=}" != "" ]]
+    then
+      curl -fsSL "${CONFIG_SCRIPT_SOURCE}" --output "${script_file}"
+    else
+      curl -fsSL "${script_url}" --output "${script_file}"
+    fi
+  fi
+}
+
+read_input_options() {
+  while [[ "${1:-}" != "" ]]
+  do
+    case $1 in
+      -c | --confirm)
+        export AUTO_CONFIRM_SETTINGS=1
+        ;;
+      -d | --debug)
+        export AUTO_IS_DEBUG=1
+        ;;
+      -r | --reboot)
+        export AUTO_REBOOT=1
+        ;;
+      -s | --script)
+        shift
+        CONFIG_SCRIPT_SOURCE=$1
+        ;;
+      *)
+        noop
+        ;;
+    esac
+
+    shift
+  done
+}
+
+main() {
+  local script_file
+  script_file="/tmp/deb-install.bash"
+
+  check_root
+  set_exports
+  read_input_options "$@"
+
+  download_deb_installer "${script_file}"
+
+  # Now run the script
+  bash "${script_file}"
+}
+
+main "$@"
+EOF
+}
+
+download_deb_installer() {
+  local script_file=$1
+
+  local script_url="https://raw.githubusercontent.com/brennanfee/linux-bootstraps/main/scripted-installer/debian/deb-install.bash"
+
+  if [[ ! -f "${script_file}" ]]
+  then
+    # To support testing of other versions of the install script (local versions, branches, etc.)
+    if [[ "${CONFIG_SCRIPT_SOURCE:=}" != "" ]]
+    then
+      curl -fsSL "${CONFIG_SCRIPT_SOURCE}" --output "${script_file}"
+    else
+      curl -fsSL "${script_url}" --output "${script_file}"
+    fi
+  fi
+}
+
+run_exports() {
+  if [[ ${DEFAULT_KEYMAP} != "${AUTO_KEYMAP}" ]]
+  then
+    export AUTO_KEYMAP=${AUTO_KEYMAP}
+  fi
+  if [[ ${DEFAULT_LOCALE} != "${AUTO_LOCALE}" ]]
+  then
+    export AUTO_LOCALE=${AUTO_LOCALE}
+  fi
+  if [[ ${DEFAULT_TIMEZONE} != "${AUTO_TIMEZONE}" ]]
+  then
+    export AUTO_TIMEZONE=${AUTO_TIMEZONE}
+  fi
+
+  if [[ ${DEFAULT_INSTALL_OS} != "${AUTO_INSTALL_OS}" ]]
+  then
+    export AUTO_INSTALL_OS=${AUTO_INSTALL_OS}
+  fi
+  if [[ ${DEFAULT_INSTALL_EDITION} != "${AUTO_INSTALL_EDITION}" ]]
+  then
+    export AUTO_INSTALL_EDITION=${AUTO_INSTALL_EDITION}
+  fi
+  if [[ ${DEFAULT_KERNEL_VERSION} != "${AUTO_KERNEL_VERSION}" ]]
+  then
+    export AUTO_KERNEL_VERSION=${AUTO_KERNEL_VERSION}
+  fi
+  if [[ ${DEFAULT_REPO_OVERRIDE_URL} != "${AUTO_REPO_OVERRIDE_URL}" ]]
+  then
+    export AUTO_REPO_OVERRIDE_URL=${AUTO_REPO_OVERRIDE_URL}
+  fi
+
+  if [[ ${DEFAULT_HOSTNAME} != "${AUTO_HOSTNAME}" ]]
+  then
+    export AUTO_HOSTNAME=${AUTO_HOSTNAME}
+  fi
+  if [[ ${DEFAULT_DOMAIN} != "${AUTO_DOMAIN}" ]]
+  then
+    export AUTO_DOMAIN=${AUTO_DOMAIN}
+  fi
+
+  if [[ ${DEFAULT_SKIP_PARTITIONING} != "${AUTO_SKIP_PARTITIONING}" ]]
+  then
+    export AUTO_SKIP_PARTITIONING=${AUTO_SKIP_PARTITIONING}
+  fi
+  if [[ ${DEFAULT_MAIN_DISK} != "${AUTO_MAIN_DISK}" ]]
+  then
+    export AUTO_MAIN_DISK=${AUTO_MAIN_DISK}
+  fi
+  if [[ ${DEFAULT_SECOND_DISK} != "${AUTO_SECOND_DISK}" ]]
+  then
+    export AUTO_SECOND_DISK=${AUTO_SECOND_DISK}
+  fi
+  if [[ ${DEFAULT_ENCRYPT_DISKS} != "${AUTO_ENCRYPT_DISKS}" ]]
+  then
+    export AUTO_ENCRYPT_DISKS=${AUTO_ENCRYPT_DISKS}
+  fi
+  if [[ ${DEFAULT_DISK_PWD} != "${AUTO_DISK_PWD}" ]]
+  then
+    export AUTO_DISK_PWD=${AUTO_DISK_PWD}
+  fi
+
+  if [[ ${DEFAULT_ROOT_DISABLED} != "${AUTO_ROOT_DISABLED}" ]]
+  then
+    export AUTO_ROOT_DISABLED=${AUTO_ROOT_DISABLED}
+  fi
+  if [[ ${DEFAULT_ROOT_PWD} != "${AUTO_ROOT_PWD}" ]]
+  then
+    export AUTO_ROOT_PWD=${AUTO_ROOT_PWD}
+  fi
+  if [[ ${DEFAULT_CREATE_USER} != "${AUTO_CREATE_USER}" ]]
+  then
+    export AUTO_CREATE_USER=${AUTO_CREATE_USER}
+  fi
+  if [[ ${DEFAULT_USERNAME} != "${AUTO_USERNAME}" ]]
+  then
+    export AUTO_USERNAME=${AUTO_USERNAME}
+  fi
+  if [[ ${DEFAULT_USER_PWD} != "${AUTO_USER_PWD}" ]]
+  then
+    export AUTO_USER_PWD=${AUTO_USER_PWD}
+  fi
+
+  if [[ ${DEFAULT_USE_DATA_FOLDER} != "${AUTO_USE_DATA_FOLDER}" ]]
+  then
+    export AUTO_USE_DATA_FOLDER=${AUTO_USE_DATA_FOLDER}
+  fi
+  if [[ ${DEFAULT_STAMP_LOCATION} != "${AUTO_STAMP_LOCATION}" ]]
+  then
+    export AUTO_STAMP_LOCATION=${AUTO_STAMP_LOCATION}
+  fi
+  if [[ ${DEFAULT_CONFIG_MANAGEMENT} != "${AUTO_CONFIG_MANAGEMENT}" ]]
+  then
+    export AUTO_CONFIG_MANAGEMENT=${AUTO_CONFIG_MANAGEMENT}
+  fi
+  if [[ ${DEFAULT_EXTRA_PACKAGES} != "${AUTO_EXTRA_PACKAGES}" ]]
+  then
+    export AUTO_EXTRA_PACKAGES=${AUTO_EXTRA_PACKAGES}
+  fi
+
+  if [[ ${DEFAULT_BEFORE_SCRIPT} != "${AUTO_BEFORE_SCRIPT}" ]]
+  then
+    export AUTO_BEFORE_SCRIPT=${AUTO_BEFORE_SCRIPT}
+  fi
+  if [[ ${DEFAULT_AFTER_SCRIPT} != "${AUTO_AFTER_SCRIPT}" ]]
+  then
+    export AUTO_AFTER_SCRIPT=${AUTO_AFTER_SCRIPT}
+  fi
+  if [[ ${DEFAULT_FIRST_BOOT_SCRIPT} != "${AUTO_FIRST_BOOT_SCRIPT}" ]]
+  then
+    export AUTO_FIRST_BOOT_SCRIPT=${AUTO_FIRST_BOOT_SCRIPT}
+  fi
+
+  if [[ ${DEFAULT_CONFIRM_SETTINGS} != "${AUTO_CONFIRM_SETTINGS}" ]]
+  then
+    export AUTO_CONFIRM_SETTINGS=${AUTO_CONFIRM_SETTINGS}
+  fi
+  if [[ ${DEFAULT_REBOOT} != "${AUTO_REBOOT}" ]]
+  then
+    export AUTO_REBOOT=${AUTO_REBOOT}
+  fi
+}
+
+execute_now() {
+  local script_file
+  script_file="/tmp/deb-install.bash"
+
+  run_exports
+
+  download_deb_installer "${script_file}"
+
+  # Now run the script
+  bash "${script_file}"
 }
 
 prompts_for_options(){
@@ -1285,6 +2003,18 @@ prompts_for_options(){
   ask_should_create_user
   ask_for_user_name
   ask_for_user_password
+
+  ask_should_use_data_folder
+  ask_override_stamp_location
+  ask_install_configuration_management
+  ask_install_extra_packages
+
+  ask_for_before_script
+  ask_for_after_script
+  ask_for_first_boot_script
+
+  ask_about_settings_confirmation
+  ask_about_auto_reboot
 }
 
 ### END: Prompts & User Interaction
@@ -1299,7 +2029,22 @@ main() {
   welcome_screen
   prompts_for_options
   print_summary
-  #ask_export_or_execute
+  ask_export_or_execute
+
+  case "${SELECTED_ACTION}" in
+    export)
+      export_config
+      ;;
+    execute)
+      execute_now
+      ;;
+    exit)
+      noop
+      ;;
+    *)
+      error_msg "Invalid selection script action."
+      ;;
+  esac
 
   error_msg "ERROR: This script is not yet implemented."
 }

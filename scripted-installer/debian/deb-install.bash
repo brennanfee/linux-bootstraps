@@ -108,6 +108,9 @@ AUTO_KEYMAP="${AUTO_KEYMAP:=us}"
 # The system locale to use.
 AUTO_LOCALE="${AUTO_LOCALE:=en_US.UTF-8}"
 
+# The time zone for the machine being created.
+AUTO_TIMEZONE="${AUTO_TIMEZONE:=America/Chicago}"  # Suck it east and west coast!  ;-)
+
 # The OS to install, default is debian, alternative ubuntu.
 AUTO_INSTALL_OS="${AUTO_INSTALL_OS:=debian}"
 
@@ -126,9 +129,6 @@ AUTO_HOSTNAME="${AUTO_HOSTNAME:=}"
 # The domain for the machine being created.
 AUTO_DOMAIN="${AUTO_DOMAIN:=}"
 
-# The time zone for the machine being created.
-AUTO_TIMEZONE="${AUTO_TIMEZONE:=America/Chicago}"  # Suck it east and west coast!  ;-)
-
 # Whether to skip automatic partioning.  This is a boolean value.  Note, for this to work it is expected that prior to calling this script you have partitioned AND formatted the filesystems and mounted them at /mnt ready to be bootstrapped.  This can be done manually or with a given "early" script.  Furthermore, you still need to pass in the AUTO_MAIN_DISK value that indicates where you wish Grub to be installed (and you have prepared partitions for that).  With partitioning turned off you CAN NOT use "smallest" or "largest" for AUTO_MAIN_DISK and must pass in the device path (like /dev/sda).
 AUTO_SKIP_PARTITIONING="${AUTO_SKIP_PARTITIONING:=0}"
 
@@ -141,12 +141,6 @@ AUTO_MAIN_DISK="${AUTO_MAIN_DISK:=smallest}"
 #
 # In dual disk automatic partitioning, no change is made to the main disk layout.  For the second disk, this script creates a single LVM volume on the second disk with one of two layouts (based on the AUTO_USE_DATA_FOLDER value).  Without the data option you get a single LVM partition of 80% for /home with 20% space free for later LVM expansion\use.  With the data folder option you get two partitions, 70% for /home, 20% for /data, and 10% empty and free for later LVM expansion\use.
 AUTO_SECOND_DISK="${AUTO_SECOND_DISK:=ignore}"
-
-# Whether to use a /data folder or partition on the target machine.  This folder is a convention that I follow and use and is therefore disabled by default.  I use it for all non-user specific files and setups (usually of docker files, configuraitons, etc.).  If being used along with the AUTO_SECOND_DISK option, this value does affect the partition scheme used.  For further details on this read the information under the AUTO_SECOND_DISK option.  This is a boolean value.
-AUTO_USE_DATA_FOLDER="${AUTO_USE_DATA_FOLDER:=0}"
-
-# After installation, the install log and some other files are copied to the target machine.  This indicates (overrides) the default location.  By default, the files are copied to the /srv folder unless AUTO_USE_DATA_FOLDER is enabled.  With AUTO_USE_DATA_FOLDER turned on the files are copied to the /data folder instead of /srv.  You can override these defaults by providing a path here.  Note that your path MUST start with a full path (must start with /).
-AUTO_STAMP_FOLDER="${AUTO_STAMP_FOLDER:=}"
 
 # Whether the volume(s) created should be encrypted.  This is a boolean value.
 AUTO_ENCRYPT_DISKS="${AUTO_ENCRYPT_DISKS:=1}"
@@ -173,11 +167,11 @@ AUTO_USERNAME="${AUTO_USERNAME:=}"
 # The password for the created user.  If you do not provide a password it iwll default to the target installed OS in all lower case ("debian" or "ubuntu", etc.). The password can be a plain text password or a crypted password.
 AUTO_USER_PWD="${AUTO_USER_PWD:=}"
 
-# Whether the installer should pause, display the selected and calculated values and wait for confirmation before continuing.  Off by default to preserve fully automated installations.
-AUTO_CONFIRM_SETTINGS="${AUTO_CONFIRM_SETTINGS:=0}"
+# Whether to use a /data folder or partition on the target machine.  This folder is a convention that I follow and use and is therefore disabled by default.  I use it for all non-user specific files and setups (usually of docker files, configuraitons, etc.).  If being used along with the AUTO_SECOND_DISK option, this value does affect the partition scheme used.  For further details on this read the information under the AUTO_SECOND_DISK option.  This is a boolean value.
+AUTO_USE_DATA_FOLDER="${AUTO_USE_DATA_FOLDER:=0}"
 
-# Whether to automatically reboot after the script has completed.   Default is not to reboot.  Automated environments such as Packer should turn this on.
-AUTO_REBOOT="${AUTO_REBOOT:=0}"
+# After installation, the install log and some other files are copied to the target machine.  This indicates (overrides) the default location.  By default, the files are copied to the /srv folder unless AUTO_USE_DATA_FOLDER is enabled.  With AUTO_USE_DATA_FOLDER turned on the files are copied to the /data folder instead of /srv.  You can override these defaults by providing a path here.  Note that your path MUST start with a full path (must start with /).
+AUTO_STAMP_LOCATION="${AUTO_STAMP_LOCATION:=}"
 
 # Install a configuration management system, helpful to have here so that on first boot it can already be installed ready to locally or remotely configure the instance.  Default is "none".  Options are: none, ansible, ansible-pip, saltstack, saltstack-repo, puppet, puppet-repo
 ## Yes, I don't support puppet and chef because they are hot garbage
@@ -195,6 +189,12 @@ AUTO_AFTER_SCRIPT="${AUTO_AFTER_SCRIPT:=}"
 # A script to configure to run once on the system after initial boot.  Note, this script will run as root, before login of any user, and will ONLY RUN ONCE.
 AUTO_FIRST_BOOT_SCRIPT="${AUTO_FIRST_BOOT_SCRIPT:=}"
 
+# Whether the installer should pause, display the selected and calculated values and wait for confirmation before continuing.  Off by default to preserve fully automated installations.
+AUTO_CONFIRM_SETTINGS="${AUTO_CONFIRM_SETTINGS:=0}"
+
+# Whether to automatically reboot after the script has completed.   Default is not to reboot.  Automated environments such as Packer should turn this on.
+AUTO_REBOOT="${AUTO_REBOOT:=0}"
+
 ### END: Options & User Overrideable Parameters
 
 ### START: Params created during verification
@@ -204,7 +204,7 @@ SELECTED_SECOND_DISK=""
 ENCRYPTION_FILE=""
 SECONDARY_FILE=""
 
-SELECTED_STAMP_PATH=""
+SELECTED_STAMP_LOCATION=""
 SELECTED_REPO_URL=""
 
 SELECTED_CHARMAP="UTF-8"
@@ -263,6 +263,9 @@ log_values() {
 
   write_log "AUTO_KEYMAP: '${AUTO_KEYMAP}'"
   write_log "AUTO_LOCALE: '${AUTO_LOCALE}'"
+  write_log "AUTO_TIMEZONE: '${AUTO_TIMEZONE}'"
+  write_log_blank
+
   write_log "AUTO_INSTALL_OS: '${AUTO_INSTALL_OS}'"
   write_log "AUTO_INSTALL_EDITION: '${AUTO_INSTALL_EDITION}'"
   write_log "AUTO_KERNEL_VERSION: '${AUTO_KERNEL_VERSION}'"
@@ -271,18 +274,6 @@ log_values() {
 
   write_log "AUTO_HOSTNAME: '${AUTO_HOSTNAME}'"
   write_log "AUTO_DOMAIN: '${AUTO_DOMAIN}'"
-  write_log "AUTO_TIMEZONE: '${AUTO_TIMEZONE}'"
-  write_log "AUTO_CONFIRM_SETTINGS: '${AUTO_CONFIRM_SETTINGS}'"
-  write_log "AUTO_REBOOT: '${AUTO_REBOOT}'"
-  write_log "AUTO_CONFIG_MANAGEMENT: '${AUTO_CONFIG_MANAGEMENT}'"
-  write_log "AUTO_EXTRA_PACKAGES: '${AUTO_EXTRA_PACKAGES}'"
-  write_log_blank
-
-  write_log "AUTO_ROOT_DISABLED: '${AUTO_ROOT_DISABLED}'"
-  write_log_password "AUTO_ROOT_PWD: '${AUTO_ROOT_PWD}'"
-  write_log "AUTO_CREATE_USER: '${AUTO_CREATE_USER}'"
-  write_log "AUTO_USERNAME: '${AUTO_USERNAME}'"
-  write_log_password "AUTO_USER_PWD: '${AUTO_USER_PWD}'"
   write_log_blank
 
   write_log "AUTO_SKIP_PARTITIONING: '${AUTO_SKIP_PARTITIONING}'"
@@ -303,11 +294,32 @@ log_values() {
       write_log_password "AUTO_DISK_PWD (Password): '${AUTO_DISK_PWD}'"
       ;;
   esac
+  write_log_blank
+
+  write_log "AUTO_ROOT_DISABLED: '${AUTO_ROOT_DISABLED}'"
+  write_log_password "AUTO_ROOT_PWD: '${AUTO_ROOT_PWD}'"
+  write_log "AUTO_CREATE_USER: '${AUTO_CREATE_USER}'"
+  write_log "AUTO_USERNAME: '${AUTO_USERNAME}'"
+  write_log_password "AUTO_USER_PWD: '${AUTO_USER_PWD}'"
+  write_log_blank
+
   write_log "AUTO_USE_DATA_FOLDER: '${AUTO_USE_DATA_FOLDER}'"
-  write_log "AUTO_STAMP_FOLDER: '${AUTO_STAMP_FOLDER}'"
+  write_log "AUTO_STAMP_LOCATION: '${AUTO_STAMP_LOCATION}'"
+  write_log "AUTO_CONFIG_MANAGEMENT: '${AUTO_CONFIG_MANAGEMENT}'"
+  write_log "AUTO_EXTRA_PACKAGES: '${AUTO_EXTRA_PACKAGES}'"
+  write_log_blank
+
+  write_log "AUTO_BEFORE_SCRIPT: '${AUTO_BEFORE_SCRIPT}'"
+  write_log "AUTO_AFTER_SCRIPT: '${AUTO_AFTER_SCRIPT}'"
+  write_log "AUTO_FIRST_BOOT_SCRIPT: '${AUTO_FIRST_BOOT_SCRIPT}'"
+  write_log_blank
+
+  write_log "AUTO_CONFIRM_SETTINGS: '${AUTO_CONFIRM_SETTINGS}'"
+  write_log "AUTO_REBOOT: '${AUTO_REBOOT}'"
   write_log_blank
 
   write_log "--- Calculated values ---"
+  write_log "SELECTED_CHARMAP: '${SELECTED_CHARMAP}'"
   write_log "MAIN_DISK_METHOD: '${MAIN_DISK_METHOD}'"
   write_log "SELECTED_MAIN_DISK: '${SELECTED_MAIN_DISK}'"
   write_log "SECOND_DISK_METHOD: '${SECOND_DISK_METHOD}'"
@@ -315,8 +327,7 @@ log_values() {
   write_log "ENCRYPTION_FILE: '${ENCRYPTION_FILE}'"
   write_log "SECONDARY_FILE: '${SECONDARY_FILE}'"
   write_log "SELECTED_REPO_URL: '${SELECTED_REPO_URL}'"
-  write_log "SELECTED_STAMP_PATH: '${SELECTED_STAMP_PATH}'"
-  write_log "SELECTED_CHARMAP: '${SELECTED_CHARMAP}'"
+  write_log "SELECTED_STAMP_LOCATION: '${SELECTED_STAMP_LOCATION}'"
   write_log_blank
 
   write_log_spacer
@@ -417,6 +428,8 @@ confirm_with_user() {
 
     pause_output
 
+    #### Second page
+
     print_title
     print_summary_header "Install Summary (Part 2)" "Below are more of your selections and any detected system information.  If anything is wrong cancel out now with Ctrl-C.  Otherwise press any key to continue installation."
     print_line
@@ -428,7 +441,7 @@ confirm_with_user() {
       print_status "The data folder and related configurations are being SKIPPED."
     fi
 
-    print_status "The stamp location (copy location for install log files) will be '${SELECTED_STAMP_PATH}'."
+    print_status "The stamp location (copy location for install log files) will be '${SELECTED_STAMP_LOCATION}'."
     blank_line
 
     if [[ ${AUTO_CONFIG_MANAGEMENT} == "none" ]]
@@ -443,6 +456,28 @@ confirm_with_user() {
       print_status "No extra packages have been requested to be pre-installed."
     else
       print_status "Extra packages have been selected to be pre-installed: '${AUTO_EXTRA_PACKAGES}'."
+    fi
+    blank_line
+
+    if [[ ${AUTO_BEFORE_SCRIPT} == "" ]]
+    then
+      print_status "No 'before' script has been provided."
+    else
+      print_status "'Before' script selected is '${AUTO_BEFORE_SCRIPT}'."
+    fi
+
+    if [[ ${AUTO_AFTER_SCRIPT} == "" ]]
+    then
+      print_status "No 'after' script has been provided."
+    else
+      print_status "'After' script selected is '${AUTO_AFTER_SCRIPT}'."
+    fi
+
+    if [[ ${AUTO_FIRST_BOOT_SCRIPT} == "" ]]
+    then
+      print_status "No 'first boot' script has been provided."
+    else
+      print_status "'First boot' script selected is '${AUTO_FIRST_BOOT_SCRIPT}'."
     fi
     blank_line
 
@@ -1096,14 +1131,14 @@ parse_repo_url() {
 parse_stamp_folder() {
   print_info "Determing stamp path"
 
-  SELECTED_STAMP_PATH="${AUTO_STAMP_FOLDER}"
-  if [[ ${SELECTED_STAMP_PATH} == "" ]]
+  SELECTED_STAMP_LOCATION="${AUTO_STAMP_LOCATION}"
+  if [[ ${SELECTED_STAMP_LOCATION} == "" ]]
   then
-    SELECTED_STAMP_PATH="/srv"
+    SELECTED_STAMP_LOCATION="/srv"
 
     if [[ ${AUTO_USE_DATA_FOLDER} == "1" ]]
     then
-      SELECTED_STAMP_PATH="/data"
+      SELECTED_STAMP_LOCATION="/data"
     fi
   fi
 }
@@ -2326,7 +2361,7 @@ stamp_build() {
   print_info "Stamping build"
 
   # Prepend the /mnt to it and create it if it doesn't exist
-  local stamp_path="/mnt${SELECTED_STAMP_PATH}"
+  local stamp_path="/mnt${SELECTED_STAMP_LOCATION}"
   mkdir -p "${stamp_path}"
 
   cp "${LOG}" "${stamp_path}/install-log.log"
