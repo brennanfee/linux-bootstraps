@@ -410,17 +410,31 @@ system_verifications() {
 ### START: Prereqs and Setup
 
 install_prereqs() {
-  print_info "Installing prerequisites"
-  DEBIAN_FRONTEND=noninteractive apt-get -y -q update || true
-  DEBIAN_FRONTEND=noninteractive apt-get -y -q full-upgrade || true
-  DEBIAN_FRONTEND=noninteractive apt-get -y -q autoremove || true
+  print_info "Checking prerequisites"
+  local missing_packages=0
+  local prereq_packages=('vim' 'console-data' 'locales' 'fbset')
+  local package
 
-  # Things all systems need (reminder these are being installed to the installation environment, not the target machine)
-  print_status "    Installing common prerequisites"
-  # TODO: Clean thlist of pre-reqs
-  local_install vim laptop-detect console-data locales fbset
+  for package in "${prereq_packages[@]}"
+  do
+    if ! dpkg-query -f '${binary:Package}\n' -W | grep "^${package}$"
+    then
+      missing_packages=1
+      break
+    fi
+  done
 
-  #Original: local_install vim parted bc cryptsetup lvm2 xfsprogs laptop-detect ntp console-data locales fbset
+  if [[ ${missing_packages} == "1" ]]
+  then
+    print_info "Installing prerequisites"
+    DEBIAN_FRONTEND=noninteractive apt-get -y -q update || true
+    DEBIAN_FRONTEND=noninteractive apt-get -y -q full-upgrade || true
+    DEBIAN_FRONTEND=noninteractive apt-get -y -q autoremove || true
+
+    # Things all systems need (reminder these are being installed to the installation environment, not the target machine)
+    print_status "    Installing common prerequisites"
+    local_install vim console-data locales fbset
+  fi
 }
 
 setup_installer_environment() {
@@ -1511,6 +1525,7 @@ print_summary() {
   else
     print_status "The stamp location will be '${AUTO_STAMP_LOCATION}'."
   fi
+  blank_line
 
   if [[ ${AUTO_CONFIG_MANAGEMENT} == "none" ]]
   then
@@ -1558,9 +1573,9 @@ print_summary() {
 
   if [[ ${AUTO_REBOOT} == "1" ]]
   then
-    print_status "The system will automatically boot after installation."
+    print_status "The system will automatically reboot after installation."
   else
-    print_status "The system will NOT automatically boot after installation."
+    print_status "The system will NOT automatically reboot after installation."
   fi
   blank_line
 
@@ -2030,7 +2045,7 @@ main() {
   export DEBIAN_FRONTEND=noninteractive
   # Setup local environment
   system_verifications
-#  install_prereqs
+  install_prereqs
   setup_installer_environment
 
   welcome_screen
@@ -2052,8 +2067,6 @@ main() {
       error_msg "Invalid selection script action."
       ;;
   esac
-
-  error_msg "ERROR: This script is not yet implemented."
 }
 
 main
