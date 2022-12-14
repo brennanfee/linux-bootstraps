@@ -6,8 +6,8 @@
 # way.  The config script sets some values for a specific type of installation
 # and then automatically calls the deb-install script.
 #
-# Short URL:
-# Github URL:
+# Short URL: https://tinyurl.com/deb-backports-multi
+# Github URL: https://raw.githubusercontent.com/brennanfee/linux-bootstraps/main/scripted-installer/debian/debian-my-configs/backports-multiDisk-encrypted.bash
 #
 #
 ##################  MODIFY THIS SECTION

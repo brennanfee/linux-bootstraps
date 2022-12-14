@@ -6,8 +6,8 @@
 # way.  The config script sets some values for a specific type of installation
 # and then automatically calls the deb-install script.
 #
-# Short URL:
-# Github URL:
+# Short URL: https://tinyurl.com/deb-testing-single
+# Github URL: https://raw.githubusercontent.com/brennanfee/linux-bootstraps/main/scripted-installer/debian/debian-my-configs/testing-singleDisk-encrypted.bash
 #
 #
 ##################  MODIFY THIS SECTION

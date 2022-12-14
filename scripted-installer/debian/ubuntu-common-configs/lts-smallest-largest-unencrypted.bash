@@ -7,7 +7,7 @@
 # and then automatically calls the deb-install script.
 #
 # Short URL:
-# Github URL:
+# Github URL: https://raw.githubusercontent.com/brennanfee/linux-bootstraps/main/scripted-installer/debian/ubuntu-common-configs/lts-smallest-largest-unencrypted.bash
 #
 #
 ##################  MODIFY THIS SECTION

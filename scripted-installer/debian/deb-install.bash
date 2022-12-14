@@ -2,9 +2,13 @@
 # Author: Brennan Fee
 # License: MIT License
 #
-# URL to install: bash <(curl -fsSL https://tinyurl.com/deb-install/deb-install.bash)
+# Example to run from URL: bash <(curl -fsSL <url here>)
 #
-# For the development version: https://tinyurl.com/dev-deb-install/deb-install.bash
+# Short URL: https://tinyurl.com/deb-install
+# Github URL: https://raw.githubusercontent.com/brennanfee/linux-bootstraps/main/scripted-installer/debian/deb-install.bash
+#
+# Dev branch short URL: https://tinyurl.com/dev-deb-install
+# Dev branch Github URL: https://raw.githubusercontent.com/brennanfee/linux-bootstraps/develop/scripted-installer/debian/deb-install.bash
 #
 # This script installs Debian/Ubuntu the "Arch" way.  In order to have more
 # fine-grained control it completely bypasses the Debian or Ubuntu installers

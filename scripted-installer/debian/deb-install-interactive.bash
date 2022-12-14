@@ -3,7 +3,14 @@
 # License: MIT License
 # Version: 0.01  2021-11-09
 #
-# URL to install: bash <(curl -fsSL https://<path tbd>)
+# Example to run from URL: bash <(curl -fsSL <url here>)
+#
+# Short URL: https://tinyurl.com/interactive-deb-install
+# Github URL: https://raw.githubusercontent.com/brennanfee/linux-bootstraps/main/scripted-installer/debian/deb-install-interactive.bash
+#
+# Dev branch short URL: https://tinyurl.com/dev-interactive-deb-install
+# Dev branch Github URL: https://raw.githubusercontent.com/brennanfee/linux-bootstraps/develop/scripted-installer/debian/deb-install-interactive.bash
+#
 #
 # TBD
 #
