@@ -172,49 +172,6 @@ write_log_spacer() {
   write_log "------"
 }
 
-log_values() {
-  write_log "Post Prompt Values"
-  write_log_spacer
-
-  write_log_blank
-  write_log "INSTALLER_DISTRO: '${INSTALLER_DISTRO}'"
-  write_log "SYS_ARCH: '${SYS_ARCH}'"
-  write_log "DPKG_ARCH: '${DPKG_ARCH}'"
-  write_log "UEFI: '${UEFI}'"
-  write_log "XPINGS: '${XPINGS}'"
-  write_log_blank
-  write_log "is_auto_install: '${is_auto_install}'"
-  write_log "use_second_disk: '${use_second_disk}'"
-
-  write_log_blank
-  write_log "AUTO_INSTALL: '${AUTO_INSTALL}'"
-  write_log "INSTALL_OS: '${INSTALL_OS}'"
-  write_log "INSTALL_EDITION: '${INSTALL_EDITION}'"
-  write_log "USE_BACKPORTS: '${USE_BACKPORTS}'"
-  write_log "SUPPORT_HIBERNATION: '${SUPPORT_HIBERNATION}'"
-  write_log "KEYMAP: '${KEYMAP}'"
-  write_log "HOSTNAME: '${HOSTNAME}'"
-  write_log "DOMAIN: '${DOMAIN}'"
-  write_log "TIMEZONE: '${TIMEZONE}'"
-  write_log "MAIN_DISK_SELECTION: '${MAIN_DISK_SELECTION}'"
-  write_log "SECOND_DISK_SELECTION: '${SECOND_DISK_SELECTION}'"
-  write_log "ENCRYPT_DISKS: '${ENCRYPT_DISKS}'"
-  write_log_password "DISK_PWD: '${DISK_PWD}'"
-  write_log "ROOT_DISABLED: '${ROOT_DISABLED}'"
-  write_log_password "ROOT_PWD: '${ROOT_PWD}'"
-  write_log "CREATE_USER: '${CREATE_USER}'"
-  write_log "USERNAME: '${USERNAME}'"
-  write_log_password "USER_PWD: '${USER_PWD}'"
-
-  write_log_blank
-  write_log "MULTI_DISK_SYSTEM: '${MULTI_DISK_SYSTEM}'"
-  write_log "MAIN_DISK: '${MAIN_DISK}'"
-  write_log "SECOND_DISK: '${SECOND_DISK}'"
-
-  write_log_blank
-  write_log_spacer
-}
-
 ### START: Log Functions
 
 ### START: Print Functions
@@ -521,7 +478,7 @@ ask_for_timezone() {
     AUTO_TIMEZONE=${input}
   fi
 
-  # TODO: Validate
+  # TODO: Validate?
 
   write_log "Timezone to use: ${AUTO_TIMEZONE}"
 }
