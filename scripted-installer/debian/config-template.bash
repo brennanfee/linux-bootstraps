@@ -19,8 +19,6 @@ set_exports() {
 ##################  DO NOT MODIFY BELOW THIS SECTION
 
 check_root() {
-  print_info "Checking root permissions..."
-
   local user_id
   user_id=$(id -u)
   if [[ "${user_id}" != "0" ]]
