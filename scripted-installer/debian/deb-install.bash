@@ -659,7 +659,20 @@ contains_element() {
 
 chroot_install() {
   write_log "Installing to target: '$*'"
-  DEBIAN_FRONTEND=noninteractive arch-chroot /mnt apt-get -y -q --no-install-recommends install "$@"
+  if [[ ${AUTO_INSTALL_OS} == "ubuntu" ]]
+  then
+    ## BAF - For whatever reason, Ubuntu won't boot correctly if I don't install the recommended packages along with everything else.
+    DEBIAN_FRONTEND=noninteractive arch-chroot /mnt apt-get -y -q install "$@"
+  else
+    DEBIAN_FRONTEND=noninteractive arch-chroot /mnt apt-get -y -q --no-install-recommends install "$@"
+  fi
+}
+
+chroot_run_updates() {
+  write_log "Running apt updates"
+  arch-chroot /mnt apt-get update
+  arch-chroot /mnt apt-get upgrade -y --no-install-recommends
+  arch-chroot /mnt apt-get autoremove
 }
 
 local_install() {
@@ -1474,8 +1487,7 @@ install_base_system_debian() {
   configure_keymap
 
   # Updates, just in case
-  arch-chroot /mnt apt-get update
-  arch-chroot /mnt apt-get upgrade -y --no-install-recommends
+  chroot_run_updates
 
   # Standard server setup
   arch-chroot /mnt tasksel --new-install install standard
@@ -1531,7 +1543,7 @@ install_base_system_ubuntu() {
 
   write_log "Running debootstrap"
 
-  DEBOOTSTRAP_DIR="/debootstrap" /debootstrap/debootstrap --arch "${DPKG_ARCH}" "${AUTO_INSTALL_EDITION}" "/mnt" "${SELECTED_REPO_URL}"
+  DEBOOTSTRAP_DIR="/debootstrap" /debootstrap/debootstrap --arch "${DPKG_ARCH}" --include=lsb-release "${AUTO_INSTALL_EDITION}" "/mnt" "${SELECTED_REPO_URL}"
 
   write_log "Debootstrap complete"
 
@@ -1541,12 +1553,9 @@ install_base_system_ubuntu() {
   configure_keymap
 
   # Updates, just in case
-  arch-chroot /mnt apt-get update
-  arch-chroot /mnt apt-get upgrade -y --no-install-recommends
+  chroot_run_updates
 
-  chroot_install ubuntu-minimal language-pack-en lsb-release
-
-  # The HWE kernels use the Ubuntu version # rather than the codename
+  # The HWE kernels use the Ubuntu version numbers rather than the codename
   local release_ver
   release_ver=$(arch-chroot /mnt lsb_release -r -s)
 
@@ -1642,7 +1651,7 @@ install_bootloader_efi(){
       ;;
   esac
 
-  arch-chroot /mnt grub-install "--target=${target}" --efi-directory=/boot/efi --bootloader-id=debian --recheck --no-nvram "${SELECTED_MAIN_DISK}"
+  arch-chroot /mnt grub-install "--target=${target}" --efi-directory=/boot/efi --bootloader-id="${AUTO_INSTALL_OS}" --recheck --no-nvram "${SELECTED_MAIN_DISK}"
 
   arch-chroot /mnt update-grub
 }
@@ -1704,7 +1713,7 @@ configure_apt_debian() {
     echo "deb ${SELECTED_REPO_URL} ${edition}-backports main contrib non-free" > /mnt/etc/apt/sources.list.d/debian-backports.list
   fi
 
-  arch-chroot /mnt apt-get update
+  chroot_run_updates
 }
 
 configure_apt_ubuntu() {
@@ -1721,7 +1730,7 @@ configure_apt_ubuntu() {
     echo "deb ${SELECTED_REPO_URL} ${AUTO_INSTALL_EDITION}-security main restricted universe multiverse"
   } > /mnt/etc/apt/sources.list
 
-  arch-chroot /mnt apt-get update
+  chroot_run_updates
 }
 
 configure_keymap() {
@@ -2028,19 +2037,24 @@ configure_virtualization() {
     if [[ ! -f "/mnt/boot/efi/startup.nsh" ]]
     then
       echo "FS0:" > /mnt/boot/efi/startup.nsh
-      echo "\EFI\debian\grubx64.efi" >> /mnt/boot/efi/startup.nsh
+      echo "\\EFI\\${AUTO_INSTALL_OS}\\grubx64.efi" >> /mnt/boot/efi/startup.nsh
     fi
 
     local boot_imgs
     boot_imgs=$(arch-chroot /mnt efibootmgr)
-    if ! echo "${boot_imgs}" | grep -i -q '\* debian'
+    if ! echo "${boot_imgs}" | grep -i -q "\* ${AUTO_INSTALL_OS}"
     then
       efi_disk=$(lsblk -np -o PKNAME,MOUNTPOINT | grep -i "/mnt/boot/efi" | cut -d' ' -f 1)
       efi_device=$(lsblk -np -o PATH,MOUNTPOINT | grep -i "/mnt/boot/efi" | cut -d' ' -f 1)
       efi_part="$(udevadm info --query=property --name="${efi_device}" | grep -i ID_PART_ENTRY_NUM |cut -d= -f 2)"
 
-      arch-chroot /mnt efibootmgr -c -d "${efi_disk}" -p "${efi_part}" -l '\EFI\debian\grubx64.efi' -L 'debian'
+      arch-chroot /mnt efibootmgr -c -d "${efi_disk}" -p "${efi_part}" -l "\\EFI\\${AUTO_INSTALL_OS}\\grubx64.efi" -L "${AUTO_INSTALL_OS}"
     fi
+  fi
+
+  if [[ ${detected_virt} == "oracle" && "${UEFI}" = 1 && "${AUTO_INSTALL_OS}" == "ubuntu" ]]
+  then
+    arch-chroot /mnt efibootmgr -n 0002
   fi
 }
 
@@ -2052,7 +2066,7 @@ install_applications_common() {
   print_info "Installing common applications"
 
   # Required in all environments, many to true up standard server installation
-  chroot_install apt-transport-https ca-certificates curl wget gnupg lsb-release build-essential dkms sudo acl git vim-nox python3-dev python3-keyring python3-pip python-is-python3 pipx software-properties-common apparmor ssh locales console-setup console-data lz4 network-manager netplan.io cryptsetup cryptsetup-initramfs xfsprogs dictionaries-common iamerican ibritish discover discover-data laptop-detect installation-report usbutils eject util-linux-locales
+  chroot_install apt-transport-https ca-certificates curl wget gnupg lsb-release build-essential dkms sudo acl git vim-nox python3-dev python3-keyring python3-pip python-is-python3 pipx software-properties-common apparmor ssh locales console-setup console-data lz4 network-manager netplan.io cryptsetup cryptsetup-initramfs xfsprogs dictionaries-common iamerican ibritish discover discover-data laptop-detect usbutils eject util-linux-locales
 
   setfont "Lat15-Terminus${CONSOLE_FONT_SIZE}"
 
@@ -2068,7 +2082,7 @@ install_applications_debian() {
   then
     print_info "Installing Debian specific applications"
 
-    chroot_install firmware-linux
+    chroot_install firmware-linux installation-report
   fi
 }
 
@@ -2077,7 +2091,7 @@ install_applications_ubuntu() {
   then
     print_info "Installing Ubuntu specific applications"
 
-    chroot_install linux-firmware
+    chroot_install linux-firmware language-pack-en
   fi
 }
 
@@ -2146,7 +2160,7 @@ install_salt_from_repo() {
 
   echo "deb [signed-by=/usr/local/share/keyrings/salt-archive-keyring.gpg arch=${DPKG_ARCH}] https://repo.saltproject.io/py3/${distro}/${release}/${DPKG_ARCH}/${salt_version} ${codename} main" | sudo tee /mnt/etc/apt/sources.list.d/salt.list
 
-  arch-chroot /mnt apt-get update
+  chroot_run_updates
   chroot_install salt-minion
 }
 
@@ -2165,7 +2179,7 @@ install_puppet_from_repo() {
 
   wget "https://apt.puppet.com/puppet7-release-${codename}.deb"
   arch-chroot /mnt dpkg -i "puppet7-release-${codename}.deb"
-  arch-chroot /mnt apt-get update
+  chroot_run_updates
   chroot_install puppet-agent
   arch-chroot /mnt /opt/puppetlabs/bin/puppet resource service puppet ensure=running enable=true
 }
@@ -2352,6 +2366,9 @@ EOF
 
 clean_up() {
   print_info "Cleaning up"
+
+  # Run updates one last time
+  chroot_run_updates
 
   # Clean apt
   arch-chroot /mnt apt-get clean
