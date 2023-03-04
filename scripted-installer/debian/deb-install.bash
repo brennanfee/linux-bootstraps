@@ -886,6 +886,11 @@ verify_install_edition() {
     elif [[ ${SELECTED_INSTALL_EDITION} == "rolling" ]]
     then
       SELECTED_INSTALL_EDITION=${CURRENT_UBUNTU_ROLLING_CODENAME}
+    elif [[ ${SELECTED_INSTALL_EDITION} == "stable" ]]
+    then
+      # Handles the edge case where they said ubuntu but kept the default
+      # 'stable' for edition
+      SELECTED_INSTALL_EDITION=${CURRENT_UBUNTU_LTS_CODENAME}
     fi
   fi
 }
