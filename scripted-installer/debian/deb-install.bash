@@ -54,7 +54,7 @@ CURRENT_DEB_TESTING_CODENAME="bookworm"
 
 # Should be updated with new Ubuntu releases
 CURRENT_UBUNTU_LTS_CODENAME="jammy"
-CURRENT_UBUNTU_ROLLING_CODENAME="kinetic"
+CURRENT_UBUNTU_ROLLING_CODENAME="lunar"
 
 # Default repositories - NOTE: These should NOT end in slashes
 DEFAULT_DEBIAN_REPO="https://deb.debian.org/debian"
@@ -88,9 +88,6 @@ echo "------------" | tee -a "${OUTPUT_LOG}"
 SYS_ARCH=$(uname -m) # Architecture (x86_64)
 DPKG_ARCH=$(dpkg --print-architecture) # Something like amd64, arm64
 UEFI=0
-
-# Disk to types to accept as install locations for the auto selection methods
-BLOCK_DISKS="3,8,9,22,33,34,65,66,67,202,253,254,259"
 
 # This is not to be confused with the OS we are going to install, this is the OS that was booted to perform the install.  This script only supports Debian and Ubuntu Live Server installers images.
 INSTALLER_DISTRO=$(lsb_release -i -s | tr "[:upper:]" "[:lower:]")
@@ -966,7 +963,7 @@ verify_disk_input() {
   shift
   if echo "${input}" | grep -q '^/dev/'
   then
-    if ! lsblk -ndpl --output NAME --include "${BLOCK_DISKS}" | grep -q "${input}"
+    if ! lsblk -ndpr --output NAME,RO,MOUNTPOINT | awk '$2 == "0" && $3 == "" {print $1}' | grep -q "${input}"
     then
       echo "Invalid device selection option: '${input}'"
     fi
@@ -1010,16 +1007,9 @@ verify_config_management() {
 parse_main_disk() {
   print_info "Reading Main Disk Selection"
 
-  local ventoy_disk
-  ventoy_disk=$(lsblk -np -o PKNAME,LABEL | grep -i "ventoy" | cut -d' ' -f 1 || true)
-  if [[ -z "${ventoy_disk}" ]]
-  then
-    ventoy_disk="/zzz/zzz"
-  fi
-
   if echo "${AUTO_MAIN_DISK}" | grep -q '^/dev/'
   then
-    # We have already verified the disk prior, so need need to do anything else
+    # We have already verified the disk prior, so no need to do anything else
     MAIN_DISK_METHOD="direct"
     SELECTED_MAIN_DISK=${AUTO_MAIN_DISK}
   else
@@ -1032,12 +1022,12 @@ parse_main_disk() {
     case "${AUTO_MAIN_DISK}" in
       smallest)
         MAIN_DISK_METHOD="smallest"
-        SELECTED_MAIN_DISK=$(lsblk -ndpl --output NAME --include "${BLOCK_DISKS}" --sort SIZE | grep -v "${ventoy_disk}" | head -n 1)
+        SELECTED_MAIN_DISK=$(lsblk -ndpr --output NAME,RO,MOUNTPOINT --sort SIZE | awk '$2 == "0" && $3 == "" {print $1}' | head -n 1)
         ;;
 
       largest)
         MAIN_DISK_METHOD="largest"
-        SELECTED_MAIN_DISK=$(lsblk -ndpl --output NAME --include "${BLOCK_DISKS}" --sort SIZE | grep -v "${ventoy_disk}" | tail -n 1)
+        SELECTED_MAIN_DISK=$(lsblk -ndpr --output NAME,RO,MOUNTPOINT --sort SIZE | awk '$2 == "0" && $3 == "" {print $1}' | tail -n 1)
         ;;
 
       *)
@@ -1053,11 +1043,6 @@ parse_main_disk() {
     error_msg "ERROR! Invalid main disk selected '${SELECTED_MAIN_DISK}'."
   fi
 
-  if [[ "${SELECTED_MAIN_DISK}" == "${ventoy_disk}" ]]
-  then
-    error_msg "ERROR! Invalid main disk selected (ventoy) '${SELECTED_MAIN_DISK}'."
-  fi
-
   write_log "Main disk selection method: '${MAIN_DISK_METHOD}'"
   write_log "Main disk selected: '${SELECTED_MAIN_DISK}'"
 }
@@ -1067,7 +1052,7 @@ parse_second_disk() {
 
   print_status "    Collecting disks..."
   local devices
-  devices=$(lsblk -ndpl --output NAME --include "${BLOCK_DISKS}" | grep -v "${SELECTED_MAIN_DISK}" || true)
+  devices=$(lsblk -ndpr --output NAME,RO,MOUNTPOINT | awk '$2 == "0" && $3 == "" {print $1}' | grep -v "${SELECTED_MAIN_DISK}" || true)
   write_log "Secondary devices: ${devices}"
 
   local devices_list=()
@@ -1077,17 +1062,10 @@ parse_second_disk() {
   done <<< "${devices[@]}"
   write_log "Secondary devices array: ${devices_list[*]}"
 
-  local ventoy_disk
-  ventoy_disk=$(lsblk -np -o PKNAME,LABEL | grep -i "ventoy" | cut -d' ' -f 1 || true)
-  if [[ -z ${ventoy_disk} ]]
-  then
-    ventoy_disk="/zzz/zzz"
-  fi
-
   write_log "checking for second disk"
-  if [[ ${AUTO_SKIP_PARTITIONING} == "1" || ${#devices_list[@]} == "0" || "${SELECTED_MAIN_DISK}" == "ignore" ]]
+  if [[ ${AUTO_SKIP_PARTITIONING} == "1" || ${#devices_list[@]} == "0" ]]
   then
-    # There is only 1 disk in the system or the user has chosen to ignore the main disk (bypassing partitioning), so regardless of what they asked for on second disk it should be ignored
+    # There is only 1 disk in the system or the user has chosen to skip partitioning, so regardless of what they asked for on second disk it should be ignored
     SECOND_DISK_METHOD="forced"
     SELECTED_SECOND_DISK="ignore"
 
@@ -1112,12 +1090,12 @@ parse_second_disk() {
 
     smallest)
       SECOND_DISK_METHOD="smallest"
-      SELECTED_SECOND_DISK=$(lsblk -ndpl --output NAME --include "${BLOCK_DISKS}" --sort SIZE | grep -v "${SELECTED_MAIN_DISK}" | grep -v "${ventoy_disk}" | head -n 1)
+      SELECTED_SECOND_DISK=$(lsblk -ndpr --output NAME,RO,MOUNTPOINT --sort SIZE | awk '$2 == "0" && $3 == "" {print $1}' | grep -v "${SELECTED_MAIN_DISK}" | head -n 1)
       ;;
 
     largest)
       SECOND_DISK_METHOD="largest"
-      SELECTED_SECOND_DISK=$(lsblk -ndpl --output NAME --include "${BLOCK_DISKS}" --sort SIZE | grep -v "${SELECTED_MAIN_DISK}" | grep -v "${ventoy_disk}" | tail -n 1)
+      SELECTED_SECOND_DISK=$(lsblk -ndpr --output NAME,RO,MOUNTPOINT --sort SIZE | awk '$2 == "0" && $3 == "" {print $1}' | grep -v "${SELECTED_MAIN_DISK}" | tail -n 1)
       ;;
 
     *)
@@ -1136,11 +1114,6 @@ parse_second_disk() {
   if [[ "${SELECTED_SECOND_DISK}" == "${SELECTED_MAIN_DISK}" ]]
   then
     error_msg "ERROR! Main disk and second disk can not be the same disk."
-  fi
-
-  if [[ "${SELECTED_SECOND_DISK}" == "${ventoy_disk}" ]]
-  then
-    error_msg "ERROR! Invalid second disk selected (ventoy) '${SELECTED_MAIN_DISK}'."
   fi
 
   write_log "Second disk selection method: '${SECOND_DISK_METHOD}'"
