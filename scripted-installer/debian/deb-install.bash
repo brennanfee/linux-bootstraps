@@ -1336,6 +1336,7 @@ encrypt_main_provided_file() {
 
 encrypt_main_passphrase() {
   print_status "    Using provided encryption passphrase"
+  ENCRYPTION_FILE="password"
 
   print_status "    Encrypting main disk"
   echo -n "${AUTO_DISK_PWD}" | cryptsetup --batch-mode -s 512 --iter-time 5000 --type luks2 luksFormat "${MAIN_DISK_THIRD_PART}" -
@@ -1756,7 +1757,7 @@ configure_encryption() {
     mkdir -p /mnt/etc/keys
 
     local main_keyfile="none"
-    if [[ ${ENCRYPTION_FILE} != "" ]]
+    if [[ "${ENCRYPTION_FILE}" != "password" ]]
     then
       main_keyfile="/mnt/boot/root.key"
       mv "${ENCRYPTION_FILE}" "${main_keyfile}"
@@ -1776,11 +1777,16 @@ configure_encryption() {
       local discard_option=",discard"
     fi
 
-    echo "cryptroot UUID=${main_uuid} /dev/disk/by-uuid/${boot_uuid}:root.key luks,initramfs,keyscript=/lib/cryptsetup/scripts/passdev,tries=3${discard_option}" >> /mnt/etc/crypttab
+    if [[ "${ENCRYPTION_FILE}" != "password" ]]
+    then
+      echo "cryptroot UUID=${main_uuid} /dev/disk/by-uuid/${boot_uuid}:root.key luks,initramfs,keyscript=/lib/cryptsetup/scripts/passdev,tries=3${discard_option}" >> /mnt/etc/crypttab
+    else
+      echo "cryptroot UUID=${main_uuid} none luks,initramfs,tries=3${discard_option}" >> /mnt/etc/crypttab
+    fi
 
     fix_systemd_encryption_bug
 
-    if [[ ${SELECTED_SECOND_DISK} != "ignore" && ${SECONDARY_FILE} != "" ]]
+    if [[ "${SELECTED_SECOND_DISK}" != "ignore" && "${SECONDARY_FILE}" != "" ]]
     then
       local second_key="/etc/keys/secondary.key"
       mv "${SECONDARY_FILE}" "/mnt${second_key}"
