@@ -150,9 +150,9 @@ AUTO_SECOND_DISK="${AUTO_SECOND_DISK:=ignore}"
 # Whether the volume(s) created should be encrypted.  This is a boolean value.
 AUTO_ENCRYPT_DISKS="${AUTO_ENCRYPT_DISKS:=1}"
 
-# The password to use for the main encrypted volume.  A special value of "file", the default, can be passed which will create a disk file in the /boot partition that will auto-decrypt on boot.  This is done so that any automated systems that expect a boot without the need of a password can still function.  You can also pass a full path (it must start with / or http://) to a file to use, that file will be copied to the /boot partition to preserve the automatic boot nature required for automation.  Lastly, you can still provide an actual passphrase which will be used.  However, this method will break any automations as typing the password will be required at boot.
+# The password to use for the main encrypted volume.  A special value of "file", the default, can be passed which will generate a disk file in the /boot partition that will auto-decrypt on boot.  This is done so that any automated systems that expect a boot without the need of a password can still function.  You can also pass a full path (it must start with slash /, no relative paths) to a file to use, that file will be copied to the /boot partition to preserve the automatic boot nature required for automation.  Instead of a local file you can allso pass a URL to a file which should be downloaded and used, it must start with http:// or https://.  Lastly, you can still provide an actual passphrase which will be used.  However, this method will break any automations as typing the password will be required during boot.
 #
-# In all configurations, if a second disk is being used a file will be generated automatically as the decryption key for the second disk and stored on the root partition (in the /etc/keys folder).  The system will be configured to automatically unlock that partition after the root partition is decrypted.
+# In all configurations, if a second disk is being used a separate file will be generated automatically as the decryption key for the second disk and stored on the root partition (in the /etc/keys folder).  The system will be configured to automatically unlock that partition after the root partition is decrypted.
 #
 # NOTE: This is not intended to be a secure installation without the need for the user to modify things post bootstrap.  This merely "initializes" the encryption as it is much easier to modify the encryption keys\slots later than it is to encrypt a partition which is already in use (especially root).  Therefore, it is fully expected that the user will either replace the file or otherwise manage the encryption keys after initial boot.
 AUTO_DISK_PWD="${AUTO_DISK_PWD:=file}"
@@ -295,7 +295,10 @@ log_values() {
       write_log "AUTO_DISK_PWD: tpm"
       ;;
     /*)
-      write_log "AUTO_DISK_PWD: Provided file '${AUTO_DISK_PWD}'"
+      write_log "AUTO_DISK_PWD: Provided local file '${AUTO_DISK_PWD}'"
+      ;;
+    http://* | https://* | ftp://* | ftps://* | sftp://* | file://* )
+      write_log "AUTO_DISK_PWD: Provided remote file '${AUTO_DISK_PWD}'"
       ;;
     *)
       write_log_password "AUTO_DISK_PWD (Password): '${AUTO_DISK_PWD}'"
@@ -398,7 +401,10 @@ confirm_with_user() {
           encryption_method="tpm"
           ;;
         /*)
-          encryption_method="provided file"
+          encryption_method="provided local file"
+          ;;
+        http://* | https://* | ftp://* | ftps://* | sftp://* | file://* )
+          encryption_method="provided remote file"
           ;;
         *)
           encryption_method="password"
@@ -1288,7 +1294,7 @@ setup_encryption() {
         encrypt_main_generated_file
         ;;
 
-      /*)
+      /* | http://* | https://* | ftp://* | ftps://* | sftp://* | file://* )
         encrypt_main_provided_file
         ;;
 
@@ -1330,7 +1336,14 @@ encrypt_main_generated_file() {
 
 encrypt_main_provided_file() {
   ENCRYPTION_FILE="${AUTO_DISK_PWD}"
-  print_status "    Using encryption file"
+  print_status "    Using provided encryption file"
+
+  if [[ "${ENCRYPTION_FILE}" != /* ]]
+  then
+    local download_file="downloaded-key"
+    wget -O "${download_file}" "${ENCRYPTION_FILE}"
+    ENCRYPTION_FILE="${download_file}"
+  fi
 
   print_status "    Encrypting main disk"
   cryptsetup --batch-mode -s 512 --iter-time 5000 --type luks2 luksFormat "${MAIN_DISK_THIRD_PART}" "${ENCRYPTION_FILE}"
