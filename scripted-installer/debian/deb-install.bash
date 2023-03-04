@@ -39,8 +39,8 @@ fi
 
 SCRIPT_AUTHOR="Brennan Fee"
 SCRIPT_LICENSE="MIT License"
-SCRIPT_VERSION="0.5"
-SCRIPT_DATE="2022-11-15"
+SCRIPT_VERSION="0.6"
+SCRIPT_DATE="2023-03-04"
 
 ## Data - These values will change from time-to-time and are placed here to have one place to
 ## change them without having to hunt around in the script.
@@ -2328,7 +2328,6 @@ setup_first_boot_script() {
     wget -O "/home/user/scripts/first-boot.script" "${AUTO_FIRST_BOOT_SCRIPT}"
     cp "/home/user/scripts/first-boot.script" "/mnt/usr/local/sbin/first-boot.script"
 
-    # TODO: Setup to run once
     cat <<- 'EOF' > /mnt/etc/systemd/system/deb-install-first-boot.service
 [Unit]
 Description=Script to run on first boot of system.
