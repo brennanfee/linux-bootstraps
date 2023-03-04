@@ -52,14 +52,18 @@ SUPPORTED_OSES=('debian' 'ubuntu')
 CURRENT_DEB_STABLE_CODENAME="bullseye"
 CURRENT_DEB_TESTING_CODENAME="bookworm"
 
+# Should be updated with new Ubuntu releases
+CURRENT_UBUNTU_LTS_CODENAME="jammy"
+CURRENT_UBUNTU_ROLLING_CODENAME="kinetic"
+
 # Default repositories - NOTE: These should NOT end in slashes
 DEFAULT_DEBIAN_REPO="https://deb.debian.org/debian"
 DEFAULT_UBUNTU_REPO="http://archive.ubuntu.com/ubuntu"
 
 # Debootstrap download filenames
 DEBOOTSTRAP_PATH="pool/main/d/debootstrap"
-CURRENT_DEBIAN_DEBOOTSTRAP_FILE="debootstrap_1.0.128+nmu2.tar.gz"
-CURRENT_UBUNTU_DEBOOTSTRAP_FILE="debootstrap_1.0.127ubuntu2.tar.gz"
+CURRENT_DEBIAN_DEBOOTSTRAP_FILE="debootstrap_1.0.128+nmu2~bpo11+1.tar.gz"
+CURRENT_UBUNTU_DEBOOTSTRAP_FILE="debootstrap_1.0.128+nmu2ubuntu1.tar.gz"
 
 ### End: Data
 
@@ -203,6 +207,8 @@ AUTO_REBOOT="${AUTO_REBOOT:=0}"
 
 ### START: Params created during verification
 
+SELECTED_INSTALL_EDITION=""
+
 SELECTED_MAIN_DISK=""
 SELECTED_SECOND_DISK=""
 ENCRYPTION_FILE=""
@@ -324,6 +330,7 @@ log_values() {
 
   write_log "--- Calculated values ---"
   write_log "SELECTED_CHARMAP: '${SELECTED_CHARMAP}'"
+  write_log "SELECTED_INSTALL_EDITION: '${SELECTED_INSTALL_EDITION}'"
   write_log "MAIN_DISK_METHOD: '${MAIN_DISK_METHOD}'"
   write_log "SELECTED_MAIN_DISK: '${SELECTED_MAIN_DISK}'"
   write_log "SECOND_DISK_METHOD: '${SECOND_DISK_METHOD}'"
@@ -354,7 +361,7 @@ confirm_with_user() {
 
     print_status "The selected keymap is '${AUTO_KEYMAP}', locale is '${AUTO_LOCALE}', and the selected timezone is '${AUTO_TIMEZONE}'."
 
-    print_status "The distribution to install is '${AUTO_INSTALL_OS}', '${AUTO_INSTALL_EDITION}' edition."
+    print_status "The distribution to install is '${AUTO_INSTALL_OS}', '${SELECTED_INSTALL_EDITION}' edition."
 
     print_status "The kernel version to install, if available, is '${AUTO_KERNEL_VERSION}'."
 
@@ -867,6 +874,22 @@ verify_install_os() {
   if [[ ! ${EXIT_CODE} == "0" ]]
   then
     error_msg "Invalid OS to install: '${AUTO_INSTALL_OS}'"
+  fi
+}
+
+verify_install_edition() {
+  print_info "Verifying Install OS"
+
+  SELECTED_INSTALL_EDITION="${AUTO_INSTALL_EDITION}"
+  if [[ ${AUTO_INSTALL_OS} == "ubuntu" ]]
+  then
+    if [[ ${SELECTED_INSTALL_EDITION} == "lts" ]]
+    then
+      SELECTED_INSTALL_EDITION=${CURRENT_UBUNTU_LTS_CODENAME}
+    elif [[ ${SELECTED_INSTALL_EDITION} == "rolling" ]]
+    then
+      SELECTED_INSTALL_EDITION=${CURRENT_UBUNTU_ROLLING_CODENAME}
+    fi
   fi
 }
 
@@ -1477,7 +1500,7 @@ install_base_system_debian() {
 
   write_log "Running debootstrap"
 
-  DEBOOTSTRAP_DIR="/debootstrap" /debootstrap/debootstrap --arch "${DPKG_ARCH}" --include=lsb-release "${AUTO_INSTALL_EDITION}" "/mnt" "${SELECTED_REPO_URL}"
+  DEBOOTSTRAP_DIR="/debootstrap" /debootstrap/debootstrap --arch "${DPKG_ARCH}" --include=lsb-release "${SELECTED_INSTALL_EDITION}" "/mnt" "${SELECTED_REPO_URL}"
 
   write_log "Debootstrap complete"
 
@@ -1501,7 +1524,7 @@ install_base_system_debian() {
   if [[ "${AUTO_KERNEL_VERSION}" == "backport" || "${AUTO_KERNEL_VERSION}" == "backports" ]]
   then
     local dont_support_backports=("sid" "unstable" "rc-buggy" "experimental")
-    get_exit_code contains_element "${AUTO_INSTALL_EDITION}" "${dont_support_backports[@]}"
+    get_exit_code contains_element "${SELECTED_INSTALL_EDITION}" "${dont_support_backports[@]}"
     if [[ ! ${EXIT_CODE} == "0" ]]
     then
       # Check to see the package exists in backports, if not we'll just install the default kernel
@@ -1543,7 +1566,7 @@ install_base_system_ubuntu() {
 
   write_log "Running debootstrap"
 
-  DEBOOTSTRAP_DIR="/debootstrap" /debootstrap/debootstrap --arch "${DPKG_ARCH}" --include=lsb-release "${AUTO_INSTALL_EDITION}" "/mnt" "${SELECTED_REPO_URL}"
+  DEBOOTSTRAP_DIR="/debootstrap" /debootstrap/debootstrap --arch "${DPKG_ARCH}" --include=lsb-release "${SELECTED_INSTALL_EDITION}" "/mnt" "${SELECTED_REPO_URL}"
 
   write_log "Debootstrap complete"
 
@@ -1695,15 +1718,15 @@ configure_apt_debian() {
 
   # Write out sources
   {
-    echo "deb ${SELECTED_REPO_URL} ${AUTO_INSTALL_EDITION} main contrib non-free"
+    echo "deb ${SELECTED_REPO_URL} ${SELECTED_INSTALL_EDITION} main contrib non-free"
     # The security repo MUST come from the main sources as mirrors will not contain a copy
-    echo "deb http://deb.debian.org/debian-security ${AUTO_INSTALL_EDITION}-security main contrib non-free"
-    echo "deb ${SELECTED_REPO_URL} ${AUTO_INSTALL_EDITION}-updates main contrib non-free"
+    echo "deb http://deb.debian.org/debian-security ${SELECTED_INSTALL_EDITION}-security main contrib non-free"
+    echo "deb ${SELECTED_REPO_URL} ${SELECTED_INSTALL_EDITION}-updates main contrib non-free"
   } > /mnt/etc/apt/sources.list
 
   # Install backports source
   local dont_support_backports=("sid" "unstable" "rc-buggy" "experimental")
-  get_exit_code contains_element "${AUTO_INSTALL_EDITION}" "${dont_support_backports[@]}"
+  get_exit_code contains_element "${SELECTED_INSTALL_EDITION}" "${dont_support_backports[@]}"
   if [[ ! ${EXIT_CODE} == "0" ]]
   then
     # Can't use branches like "stable" or "oldstable" must convert to the codename like "bullseye" or "bookworm"
@@ -1724,10 +1747,10 @@ configure_apt_ubuntu() {
 
   # Write out sources
   {
-    echo "deb ${SELECTED_REPO_URL} ${AUTO_INSTALL_EDITION} main restricted universe multiverse"
-    echo "deb ${SELECTED_REPO_URL} ${AUTO_INSTALL_EDITION}-updates main restricted universe multiverse"
-    echo "deb ${SELECTED_REPO_URL} ${AUTO_INSTALL_EDITION}-backports main restricted universe multiverse"
-    echo "deb ${SELECTED_REPO_URL} ${AUTO_INSTALL_EDITION}-security main restricted universe multiverse"
+    echo "deb ${SELECTED_REPO_URL} ${SELECTED_INSTALL_EDITION} main restricted universe multiverse"
+    echo "deb ${SELECTED_REPO_URL} ${SELECTED_INSTALL_EDITION}-updates main restricted universe multiverse"
+    echo "deb ${SELECTED_REPO_URL} ${SELECTED_INSTALL_EDITION}-backports main restricted universe multiverse"
+    echo "deb ${SELECTED_REPO_URL} ${SELECTED_INSTALL_EDITION}-security main restricted universe multiverse"
   } > /mnt/etc/apt/sources.list
 
   chroot_run_updates
@@ -2451,6 +2474,7 @@ verify_parameters() {
   normalize_parameters
 
   verify_install_os
+  verify_install_edition
   verify_kernel_version
   verify_timezone
   verify_user_configuration
