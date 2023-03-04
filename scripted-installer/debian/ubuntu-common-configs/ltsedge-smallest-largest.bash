@@ -7,19 +7,18 @@
 # and then automatically calls the deb-install script.
 #
 # Short URL:
-# Github URL: https://raw.githubusercontent.com/brennanfee/linux-bootstraps/main/scripted-installer/debian/debian-common-configs/stable-smallest-ignore-unencrypted.bash
+# Github URL: https://raw.githubusercontent.com/brennanfee/linux-bootstraps/main/scripted-installer/debian/ubuntu-common-configs/ltsedge-smallest-largest.bash
 #
 #
 ##################  MODIFY THIS SECTION
 ## Set the deb-install variables\options you want here, make sure to export them.
 set_exports() {
-  export AUTO_INSTALL_OS=${AUTO_INSTALL_OS:=debian}
-  export AUTO_INSTALL_EDITION=${AUTO_INSTALL_EDITION:=stable}
-  export AUTO_KERNEL_VERSION=${AUTO_KERNEL_VERSION:=default}
+  export AUTO_INSTALL_OS=${AUTO_INSTALL_OS:=ubuntu}
+  export AUTO_INSTALL_EDITION=${AUTO_INSTALL_EDITION:=lts}
+  export AUTO_KERNEL_VERSION=${AUTO_KERNEL_VERSION:=hwe-edge}
 
   export AUTO_MAIN_DISK=${AUTO_MAIN_DISK:=smallest}
-  export AUTO_SECOND_DISK=${AUTO_SECOND_DISK:=ignore}
-  export AUTO_ENCRYPT_DISKS=${AUTO_ENCRYPT_DISKS:=0}
+  export AUTO_SECOND_DISK=${AUTO_SECOND_DISK:=largest}
 }
 ##################  DO NOT MODIFY BELOW THIS SECTION
 
@@ -55,6 +54,11 @@ download_deb_installer() {
 }
 
 read_input_options() {
+  # Defaults
+  export AUTO_ENCRYPT_DISKS=${AUTO_ENCRYPT_DISKS:=1}
+  export AUTO_REBOOT=${AUTO_REBOOT:=1}
+  export AUTO_USE_DATA_FOLDER=${AUTO_USE_DATA_FOLDER:=0}
+
   while [[ "${1:-}" != "" ]]
   do
     case $1 in
@@ -64,12 +68,24 @@ read_input_options() {
       -d | --debug)
         export AUTO_IS_DEBUG=1
         ;;
+      --data | --usedata | --use-data)
+        export AUTO_USE_DATA_FOLDER=1
+        ;;
       -r | --reboot)
         export AUTO_REBOOT=1
+        ;;
+      -n | --no-reboot | --noreboot)
+        export AUTO_REBOOT=0
         ;;
       -s | --script)
         shift
         CONFIG_SCRIPT_SOURCE=$1
+        ;;
+      -e | --encrypt | --encrypted)
+        export AUTO_ENCRYPT_DISKS=1
+        ;;
+      -u | --unencrypt | --unencrypted | --not-encrypted | --notencrypted)
+        export AUTO_ENCRYPT_DISKS=0
         ;;
       *)
         noop
@@ -85,8 +101,8 @@ main() {
   script_file="/tmp/deb-install.bash"
 
   check_root
-  set_exports
   read_input_options "$@"
+  set_exports
 
   download_deb_installer "${script_file}"
 
