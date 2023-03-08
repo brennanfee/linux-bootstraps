@@ -680,9 +680,9 @@ chroot_install() {
 
 chroot_run_updates() {
   write_log "Running apt updates"
-  arch-chroot /mnt apt-get update
-  arch-chroot /mnt apt-get upgrade -y --no-install-recommends
-  arch-chroot /mnt apt-get autoremove
+  DEBIAN_FRONTEND=noninteractive arch-chroot /mnt apt-get -y -q update
+  DEBIAN_FRONTEND=noninteractive arch-chroot /mnt apt-get -y -q full-upgrade
+  DEBIAN_FRONTEND=noninteractive arch-chroot /mnt apt-get -y -q autoremove
 }
 
 local_install() {
