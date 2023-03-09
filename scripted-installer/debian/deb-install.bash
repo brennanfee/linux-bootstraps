@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Author: Brennan Fee
 # License: MIT License
+# Version: 0.6
+# Date: 2023-03-04
 #
-# Example to run from URL: bash <(curl -fsSL <url here>)
+# Example to run directly from URL: bash <(curl -fsSL <url here>)
 #
 # Short URL: https://tinyurl.com/deb-install
 # Github URL: https://raw.githubusercontent.com/brennanfee/linux-bootstraps/main/scripted-installer/debian/deb-install.bash

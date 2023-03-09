@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Author: Brennan Fee
 # License: MIT License
-# Version: 0.01  2021-11-09
+# Version: 0.6
+# Date: 2023-03-04
 #
-# Example to run from URL: bash <(curl -fsSL <url here>)
+# Example to run directly from URL: bash <(curl -fsSL <url here>)
 #
 # Short URL: https://tinyurl.com/interactive-deb-install
 # Github URL: https://raw.githubusercontent.com/brennanfee/linux-bootstraps/main/scripted-installer/debian/deb-install-interactive.bash
@@ -11,8 +12,17 @@
 # Dev branch short URL: https://tinyurl.com/dev-interactive-deb-install
 # Dev branch Github URL: https://raw.githubusercontent.com/brennanfee/linux-bootstraps/develop/scripted-installer/debian/deb-install-interactive.bash
 #
+# This script can be used to interactively install Debian/Ubuntu the "Arch" way.  It can
+# also be used to produce a "configuration" file with the selected options during the
+# interactive session.  The provided configuration file can then be used to automatically
+# execute the installation with those settings.  This can provide a consistent install
+# configuration for mutiple machines.
 #
-# TBD
+# At the end of the interactive questions you will be prompted whether you wish to export
+# a configuration file or proceed and perform the installation.  While the export can be
+# done on any machine and run in any Linux environment, for the installation to proceed
+# you must have booted with a Debian (or Ubuntu) live "server" ISOs (which one shouldn't
+# matter).
 #
 # Bash strict mode
 ([[ -n ${ZSH_EVAL_CONTEXT:-} && ${ZSH_EVAL_CONTEXT:-} =~ :file$ ]] ||

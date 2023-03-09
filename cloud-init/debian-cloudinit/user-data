@@ -1,0 +1,125 @@
+#cloud-config
+# vim: set filetype=yaml :
+autoinstall:
+  version: 1
+  locale: en_US
+  keyboard:
+    layout: en
+    variant: us
+  identity:
+    hostname: debian
+    password: TBD
+    username: debian
+  early-commands:
+    - systemctl stop ssh
+    - wget -q -O /tmp/debian-early-command.bash $(sed 's|.*s=\([^ ]\+\).*|\1|' /proc/cmdline)/debian-early-command.bash
+    - bash /tmp/debian-early-command.bash
+  ssh:
+    install-server: true
+  user-data:
+    disable_root: true
+    timezone: US/Central
+  storage:
+    swap:
+      size: 0
+    config:
+      - id: disk-root
+        type: disk
+        ptable: gpt
+        wipe: superblock-recursive
+        match:
+          size: smallest
+      - id: part-efi
+        type: partition
+        device: disk-root
+        grub_device: true
+        flag: boot
+        size: 512MB
+      - id: part-boot
+        type: partition
+        device: disk-root
+        size: 1G
+      - id: part-main
+        type: partition
+        device: disk-root
+        size: -1
+      - id: format-part-boot
+        type: format
+        fstype: ext4
+        label: boot
+        volume: part-boot
+      - id: format-part-efi
+        type: format
+        fstype: vfat
+        label: efi
+        volume: part-efi
+      - id: format-part-main
+        type: format
+        fstype: ext4
+        label: root
+        volume: part-main
+      - id: mount-root
+        type: mount
+        path: /
+        device: format-part-main
+        options: "errors=remount-ro"
+      - id: mount-boot
+        type: mount
+        path: /boot
+        device: format-part-boot
+        passno: 2
+      - id: mount-efi
+        type: mount
+        path: /boot/efi
+        device: format-part-efi
+        passno: 1
+        options: "umask=0077"
+  late-commands:
+    - wget -q -O /tmp/debian-late-command.bash $(sed 's|.*s=\([^ ]\+\).*|\1|' /proc/cmdline)/debian-late-command.bash
+    - bash /tmp/debian-late-command.bash
+  refresh-installer:
+    update: true
+  packages:
+    - apt-transport-https
+    - ca-certificates
+    - curl
+    - wget
+    - gnupg
+    - lsb-release
+    - build-essential
+    - dkms
+    - sudo
+    - acl
+    - git
+    - vim-nox
+    - python3-dev
+    - python3-setuptools
+    - python3-wheel
+    - python3-keyring
+    - python3-venv
+    - python3-pip
+    - python-is-python3
+    - software-properties-common
+    - os-prober
+    - apparmor
+    - ssh
+    - ansible
+    - locales
+    - console-setup
+    - lz4
+    - network-manager
+    - netplan.io
+    - cryptsetup
+    - cryptsetup-initramfs
+    - xfsprogs
+    - lvm2
+    - dictionaries-common
+    - iamerican
+    - ibritish
+    - discover
+    - discover-data
+    - laptop-detect
+    - installation-report
+    - usbutils
+    - eject
+    - util-linux-locales
