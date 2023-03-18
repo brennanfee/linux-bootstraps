@@ -109,12 +109,13 @@ DEFAULT_USE_DATA_FOLDER="0"
 DEFAULT_STAMP_LOCATION=""
 DEFAULT_CONFIG_MANAGEMENT="none"
 DEFAULT_EXTRA_PACKAGES=""
+DEFAULT_EXTRA_PREREQ_PACKAGES=""
 
 DEFAULT_BEFORE_SCRIPT=""
 DEFAULT_AFTER_SCRIPT=""
 DEFAULT_FIRST_BOOT_SCRIPT=""
 
-DEFAULT_CONFIRM_SETTINGS="0"
+DEFAULT_CONFIRM_SETTINGS="1"
 DEFAULT_REBOOT="0"
 
 AUTO_KEYMAP="${DEFAULT_KEYMAP}"
@@ -145,6 +146,7 @@ AUTO_USE_DATA_FOLDER="${DEFAULT_USE_DATA_FOLDER}"
 AUTO_STAMP_LOCATION="${DEFAULT_STAMP_LOCATION}"
 AUTO_CONFIG_MANAGEMENT="${DEFAULT_CONFIG_MANAGEMENT}"
 AUTO_EXTRA_PACKAGES="${DEFAULT_EXTRA_PACKAGES}"
+AUTO_EXTRA_PREREQ_PACKAGES="${DEFAULT_EXTRA_PREREQ_PACKAGES}"
 
 AUTO_BEFORE_SCRIPT="${DEFAULT_BEFORE_SCRIPT}"
 AUTO_AFTER_SCRIPT="${DEFAULT_AFTER_SCRIPT}"
@@ -1262,6 +1264,21 @@ ask_install_extra_packages() {
   write_log "Extra packages to install: '${AUTO_EXTRA_PACKAGES}'"
 }
 
+ask_install_extra_prereq_packages() {
+  AUTO_EXTRA_PREREQ_PACKAGES
+  write_log "In ask to install extra prerequisite pre-installation packages."
+
+  print_section "Install Extra Prerequisite Pre-installation Packages"
+  print_section_info "You can, optionally, provide a space separated list of Apt packages to be installed into the pre-installation environment.  This may be desired if you are running a BEFORE or AFTER script and require some tooling or a specific scripting language to be installed."
+  local input
+  read -rp "Extra Prerequisite Pre-installation Packages To Install: " input
+  if [[ ${input} != "" ]]; then
+    AUTO_EXTRA_PREREQ_PACKAGES=${input}
+  fi
+
+  write_log "Extra prerequisite pre-installation packages to install: '${AUTO_EXTRA_PREREQ_PACKAGES}'"
+}
+
 ask_for_before_script() {
   write_log "In ask for before script."
 
@@ -1507,6 +1524,12 @@ print_summary() {
   else
     print_status "Extra packages have been selected to be pre-installed: '${AUTO_EXTRA_PACKAGES}'."
   fi
+  if [[ ${AUTO_EXTRA_PREREQ_PACKAGES} == "" ]]
+  then
+    print_status "No extra prerequisite pre-installation packages have been requested to be installed."
+  else
+    print_status "Extra prerequisite pre-installation packages have been selected to be installed: '${AUTO_EXTRA_PREREQ_PACKAGES}'."
+  fi
   blank_line
 
   if [[ ${AUTO_BEFORE_SCRIPT} == "" ]]
@@ -1687,6 +1710,10 @@ output_exports() {
   then
     echo "  export AUTO_EXTRA_PACKAGES=${AUTO_EXTRA_PACKAGES}" >> "${SELECTED_EXPORT_FILE}"
   fi
+  if [[ ${DEFAULT_EXTRA_PREREQ_PACKAGES} != "${AUTO_EXTRA_PREREQ_PACKAGES}" ]]
+  then
+    echo "  export AUTO_EXTRA_PREREQ_PACKAGES=${AUTO_EXTRA_PREREQ_PACKAGES}" >> "${SELECTED_EXPORT_FILE}"
+  fi
 
   if [[ ${DEFAULT_BEFORE_SCRIPT} != "${AUTO_BEFORE_SCRIPT}" ]]
   then
@@ -1764,9 +1791,9 @@ download_deb_installer() {
     # To support testing of other versions of the install script (local versions, branches, etc.)
     if [[ "${CONFIG_SCRIPT_SOURCE:=}" != "" ]]
     then
-      curl -fsSL "${CONFIG_SCRIPT_SOURCE}" --output "${script_file}"
+      wget -O "${script_file}" "${CONFIG_SCRIPT_SOURCE}"
     else
-      curl -fsSL "${script_url}" --output "${script_file}"
+      wget -O "${script_file}" "${script_url}"
     fi
   fi
 }
@@ -1774,20 +1801,31 @@ download_deb_installer() {
 read_input_options() {
   # Defaults
   export AUTO_ENCRYPT_DISKS=${AUTO_ENCRYPT_DISKS:=1}
-  export AUTO_REBOOT=${AUTO_REBOOT:=1}
+  export AUTO_CONFIRM_SETTINGS=${AUTO_CONFIRM_SETTINGS:=1}
+  export AUTO_REBOOT=${AUTO_REBOOT:=0}
   export AUTO_USE_DATA_FOLDER=${AUTO_USE_DATA_FOLDER:=0}
 
   while [[ "${1:-}" != "" ]]
   do
     case $1 in
-      -c | --confirm)
+      -a | --auto | --automatic | --automode | --auto-mode)
+        export AUTO_CONFIRM_SETTINGS=0
+        export AUTO_REBOOT=0
+        ;;
+      -c | --confirm | --confirmation)
         export AUTO_CONFIRM_SETTINGS=1
+        ;;
+      -q | --quiet | --skip-confirm | --skipconfirm | --skip-confirmation | --skipconfirmation | --no-confirm | --noconfirm | --no-confirmation | --noconfirmation)
+        export AUTO_CONFIRM_SETTINGS=0
         ;;
       -d | --debug)
         export AUTO_IS_DEBUG=1
         ;;
       --data | --usedata | --use-data)
         export AUTO_USE_DATA_FOLDER=1
+        ;;
+      --nodata | --no-data | --nousedata | --no-use-data)
+        export AUTO_USE_DATA_FOLDER=0
         ;;
       -r | --reboot)
         export AUTO_REBOOT=1
@@ -1947,6 +1985,10 @@ run_exports() {
   then
     export AUTO_EXTRA_PACKAGES=${AUTO_EXTRA_PACKAGES}
   fi
+  if [[ ${DEFAULT_EXTRA_PREREQ_PACKAGES} != "${AUTO_EXTRA_PREREQ_PACKAGES}" ]]
+  then
+    export AUTO_EXTRA_PREREQ_PACKAGES=${AUTO_EXTRA_PREREQ_PACKAGES}
+  fi
 
   if [[ ${DEFAULT_BEFORE_SCRIPT} != "${AUTO_BEFORE_SCRIPT}" ]]
   then
@@ -2012,6 +2054,7 @@ prompts_for_options(){
   ask_override_stamp_location
   ask_install_configuration_management
   ask_install_extra_packages
+  ask_install_extra_prereq_packages
 
   ask_for_before_script
   ask_for_after_script

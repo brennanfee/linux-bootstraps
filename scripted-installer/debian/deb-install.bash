@@ -136,7 +136,7 @@ AUTO_HOSTNAME="${AUTO_HOSTNAME:=}"
 # The domain for the machine being created.
 AUTO_DOMAIN="${AUTO_DOMAIN:=}"
 
-# Whether to skip automatic partioning.  This is a boolean value.  Note, for this to work it is expected that prior to calling this script you have partitioned AND formatted the filesystems and mounted them at /mnt ready to be bootstrapped.  This can be done manually or with a given "early" script.  Furthermore, you still need to pass in the AUTO_MAIN_DISK value that indicates where you wish Grub to be installed (and you have prepared partitions for that).  With partitioning turned off you CAN NOT use "smallest" or "largest" for AUTO_MAIN_DISK and must pass in the device path (like /dev/sda).
+# Whether to skip automatic partitioning.  This is a boolean value.  Note, for this to work it is expected that prior to calling this script you have partitioned AND formatted the filesystems and mounted them at /mnt ready to be bootstrapped.  This can be done manually or with a given "early" script.  Furthermore, you still need to pass in the AUTO_MAIN_DISK value that indicates where you wish Grub to be installed (and you have prepared partitions for that).  With partitioning turned off you CAN NOT use "smallest" or "largest" for AUTO_MAIN_DISK and must pass in the device path (like /dev/sda).
 AUTO_SKIP_PARTITIONING="${AUTO_SKIP_PARTITIONING:=0}"
 
 # The main disk to install the OS and Grub to.  It can be a device (like /dev/sda) or a size match like "smallest" or "largest".  When automatic partitioning, for single disk envrionments we create a BIOS\UEFI partition, a /boot partition, and the rest of the disk a /root partition.
@@ -184,8 +184,11 @@ AUTO_STAMP_LOCATION="${AUTO_STAMP_LOCATION:=}"
 ## Yes, I don't support puppet and chef because they are hot garbage
 AUTO_CONFIG_MANAGEMENT="${AUTO_CONFIG_MANAGEMENT:=none}"
 
-# A list of 'other' packages to install during the setup.
+# A list of other\extra packages to install to the target machine during the setup.
 AUTO_EXTRA_PACKAGES="${AUTO_EXTRA_PACKAGES:=}"
+
+# A list of other\extra prerequisite packages to install in the pre-installation environment.
+AUTO_EXTRA_PREREQ_PACKAGES="${AUTO_EXTRA_PREREQ_PACKAGES:=}"
 
 # A script to run BEFORE the system setup.  This must be a URL where the script can be download or read from, ftp:// and file:// url's should be supported.
 AUTO_BEFORE_SCRIPT="${AUTO_BEFORE_SCRIPT:=}"
@@ -197,7 +200,7 @@ AUTO_AFTER_SCRIPT="${AUTO_AFTER_SCRIPT:=}"
 AUTO_FIRST_BOOT_SCRIPT="${AUTO_FIRST_BOOT_SCRIPT:=}"
 
 # Whether the installer should pause, display the selected and calculated values and wait for confirmation before continuing.  Off by default to preserve fully automated installations.
-AUTO_CONFIRM_SETTINGS="${AUTO_CONFIRM_SETTINGS:=0}"
+AUTO_CONFIRM_SETTINGS="${AUTO_CONFIRM_SETTINGS:=1}"
 
 # Whether to automatically reboot after the script has completed.   Default is not to reboot.  Automated environments such as Packer should turn this on.
 AUTO_REBOOT="${AUTO_REBOOT:=0}"
@@ -319,6 +322,7 @@ log_values() {
   write_log "AUTO_STAMP_LOCATION: '${AUTO_STAMP_LOCATION}'"
   write_log "AUTO_CONFIG_MANAGEMENT: '${AUTO_CONFIG_MANAGEMENT}'"
   write_log "AUTO_EXTRA_PACKAGES: '${AUTO_EXTRA_PACKAGES}'"
+  write_log "AUTO_EXTRA_PREREQ_PACKAGES: '${AUTO_EXTRA_PREREQ_PACKAGES}'"
   write_log_blank
 
   write_log "AUTO_BEFORE_SCRIPT: '${AUTO_BEFORE_SCRIPT}'"
@@ -472,6 +476,12 @@ confirm_with_user() {
       print_status "No extra packages have been requested to be pre-installed."
     else
       print_status "Extra packages have been selected to be pre-installed: '${AUTO_EXTRA_PACKAGES}'."
+    fi
+    if [[ ${AUTO_EXTRA_PREREQ_PACKAGES} == "" ]]
+    then
+      print_status "No extra prerequisite pre-installation packages have been requested to be installed."
+    else
+      print_status "Extra prerequisite pre-installation packages have been selected to be installed: '${AUTO_EXTRA_PREREQ_PACKAGES}'."
     fi
     blank_line
 
@@ -780,6 +790,12 @@ install_prereqs() {
   # Things all systems need (reminder these are being installed to the installation environment, not the target machine)
   print_status "    Installing common prerequisites"
   local_install vim arch-install-scripts parted bc cryptsetup lvm2 xfsprogs laptop-detect ntp console-data locales fbset
+
+  if [[ "${AUTO_EXTRA_PREREQ_PACKAGES}" != "" ]]
+  then
+    print_status "    Installing user requested prerequisites"
+    local_install "${AUTO_EXTRA_PREREQ_PACKAGES}"
+  fi
 }
 
 get_debootstrap() {
@@ -917,7 +933,7 @@ verify_kernel_version() {
       ;;
 
     ubuntu)
-      options=('default' 'hwe' 'hwe-edge' 'hwe_edge')
+      options=('default' 'hwe' 'hwe-edge' 'hwe_edge' 'backport' 'backports')
       get_exit_code contains_element "${AUTO_KERNEL_VERSION}" "${options[@]}"
       if [[ ! ${EXIT_CODE} == "0" ]]
       then
@@ -925,6 +941,11 @@ verify_kernel_version() {
       fi
       # Normalize the two edge options
       if [[ "${AUTO_KERNEL_VERSION}" == "hwe_edge" ]]
+      then
+        AUTO_KERNEL_VERSION="hwe-edge"
+      fi
+      # Normalize the debian backport(s)
+      if [[ "${AUTO_KERNEL_VERSION}" == "backport" || "${AUTO_KERNEL_VERSION}" == "backports" ]]
       then
         AUTO_KERNEL_VERSION="hwe-edge"
       fi
@@ -1383,8 +1404,8 @@ setup_lvm() {
 
     if [[ ${AUTO_USE_DATA_FOLDER} == "1" ]]
     then
-      lvcreate -l 70%VG "vg_data" -n lv_home
-      lvcreate -l 20%VG "vg_data" -n lv_data
+      lvcreate -l 50%VG "vg_data" -n lv_home
+      lvcreate -l 30%VG "vg_data" -n lv_data
     else
       lvcreate -l 80%VG "vg_data" -n lv_home
     fi
@@ -2178,9 +2199,9 @@ install_salt_from_repo() {
       ;;
   esac
 
-  sudo curl -fsSL -o /mnt/usr/local/share/keyrings/salt-archive-keyring.gpg "https://repo.saltproject.io/py3/${distro}/${release}/${DPKG_ARCH}/${salt_version}/salt-archive-keyring.gpg"
+  wget -O /mnt/usr/local/share/keyrings/salt-archive-keyring.gpg "https://repo.saltproject.io/py3/${distro}/${release}/${DPKG_ARCH}/${salt_version}/salt-archive-keyring.gpg"
 
-  echo "deb [signed-by=/usr/local/share/keyrings/salt-archive-keyring.gpg arch=${DPKG_ARCH}] https://repo.saltproject.io/py3/${distro}/${release}/${DPKG_ARCH}/${salt_version} ${codename} main" | sudo tee /mnt/etc/apt/sources.list.d/salt.list
+  echo "deb [signed-by=/usr/local/share/keyrings/salt-archive-keyring.gpg arch=${DPKG_ARCH}] https://repo.saltproject.io/py3/${distro}/${release}/${DPKG_ARCH}/${salt_version} ${codename} main" | tee /mnt/etc/apt/sources.list.d/salt.list
 
   chroot_run_updates
   chroot_install salt-minion
@@ -2313,7 +2334,7 @@ setup_user() {
 
 run_before_script() {
   print_info "In Run Before Script"
-  if [[ ${AUTO_BEFORE_SCRIPT} != "" ]]
+  if [[ "${AUTO_BEFORE_SCRIPT}" != "" ]]
   then
     mkdir -p "/home/user/scripts"
     wget -O "/home/user/scripts/before.script" "${AUTO_BEFORE_SCRIPT}"
@@ -2325,7 +2346,7 @@ run_before_script() {
 
 run_after_script() {
   print_info "In Run After Script"
-  if [[ ${AUTO_AFTER_SCRIPT} != "" ]]
+  if [[ "${AUTO_AFTER_SCRIPT}" != "" ]]
   then
     mkdir -p "/home/user/scripts"
     wget -O "/home/user/scripts/after.script" "${AUTO_AFTER_SCRIPT}"
@@ -2337,7 +2358,7 @@ run_after_script() {
 
 setup_first_boot_script() {
   print_info "In Setup First Boot Script"
-  if [[ ${AUTO_FIRST_BOOT_SCRIPT} != "" ]]
+  if [[ "${AUTO_FIRST_BOOT_SCRIPT}" != "" ]]
   then
     mkdir -p "/home/user/scripts"
     wget -O "/home/user/scripts/first-boot.script" "${AUTO_FIRST_BOOT_SCRIPT}"
@@ -2413,9 +2434,9 @@ stamp_build() {
     cp "${OUTPUT_LOG}" "${stamp_path}/install-output.log"
   fi
 
-  echo "Build Time: ${INSTALL_DATE}" | sudo tee "${stamp_path}/image_build_info"
-  echo "Script Version: ${SCRIPT_VERSION}" | sudo tee "${stamp_path}/image_build_info"
-  echo "Script Date: ${SCRIPT_DATE}" | sudo tee "${stamp_path}/image_build_info"
+  echo "Build Time: ${INSTALL_DATE}" | tee -a "${stamp_path}/image_build_info"
+  echo "Script Version: ${SCRIPT_VERSION}" | tee -a "${stamp_path}/image_build_info"
+  echo "Script Date: ${SCRIPT_DATE}" | tee -a "${stamp_path}/image_build_info"
   if [[ ${AUTO_CREATE_USER} == "1" ]]
   then
     user_name=${AUTO_USERNAME}
@@ -2423,9 +2444,9 @@ stamp_build() {
     then
       user_name=${AUTO_INSTALL_OS}
     fi
-    echo "Installed User: ${user_name}" | sudo tee -a "${stamp_path}/image_build_info"
+    echo "Installed User: ${user_name}" | tee -a "${stamp_path}/image_build_info"
   else
-    echo "Installed User: (root only)" | sudo tee -a "${stamp_path}/image_build_info"
+    echo "Installed User: (root only)" | tee -a "${stamp_path}/image_build_info"
   fi
 }
 
