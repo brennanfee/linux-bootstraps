@@ -1613,6 +1613,8 @@ ask_for_export_file() {
 }
 
 output_exports() {
+  write_log "In output_exports."
+
   if [[ ${DEFAULT_KEYMAP} != "${AUTO_KEYMAP}" ]]
   then
     echo "  export AUTO_KEYMAP=${AUTO_KEYMAP}" >> "${SELECTED_EXPORT_FILE}"
@@ -1739,6 +1741,8 @@ output_exports() {
 }
 
 export_config() {
+  write_log "In export_config."
+
   ask_for_export_file
 
   # First part of file...
@@ -1871,6 +1875,8 @@ EOF
 }
 
 download_deb_installer() {
+  write_log "In download_deb_installer."
+
   local script_file=$1
 
   local script_url="https://raw.githubusercontent.com/brennanfee/linux-bootstraps/main/scripted-installer/debian/deb-install.bash"
@@ -1888,6 +1894,8 @@ download_deb_installer() {
 }
 
 run_exports() {
+  write_log "In run_exports."
+
   if [[ ${DEFAULT_KEYMAP} != "${AUTO_KEYMAP}" ]]
   then
     export AUTO_KEYMAP=${AUTO_KEYMAP}
@@ -2014,15 +2022,53 @@ run_exports() {
 }
 
 execute_now() {
+  write_log "In execute_now."
+
   local script_file
   script_file="/tmp/deb-install.bash"
+  local proceed=0
 
-  run_exports
+  # Confirm they want to do a local installation
+  print_section "Proceed with local installation"
+  print_section_info "Are you ABSOLUTELY CERTAIN that you want to proceed with a LOCAL installation given the values you provided during this interactive session?  Please be aware that files and file systems may be altered in the process which could result in LOSS OF DATA."
 
-  download_deb_installer "${script_file}"
+  local yes_no=('No' 'Yes')
+  local option
+  select option in "${yes_no[@]}"
+  do
+    get_exit_code contains_element "${option}" "${yes_no[@]}"
+    if [[ ${EXIT_CODE} == "0" ]]
+    then
+      break
+    else
+      invalid_option
+    fi
+  done
 
-  # Now run the script
-  bash "${script_file}"
+  option=$(echo "${option}" | tr "[:upper:]" "[:lower:]")
+  case "${option}" in
+    yes)
+      proceed=1
+      ;;
+    no)
+      proceed=0
+      ;;
+    *)
+      error_msg "Invalid selection for proceed with location installation."
+      ;;
+  esac
+
+  write_log "Should proceed with local installation: ${proceed}"
+
+  if [[ "${proceed}" == "1" ]]
+  then
+    run_exports
+
+    download_deb_installer "${script_file}"
+
+    # Now run the script
+    bash "${script_file}"
+  fi
 }
 
 prompts_for_options(){
