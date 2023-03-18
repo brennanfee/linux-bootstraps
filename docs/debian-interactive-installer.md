@@ -21,7 +21,9 @@ The boot media OS does not need to match the desired target OS for the machine b
 
 Once you are at the command prompt, you need to verify you have an internet connection.  This can best be done by using "ping" to reach a common web location like google.com.
 
-`ping -c 3 google.com`
+```bash
+ping -c 3 google.com`
+```
 
 If you do not have an internet connection you will need to set up the network for the machine you are on.  This documentation cannot go into that detail as each machine and each ISO OS (Debian versus Ubuntu) may have different ways of initializing the network.  Please search for guidance with the respective Linux distribution documentation and communities.
 
@@ -31,12 +33,14 @@ Only after a network has been verified as working can you proceed.
 
 After the correct variables have been set you can download and execute the script:
 
-`bash <(curl -fsSL https://tinyurl.com/interactive-deb-install)`
+```bash
+bash <(curl -fsSL https://tinyurl.com/interactive-deb-install)
+```
 
 Some prefer to separate the download from the running of the script (as an added security measure, the script can be examined before executing):
 
 ```bash
-wget -o installer.bash https://tinyurl.com/interactive-deb-install
+wget -O installer.bash https://tinyurl.com/interactive-deb-install
 bash ./installer.bash
 ```
 
@@ -48,13 +52,15 @@ Be sure to select "Execute" when asked if you wish to Export a file or Execute t
 
 To generate a config file which can be used later.  Simply run the interactive script at a local prompt.
 
-`sudo bash ./deb-install-interactive.bash`
+```bash
+sudo bash ./deb-install-interactive.bash
+```
 
 At the final question select to "Export" a file and the script will prompt you for a name for your exported file and then produce a script file that can be used at any later time.
 
 ## Installation Method With A Config File
 
-For detailed instructions please see the documentation here: [Configuration Installation](docs/debian-scripted-installer.md#installation-method-with-configuration-file)
+For detailed instructions please see the documentation here: [Configuration Installation](debian-scripted-installer.md#installation-method-with-configuration-file)
 
 ## Config File Switches
 

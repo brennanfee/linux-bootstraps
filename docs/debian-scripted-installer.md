@@ -2,9 +2,11 @@
 
 ## Overview
 
+The primary purpose for this script is to mimic the "Arch Way" of installing things for both Debian and Ubuntu distributions (and possibly some day, derivatives of those).  These "Arch Way" scripts support far more complex and customizable scenarios then is possible with cloud-init or pre-seed environments, yet still maintain the ability to be fully automated.  Frankly, I went down this path simply because the default installers provided by the distributions are just not flexible enough or are far too complex to work with, especially in their automated variations.
+
 ## Standard Installation Method
 
-The standard way of using the script is to boot to a prompt using a "live" server image of either Debian or Ubuntu and then running a few simple commands.  Using live desktop images should work as well as you can run the necessary commands in a terminal window, however the extra time to load a full desktop is generally not worth it.
+The standard way of using the script is to boot to a prompt using a "live" server image of either Debian or Ubuntu and then running a few simple commands.  Using live desktop images should work as well as you can run the necessary commands in a terminal window, however the extra time to load a full desktop is generally not worth it.  It should be noted that no testing is in place for using live desktop images and so if you run into issues it is recommended to try a live server image first before filing a bug or seeking other help.
 
 ### Boot To Live Linux
 
@@ -12,17 +14,19 @@ The boot media OS does not need to match the desired target OS for the machine b
 
 ### Verify Network
 
-Once you are at the command prompt, you need to verify you have an internet connection.  This can best be done by using "ping" to reach a common web location like google.com.
+Once you are at the command prompt, you need to verify you have an internet connection.  This can best be done by using the "ping" command to reach a common web location like google.com.
 
-`ping -c 3 google.com`
+```bash
+ping -c 3 google.com
+```
 
 If you do not have an internet connection you will need to set up the network for the machine you are on.  This documentation cannot go into that detail as each machine and each ISO OS (Debian versus Ubuntu) may have different ways of initializing the network.  Please search for guidance with the respective Linux distribution documentation and communities.
 
-Only after a network has been verified as working can you proceed.
+Only after a network connection has been verified as working can you proceed.
 
 ### Export Variables
 
-You now need to export any script variables that are needed to perform the type of installation you want.  This will differ based on your preferences and the machine configuration being installed.  For a full list of the options available, see the [Description Of Options](#description-of-options) section below.  Be sure to export these variables so they will be correctly read by the script.  As an example:
+You now need to export any script variables that are needed to perform the type of installation you want.  This will differ based on your preferences and the machine configuration being installed to.  For a full list of the options available, see the [Description Of Options](#description-of-options) section below.  Be sure to export these variables so they will be correctly read by the script.  As an example:
 
 ```bash
 export AUTO_HOSTNAME=my-new-machine
@@ -33,12 +37,14 @@ export AUTO_USERNAME=bob
 
 After the correct variables have been set you can download and execute the script:
 
-`bash <(curl -fsSL https://tinyurl.com/deb-install)`
+```bash
+bash <(curl -fsSL https://tinyurl.com/deb-install)
+```
 
 Some prefer to separate the download from the running of the script (as an added security measure, the script can be examined before executing):
 
 ```bash
-wget -o deb-install.bash https://tinyurl.com/deb-install
+wget -O deb-install.bash https://tinyurl.com/deb-install
 bash ./deb-install.bash
 ```
 
@@ -62,7 +68,9 @@ As with the other installation method, you must verify that you have a working i
 
 One single command is all that is needed to kick things off:
 
-`bash <(curl -fsSL <url to your configuration script>)`
+```bash
+bash <(curl -fsSL <url to your configuration script>)
+```
 
 If desired as two commands; download, then execute:
 
@@ -85,7 +93,7 @@ For boolean entries, you may pass in any variant of the following, case insensit
 
 ### Item of set
 
-Some string options only allow specific values and you must enter only the values from a set of acceptable values.  For some of these, the set of values may be hard coded or set list of values within the script (such as AUTO_INSTALL_OS) and for others the values may be dictated by external components (such as AUTO_INSTALL_EDITION).  In all cases, passing in an invalid string option will produce an appropriate error to inform you the value you passed is not supported.
+Some string options only allow specific values and you must enter only the values from a set of acceptable values.  For some of these, the set of values may be hard coded or a specific set list of values within the script (such as AUTO_INSTALL_OS) and for others the values may be dictated by external components (such as AUTO_INSTALL_EDITION).  In all cases, passing in an invalid string option will produce an appropriate error to inform you the value you passed is not supported.
 
 Items of set are always normalized to lower case, and as such case on input should not matter.
 
