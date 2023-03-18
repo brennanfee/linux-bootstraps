@@ -38,9 +38,9 @@ For full documentation on the Debian/Ubuntu scripted installer, see:  [Debian Sc
 
 For full documentation on the Debian/Ubuntu interactive installer, see: [Debian Interactive Installer](docs/debian-interactive-installer.md)
 
-For full documentation on the Arch scripted installer, see:  TBD
+For full documentation on the Arch scripted installer, see:  [Arch Scripted Installer](docs/arch/arch-scripted-installer.md)
 
-For full documentation on the Arch interactive installer, see: TBD
+For full documentation on the Arch interactive installer, see: [Arch Interactive Installer](docs/arch/arch-interactive-installer.md)
 
 ### Cloud-init And Pre-seeds
 
