@@ -65,7 +65,7 @@ read_input_options() {
     case $1 in
       -a | --auto | --automatic | --automode | --auto-mode)
         export AUTO_CONFIRM_SETTINGS=0
-        export AUTO_REBOOT=0
+        export AUTO_REBOOT=1
         ;;
       -c | --confirm | --confirmation)
         export AUTO_CONFIRM_SETTINGS=1
