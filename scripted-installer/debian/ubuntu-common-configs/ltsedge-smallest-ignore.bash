@@ -46,9 +46,9 @@ download_deb_installer() {
     # To support testing of other versions of the install script (local versions, branches, etc.)
     if [[ "${CONFIG_SCRIPT_SOURCE:=}" != "" ]]
     then
-      curl -fsSL "${CONFIG_SCRIPT_SOURCE}" --output "${script_file}"
+      wget -O "${script_file}" "${CONFIG_SCRIPT_SOURCE}"
     else
-      curl -fsSL "${script_url}" --output "${script_file}"
+      wget -O "${script_file}" "${script_url}"
     fi
   fi
 }
@@ -56,20 +56,31 @@ download_deb_installer() {
 read_input_options() {
   # Defaults
   export AUTO_ENCRYPT_DISKS=${AUTO_ENCRYPT_DISKS:=1}
-  export AUTO_REBOOT=${AUTO_REBOOT:=1}
+  export AUTO_CONFIRM_SETTINGS=${AUTO_CONFIRM_SETTINGS:=1}
+  export AUTO_REBOOT=${AUTO_REBOOT:=0}
   export AUTO_USE_DATA_FOLDER=${AUTO_USE_DATA_FOLDER:=0}
 
   while [[ "${1:-}" != "" ]]
   do
     case $1 in
-      -c | --confirm)
+      -a | --auto | --automatic | --automode | --auto-mode)
+        export AUTO_CONFIRM_SETTINGS=0
+        export AUTO_REBOOT=0
+        ;;
+      -c | --confirm | --confirmation)
         export AUTO_CONFIRM_SETTINGS=1
+        ;;
+      -q | --quiet | --skip-confirm | --skipconfirm | --skip-confirmation | --skipconfirmation | --no-confirm | --noconfirm | --no-confirmation | --noconfirmation)
+        export AUTO_CONFIRM_SETTINGS=0
         ;;
       -d | --debug)
         export AUTO_IS_DEBUG=1
         ;;
       --data | --usedata | --use-data)
         export AUTO_USE_DATA_FOLDER=1
+        ;;
+      --nodata | --no-data | --nousedata | --no-use-data)
+        export AUTO_USE_DATA_FOLDER=0
         ;;
       -r | --reboot)
         export AUTO_REBOOT=1
