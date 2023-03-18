@@ -18,7 +18,7 @@ set_exports() {
   export AUTO_KERNEL_VERSION=${AUTO_KERNEL_VERSION:=backports}
 
   export AUTO_MAIN_DISK=${AUTO_MAIN_DISK:=smallest}
-  export AUTO_SECOND_DISK=${AUTO_SECOND_DISK:=largest}
+  export AUTO_SECOND_DISK=${AUTO_SECOND_DISK:=smallest}
 
   export AUTO_DOMAIN=${AUTO_DOMAIN:=bfee.org}
   export AUTO_USERNAME=${AUTO_USERNAME:=brennan}
