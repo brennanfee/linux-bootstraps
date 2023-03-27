@@ -1529,10 +1529,6 @@ install_base_system_debian() {
   # Standard server setup
   arch-chroot /mnt tasksel --new-install install standard
 
-  # Can't use branches like "stable" or "oldstable" must convert to the codename like "bullseye" or "bookworm"
-  local edition
-  edition=$(arch-chroot /mnt lsb_release -c -s)
-
   # Kernel & Firmware
   local kernel_to_install="default"
   if [[ "${AUTO_KERNEL_VERSION}" == "backport" || "${AUTO_KERNEL_VERSION}" == "backports" ]]
@@ -1542,7 +1538,7 @@ install_base_system_debian() {
     if [[ ! "${EXIT_CODE}" == "0" ]]
     then
       # Check to see the package exists in backports, if not we'll just install the default kernel
-      get_exit_code package_exists "linux-image-${DPKG_ARCH}/${edition}-backports"
+      get_exit_code package_exists "linux-image-${DPKG_ARCH}/${SELECTED_INSTALL_EDITION}-backports"
       if [[ "${EXIT_CODE}" == "0" ]]
       then
         kernel_to_install="backports"
@@ -1565,7 +1561,7 @@ install_base_system_debian() {
       ;;
 
     backports)
-      arch-chroot /mnt apt-get -y -q install -t "${edition}-backports" "linux-image-${DPKG_ARCH}" "linux-headers-${DPKG_ARCH}"
+      arch-chroot /mnt apt-get -y -q install -t "${SELECTED_INSTALL_EDITION}-backports" "linux-image-${DPKG_ARCH}" "linux-headers-${DPKG_ARCH}"
       ;;
 
     *)
@@ -1730,24 +1726,32 @@ configure_apt_debian() {
   # Backup the one originally installed
   mv /mnt/etc/apt/sources.list /mnt/etc/apt/sources.list.bootstrapped
 
-  # Write out sources
-  {
-    echo "deb ${SELECTED_REPO_URL} ${SELECTED_INSTALL_EDITION} main contrib non-free"
-    # The security repo MUST come from the main sources as mirrors will not contain a copy
-    echo "deb http://deb.debian.org/debian-security ${SELECTED_INSTALL_EDITION}-security main contrib non-free"
-    echo "deb ${SELECTED_REPO_URL} ${SELECTED_INSTALL_EDITION}-updates main contrib non-free"
-  } > /mnt/etc/apt/sources.list
+  local components="main contrib non-free non-free-firmware"
 
-  # Install backports source
-  local dont_support_backports=("sid" "unstable" "rc-buggy" "experimental")
-  get_exit_code contains_element "${SELECTED_INSTALL_EDITION}" "${dont_support_backports[@]}"
+  # This list should shrink over time until all releases support the new "non-free-firmware" component that was introduced in "bookworm"
+  local old_editions=("oldoldstable" "stretch" "oldstable" "buster" "stable" "bullseye")
+  get_exit_code contains_element "${SELECTED_INSTALL_EDITION}" "${old_editions[@]}"
+  if [[ "${EXIT_CODE}" == "0" ]]
+  then
+    components="main contrib non-free"
+  fi
+
+  # Write out sources
+  echo "deb ${SELECTED_REPO_URL} ${SELECTED_INSTALL_EDITION} ${components}" > /mnt/etc/apt/sources.list
+
+  local dont_support_alt_repos=("sid" "unstable" "rc-buggy" "experimental")
+  get_exit_code contains_element "${SELECTED_INSTALL_EDITION}" "${dont_support_alt_repos[@]}"
   if [[ ! "${EXIT_CODE}" == "0" ]]
   then
-    # Can't use branches like "stable" or "oldstable" must convert to the codename like "bullseye" or "bookworm"
-    local edition
-    edition=$(arch-chroot /mnt lsb_release -c -s)
+    # Alt repos
+    {
+      # The security repo MUST come from the main sources as mirrors will not contain a copy
+      echo "deb http://deb.debian.org/debian-security ${SELECTED_INSTALL_EDITION}-security ${components}"
+      echo "deb ${SELECTED_REPO_URL} ${SELECTED_INSTALL_EDITION}-updates ${components}"
+    } >> /mnt/etc/apt/sources.list
 
-    echo "deb ${SELECTED_REPO_URL} ${edition}-backports main contrib non-free" > /mnt/etc/apt/sources.list.d/debian-backports.list
+    # Now backports
+    echo "deb ${SELECTED_REPO_URL} ${SELECTED_INSTALL_EDITION}-backports ${components}" > /mnt/etc/apt/sources.list.d/debian-backports.list
   fi
 
   chroot_run_updates
@@ -1922,7 +1926,7 @@ configure_hostname() {
   hostname="${AUTO_HOSTNAME}"
   if [[ "${hostname}" == "" ]]
   then
-    hostname="${AUTO_INSTALL_OS}-$((1 + RANDOM % 10000))"
+    hostname="${AUTO_INSTALL_OS}-$((1 + RANDOM % 100000))"
   fi
 
   echo "${hostname}" > /mnt/etc/hostname
