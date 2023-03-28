@@ -2182,10 +2182,10 @@ install_configuration_management() {
       arch-chroot /mnt pipx inject ansible cryptography
       arch-chroot /mnt pipx inject ansible paramiko
       ;;
-    salt)
+    saltstack)
       chroot_install salt-minion
       ;;
-    salt-repo)
+    saltstack-repo)
       install_salt_from_repo
       ;;
     puppet)
