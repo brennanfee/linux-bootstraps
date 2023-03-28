@@ -1087,8 +1087,6 @@ parse_second_disk() {
   local devices
   devices=$(lsblk -ndpr --output NAME,RO,MOUNTPOINT | awk '$2 == "0" && $3 == "" {print $1}' | grep -v "${SELECTED_MAIN_DISK}" || true)
   write_log "Secondary devices: ${devices}"
-  write_log "Secondary devices array: ${devices[*]}"
-  write_log "Secondary devices array count: ${#devices[@]}"
 
   local devices_list=()
   while read -r line
