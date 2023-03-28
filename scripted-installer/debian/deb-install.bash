@@ -1534,16 +1534,21 @@ install_base_system_debian() {
   # Standard server setup
   arch-chroot /mnt tasksel --new-install install standard
 
+  # Can't use branches like "stable" or "oldstable" must convert to the codename like "bullseye" or "bookworm"
+  local edition
+  edition=$(arch-chroot /mnt lsb_release -c -s)
+
   # Kernel & Firmware
   local kernel_to_install="default"
   if [[ "${AUTO_KERNEL_VERSION}" == "backport" || "${AUTO_KERNEL_VERSION}" == "backports" ]]
   then
-    local dont_support_backports=("sid" "unstable" "rc-buggy" "experimental")
+    # Will need to regularly update the codename for testing here, currently "bookworm"
+    local dont_support_backports=("bookworm" "testing" "sid" "unstable" "rc-buggy" "experimental")
     get_exit_code contains_element "${SELECTED_INSTALL_EDITION}" "${dont_support_backports[@]}"
     if [[ ! "${EXIT_CODE}" == "0" ]]
     then
       # Check to see the package exists in backports, if not we'll just install the default kernel
-      get_exit_code package_exists "linux-image-${DPKG_ARCH}/${SELECTED_INSTALL_EDITION}-backports"
+      get_exit_code package_exists "linux-image-${DPKG_ARCH}/${edition}-backports"
       if [[ "${EXIT_CODE}" == "0" ]]
       then
         kernel_to_install="backports"
@@ -1562,11 +1567,11 @@ install_base_system_debian() {
   write_log "Installing Kernel"
   case "${kernel_to_install}" in
     default)
-      chroot_install "linux-image-${DPKG_ARCH}" "linux-headers-${DPKG_ARCH}"
+      chroot_install "linux-image-${DPKG_ARCH}" "linux-headers-${DPKG_ARCH}" firmware-linux
       ;;
 
     backports)
-      arch-chroot /mnt apt-get -y -q install -t "${SELECTED_INSTALL_EDITION}-backports" "linux-image-${DPKG_ARCH}" "linux-headers-${DPKG_ARCH}"
+      arch-chroot /mnt apt-get -y -q install -t "${edition}-backports" "linux-image-${DPKG_ARCH}" "linux-headers-${DPKG_ARCH}" firmware-linux
       ;;
 
     *)
@@ -1633,15 +1638,15 @@ install_base_system_ubuntu() {
   write_log "Installing Kernel"
   case "${kernel_to_install}" in
     default)
-      chroot_install linux-generic
+      chroot_install linux-generic linux-firmware
       ;;
 
     hwe)
-      chroot_install "linux-generic-hwe-${release_ver}"
+      chroot_install "linux-generic-hwe-${release_ver}" linux-firmware
       ;;
 
     hwe-edge)
-      chroot_install "linux-generic-hwe-${release_ver}-edge"
+      chroot_install "linux-generic-hwe-${release_ver}-edge" linux-firmware
       ;;
 
     *)
@@ -1744,6 +1749,7 @@ configure_apt_debian() {
   # Write out sources
   echo "deb ${SELECTED_REPO_URL} ${SELECTED_INSTALL_EDITION} ${components}" > /mnt/etc/apt/sources.list
 
+  # Alt repos
   local dont_support_alt_repos=("sid" "unstable" "rc-buggy" "experimental")
   get_exit_code contains_element "${SELECTED_INSTALL_EDITION}" "${dont_support_alt_repos[@]}"
   if [[ ! "${EXIT_CODE}" == "0" ]]
@@ -1754,9 +1760,19 @@ configure_apt_debian() {
       echo "deb http://deb.debian.org/debian-security ${SELECTED_INSTALL_EDITION}-security ${components}"
       echo "deb ${SELECTED_REPO_URL} ${SELECTED_INSTALL_EDITION}-updates ${components}"
     } >> /mnt/etc/apt/sources.list
+  fi
+
+  # Will need to regularly update the codename for testing here, currently "bookworm"
+  local dont_support_backports=("bookworm" "testing" "sid" "unstable" "rc-buggy" "experimental")
+  get_exit_code contains_element "${SELECTED_INSTALL_EDITION}" "${dont_support_alt_repos[@]}"
+  if [[ ! "${EXIT_CODE}" == "0" ]]
+  then
+    # Can't use branches like "stable" or "oldstable" must convert to the codename like "bullseye" or "bookworm"
+    local edition
+    edition=$(arch-chroot /mnt lsb_release -c -s)
 
     # Now backports
-    echo "deb ${SELECTED_REPO_URL} ${SELECTED_INSTALL_EDITION}-backports ${components}" > /mnt/etc/apt/sources.list.d/debian-backports.list
+    echo "deb ${SELECTED_REPO_URL} ${edition}-backports ${components}" > /mnt/etc/apt/sources.list.d/debian-backports.list
   fi
 
   chroot_run_updates
@@ -2133,7 +2149,7 @@ install_applications_debian() {
   then
     print_info "Installing Debian specific applications"
 
-    chroot_install firmware-linux installation-report
+    chroot_install installation-report
   fi
 }
 
@@ -2142,7 +2158,7 @@ install_applications_ubuntu() {
   then
     print_info "Installing Ubuntu specific applications"
 
-    chroot_install linux-firmware language-pack-en
+    chroot_install language-pack-en
   fi
 }
 
