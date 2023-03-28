@@ -1087,11 +1087,16 @@ parse_second_disk() {
   local devices
   devices=$(lsblk -ndpr --output NAME,RO,MOUNTPOINT | awk '$2 == "0" && $3 == "" {print $1}' | grep -v "${SELECTED_MAIN_DISK}" || true)
   write_log "Secondary devices: ${devices}"
+  write_log "Secondary devices array: ${devices[*]}"
+  write_log "Secondary devices array count: ${#devices[@]}"
 
   local devices_list=()
   while read -r line
   do
-    devices_list+=("${line}")
+    if [[ "${line}" != "" ]]
+    then
+      devices_list+=("${line}")
+    fi
   done <<< "${devices[@]}"
   write_log "Secondary devices array: ${devices_list[*]}"
   write_log "Secondary devices array count: ${#devices_list[@]}"
@@ -1125,12 +1130,12 @@ parse_second_disk() {
 
     smallest)
       SECOND_DISK_METHOD="smallest"
-      SELECTED_SECOND_DISK=$(lsblk -ndpr --output NAME,RO,MOUNTPOINT --sort SIZE | awk '$2 == "0" && $3 == "" {print $1}' | grep -v "${SELECTED_MAIN_DISK}" | head -n 1)
+      SELECTED_SECOND_DISK=$(lsblk -ndpr --output NAME,RO,MOUNTPOINT --sort SIZE | awk '$2 == "0" && $3 == "" {print $1}' | grep -v "${SELECTED_MAIN_DISK}" | head -n 1 || true)
       ;;
 
     largest)
       SECOND_DISK_METHOD="largest"
-      SELECTED_SECOND_DISK=$(lsblk -ndpr --output NAME,RO,MOUNTPOINT --sort SIZE | awk '$2 == "0" && $3 == "" {print $1}' | grep -v "${SELECTED_MAIN_DISK}" | tail -n 1)
+      SELECTED_SECOND_DISK=$(lsblk -ndpr --output NAME,RO,MOUNTPOINT --sort SIZE | awk '$2 == "0" && $3 == "" {print $1}' | grep -v "${SELECTED_MAIN_DISK}" | tail -n 1 || true)
       ;;
 
     *)
