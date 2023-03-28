@@ -1094,10 +1094,12 @@ parse_second_disk() {
     devices_list+=("${line}")
   done <<< "${devices[@]}"
   write_log "Secondary devices array: ${devices_list[*]}"
+  write_log "Secondary devices array count: ${#devices_list[@]}"
 
   write_log "checking for second disk"
   if [[ "${AUTO_SKIP_PARTITIONING}" == "1" || "${#devices_list[@]}" == "0" ]]
   then
+    write_log "Forcing ingore for second disk due to only 1 disk in system"
     # There is only 1 disk in the system or the user has chosen to skip partitioning, so regardless of what they asked for on second disk it should be ignored
     SECOND_DISK_METHOD="forced"
     SELECTED_SECOND_DISK="ignore"
