@@ -1779,7 +1779,7 @@ configure_apt_debian() {
 }
 
 configure_apt_ubuntu() {
-  print_info "Configuring APT (Debian)"
+  print_info "Configuring APT (Ubuntu)"
 
   # Backup the one originally installed
   mv /mnt/etc/apt/sources.list /mnt/etc/apt/sources.list.bootstrapped
@@ -2364,7 +2364,11 @@ run_before_script() {
     wget -O "/home/user/scripts/before.script" "${AUTO_BEFORE_SCRIPT}"
     chmod +x "/home/user/scripts/before.script"
 
-    /home/user/scripts/before.script
+    get_exit_code /home/user/scripts/before.script
+    if [[ "${EXIT_CODE}" != "0" ]]
+    then
+      error_msg "Before script returned a non-zero exit code: ${EXIT_CODE}"
+    fi
   fi
 }
 
@@ -2376,7 +2380,11 @@ run_after_script() {
     wget -O "/home/user/scripts/after.script" "${AUTO_AFTER_SCRIPT}"
     chmod +x "/home/user/scripts/after.script"
 
-    /home/user/scripts/after.script
+    get_exit_code /home/user/scripts/after.script
+    if [[ "${EXIT_CODE}" != "0" ]]
+    then
+      error_msg "After script returned a non-zero exit code: ${EXIT_CODE}"
+    fi
   fi
 }
 
