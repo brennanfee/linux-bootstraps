@@ -2244,8 +2244,11 @@ install_puppet_from_repo() {
       ;;
   esac
 
-  wget -O "/mnt/tmp/puppet7-release-${codename}.deb" "https://apt.puppet.com/puppet7-release-${codename}.deb"
-  arch-chroot /mnt dpkg -i "/tmp/puppet7-release-${codename}.deb"
+  wget -O "/mnt/usr/local/src/puppet7-release-${codename}.deb" "https://apt.puppet.com/puppet7-release-${codename}.deb"
+  sync
+
+  arch-chroot /mnt dpkg -i "/usr/local/src/puppet7-release-${codename}.deb"
+
   chroot_run_updates
   chroot_install puppet-agent
   arch-chroot /mnt /opt/puppetlabs/bin/puppet resource service puppet ensure=running enable=true
