@@ -2158,7 +2158,7 @@ install_applications_ubuntu() {
   then
     print_info "Installing Ubuntu specific applications"
 
-    chroot_install language-pack-en
+    chroot_install language-pack-en man
   fi
 }
 
@@ -2244,8 +2244,8 @@ install_puppet_from_repo() {
       ;;
   esac
 
-  wget -O "/home/user/puppet7-release-${codename}.deb" "https://apt.puppet.com/puppet7-release-${codename}.deb"
-  arch-chroot /mnt dpkg -i "/home/user/puppet7-release-${codename}.deb"
+  wget -O "/mnt/tmp/puppet7-release-${codename}.deb" "https://apt.puppet.com/puppet7-release-${codename}.deb"
+  arch-chroot /mnt dpkg -i "/tmp/puppet7-release-${codename}.deb"
   chroot_run_updates
   chroot_install puppet-agent
   arch-chroot /mnt /opt/puppetlabs/bin/puppet resource service puppet ensure=running enable=true
