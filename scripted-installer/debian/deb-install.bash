@@ -190,13 +190,13 @@ AUTO_EXTRA_PACKAGES="${AUTO_EXTRA_PACKAGES:=}"
 # A list of other\extra prerequisite packages to install in the pre-installation environment.
 AUTO_EXTRA_PREREQ_PACKAGES="${AUTO_EXTRA_PREREQ_PACKAGES:=}"
 
-# A script to run BEFORE the system setup.  This must be a URL where the script can be download or read from, ftp:// and file:// url's should be supported.
+# A script to run BEFORE the system setup.  This must be a file path (starting with /) or a URL where the script can be download or read from, ftp:// and file:// url's should be supported.
 AUTO_BEFORE_SCRIPT="${AUTO_BEFORE_SCRIPT:=}"
 
-# A script to run after the system setup prior to reboot (if AUTO_REBOOT).
+# A script to run after the system setup prior to reboot (if AUTO_REBOOT).  This must be a file path (starting with /) or a URL where the script can be download or read from, ftp:// and file:// url's should be supported.
 AUTO_AFTER_SCRIPT="${AUTO_AFTER_SCRIPT:=}"
 
-# A script to configure to run once on the system after initial boot.  Note, this script will run as root, before login of any user, and will ONLY RUN ONCE.
+# A script to configure to run once on the system after initial boot.  Note, this script will run as root, before login of any user, and will ONLY RUN ONCE.  This must be a file path (starting with /) or a URL where the script can be download or read from, ftp:// and file:// url's should be supported.
 AUTO_FIRST_BOOT_SCRIPT="${AUTO_FIRST_BOOT_SCRIPT:=}"
 
 # Whether the installer should pause, display the selected and calculated values and wait for confirmation before continuing.  Off by default to preserve fully automated installations.
@@ -2244,8 +2244,8 @@ install_puppet_from_repo() {
       ;;
   esac
 
-  wget "https://apt.puppet.com/puppet7-release-${codename}.deb"
-  arch-chroot /mnt dpkg -i "puppet7-release-${codename}.deb"
+  wget -O "/home/user/puppet7-release-${codename}.deb" "https://apt.puppet.com/puppet7-release-${codename}.deb"
+  arch-chroot /mnt dpkg -i "/home/user/puppet7-release-${codename}.deb"
   chroot_run_updates
   chroot_install puppet-agent
   arch-chroot /mnt /opt/puppetlabs/bin/puppet resource service puppet ensure=running enable=true
@@ -2360,11 +2360,17 @@ run_before_script() {
   print_info "In Run Before Script"
   if [[ "${AUTO_BEFORE_SCRIPT}" != "" ]]
   then
+    local script="/home/user/scripts/before.script"
     mkdir -p "/home/user/scripts"
-    wget -O "/home/user/scripts/before.script" "${AUTO_BEFORE_SCRIPT}"
-    chmod +x "/home/user/scripts/before.script"
+    if [[ "${AUTO_BEFORE_SCRIPT}" == /* ]]
+    then
+      cp "${AUTO_BEFORE_SCRIPT}" "${script}"
+    else
+      wget -O "${script}" "${AUTO_BEFORE_SCRIPT}"
+    fi
+    chmod +x "${script}"
 
-    get_exit_code /home/user/scripts/before.script
+    get_exit_code "${script}"
     if [[ "${EXIT_CODE}" != "0" ]]
     then
       error_msg "Before script returned a non-zero exit code: ${EXIT_CODE}"
@@ -2376,11 +2382,17 @@ run_after_script() {
   print_info "In Run After Script"
   if [[ "${AUTO_AFTER_SCRIPT}" != "" ]]
   then
+    local script="/home/user/scripts/after.script"
     mkdir -p "/home/user/scripts"
-    wget -O "/home/user/scripts/after.script" "${AUTO_AFTER_SCRIPT}"
-    chmod +x "/home/user/scripts/after.script"
+    if [[ "${AUTO_AFTER_SCRIPT}" == /* ]]
+    then
+      cp "${AUTO_AFTER_SCRIPT}" "${script}"
+    else
+      wget -O "${script}" "${AUTO_AFTER_SCRIPT}"
+    fi
+    chmod +x "${script}"
 
-    get_exit_code /home/user/scripts/after.script
+    get_exit_code "${script}"
     if [[ "${EXIT_CODE}" != "0" ]]
     then
       error_msg "After script returned a non-zero exit code: ${EXIT_CODE}"
@@ -2392,9 +2404,15 @@ setup_first_boot_script() {
   print_info "In Setup First Boot Script"
   if [[ "${AUTO_FIRST_BOOT_SCRIPT}" != "" ]]
   then
+    local script="/home/user/scripts/first-boot.script"
     mkdir -p "/home/user/scripts"
-    wget -O "/home/user/scripts/first-boot.script" "${AUTO_FIRST_BOOT_SCRIPT}"
-    cp "/home/user/scripts/first-boot.script" "/mnt/usr/local/sbin/first-boot.script"
+    if [[ "${AUTO_FIRST_BOOT_SCRIPT}" == /* ]]
+    then
+      cp "${AUTO_FIRST_BOOT_SCRIPT}" "${script}"
+    else
+      wget -O "${script}" "${AUTO_FIRST_BOOT_SCRIPT}"
+    fi
+    cp "${script}" "/mnt/usr/local/sbin/first-boot.script"
 
     cat <<- 'EOF' > /mnt/etc/systemd/system/deb-install-first-boot.service
 [Unit]
