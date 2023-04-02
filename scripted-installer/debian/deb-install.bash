@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Author: Brennan Fee
 # License: MIT License
-# Version: 1.0
-# Date: 2023-03-18
+# Version: 1.5
+# Date: 2023-04-02
 #
 # Example to run directly from URL: bash <(curl -fsSL <url here>)
 #
@@ -41,8 +41,8 @@ fi
 
 SCRIPT_AUTHOR="Brennan Fee"
 SCRIPT_LICENSE="MIT License"
-SCRIPT_VERSION="1.0"
-SCRIPT_DATE="2023-03-18"
+SCRIPT_VERSION="1.5"
+SCRIPT_DATE="2023-04-02"
 
 ## Data - These values will change from time-to-time and are placed here to have one place to
 ## change them without having to hunt around in the script.
@@ -152,7 +152,7 @@ AUTO_SECOND_DISK="${AUTO_SECOND_DISK:=ignore}"
 # Whether the volume(s) created should be encrypted.  This is a boolean value.
 AUTO_ENCRYPT_DISKS="${AUTO_ENCRYPT_DISKS:=1}"
 
-# The password to use for the main encrypted volume.  A special value of "file", the default, can be passed which will generate a disk file in the /boot partition that will auto-decrypt on boot.  This is done so that any automated systems that expect a boot without the need of a password can still function.  You can also pass a full path (it must start with slash /, no relative paths) to a file to use, that file will be copied to the /boot partition to preserve the automatic boot nature required for automation.  Instead of a local file you can allso pass a URL to a file which should be downloaded and used, it must start with http:// or https://.  Lastly, you can still provide an actual passphrase which will be used.  However, this method will break any automations as typing the password will be required during boot.
+# The password to use for the main encrypted volume.  A special value of "file", the default, can be passed which will generate a disk file in the /boot partition that will auto-decrypt on boot.  This is done so that any automated systems that expect a boot without the need of a password can still function.  You can also pass a full path (it must start with slash /, no relative paths) to a file to use, that file will be copied to the /boot partition to preserve the automatic boot nature required for automation.  Instead of a local file you can allso pass a URL to a file which should be downloaded and used, it must start with a schema, such as http:// or https://.  Lastly, you can still provide an actual passphrase which will be used.  However, this method will break any automations as typing the password will be required during boot.
 #
 # In all configurations, if a second disk is being used a separate file will be generated automatically as the decryption key for the second disk and stored on the root partition (in the /etc/keys folder).  The system will be configured to automatically unlock that partition after the root partition is decrypted.
 #

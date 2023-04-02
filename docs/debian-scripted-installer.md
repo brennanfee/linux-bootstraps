@@ -281,7 +281,7 @@ After installation, the install log and some other files are copied to the targe
 
 Default: 'none' (item of set)
 
-Supported values: none, ansible, ansible-pip, saltstack, saltstack-repo, puppet, puppet-repo
+Supported values: none, ansible, ansible-pip, saltstack, saltstack-repo, saltstack-bootstrap, puppet, puppet-repo
 
 Install a configuration management system.  This can be helpful to have so that on first boot it can already be installed ready to locally or remotely configure the instance.  Default is "none".  At present, each of the systems allows multiple "ways" they might be installed.  The first, non-qualified version always installs the CM tool from the Apt repositories.  This should generally be acceptable but, given the distribution, may be slightly older versions of the CM tools.  The other options perform installations using the CM tools provided methods (pip for Ansible, custom Apt repo for the others).  These should provider newer more updated versions of the CM tools, but might not be as stable.
 
