@@ -2266,7 +2266,7 @@ install_salt_from_bootstrap() {
     cp /home/user/install_salt.sh /mnt/usr/local/src/install_salt.sh
     sync
 
-    arch-chroot /mnt sh /usr/local/src/install_salt.sh -P -x python3 stable
+    arch-chroot /mnt sh /usr/local/src/install_salt.sh -P -X -x python3 stable
   else
     error_msg "WARNING: Salt script is corrupt or has been tampered with."
   fi
