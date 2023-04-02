@@ -180,7 +180,7 @@ AUTO_USE_DATA_FOLDER="${AUTO_USE_DATA_FOLDER:=0}"
 # After installation, the install log and some other files are copied to the target machine.  This indicates (overrides) the default location.  By default, the files are copied to the /srv folder unless AUTO_USE_DATA_FOLDER is enabled.  With AUTO_USE_DATA_FOLDER turned on the files are copied to the /data folder instead of /srv.  You can override these defaults by providing a path here.  Note that your path MUST start with a full path (must start with /).
 AUTO_STAMP_LOCATION="${AUTO_STAMP_LOCATION:=}"
 
-# Install a configuration management system, helpful to have here so that on first boot it can already be installed ready to locally or remotely configure the instance.  Default is "none".  Options are: none, ansible, ansible-pip, saltstack, saltstack-repo, puppet, puppet-repo
+# Install a configuration management system, helpful to have here so that on first boot it can already be installed ready to locally or remotely configure the instance.  Default is "none".  Options are: none, ansible, ansible-pip, saltstack, saltstack-repo, saltstack-bootstrap, puppet, puppet-repo
 ## Yes, I don't support puppet and chef because they are hot garbage
 AUTO_CONFIG_MANAGEMENT="${AUTO_CONFIG_MANAGEMENT:=none}"
 
@@ -1029,7 +1029,7 @@ verify_disk_inputs() {
 verify_config_management() {
   print_info "Verifying config management"
 
-  options=('none' 'ansible' 'ansible-pip' 'saltstack' 'saltstack-repo' 'puppet' 'puppet-repo')
+  options=('none' 'ansible' 'ansible-pip' 'saltstack' 'saltstack-repo' 'saltstack-bootstrap' 'puppet' 'puppet-repo')
   get_exit_code contains_element "${AUTO_CONFIG_MANAGEMENT}" "${options[@]}"
   if [[ ! "${EXIT_CODE}" == "0" ]]
   then
@@ -2183,10 +2183,13 @@ install_configuration_management() {
       arch-chroot /mnt pipx inject ansible paramiko
       ;;
     saltstack)
-      chroot_install salt-minion
+      install_salt
       ;;
     saltstack-repo)
       install_salt_from_repo
+      ;;
+    saltstack-bootstrap)
+      install_salt_from_bootstrap
       ;;
     puppet)
       chroot_install puppet-agent
@@ -2203,7 +2206,23 @@ install_configuration_management() {
   esac
 }
 
+install_salt() {
+  print_info "Installing saltstack"
+
+  get_exit_code package_exists "salt-minion"
+  if [[ "${EXIT_CODE}" == "0" ]]
+  then
+    chroot_install salt-minion
+  else
+    print_warning "Salt package not available in default repositories, falling back installing from Salt bootstrap."
+
+    install_salt_from_bootstrap
+  fi
+}
+
 install_salt_from_repo() {
+  print_info "Installing saltstack from repo"
+
   mkdir -p /mnt/usr/local/share/keyrings
 
   local salt_version="latest" # alternatively something like 3005
@@ -2223,15 +2242,39 @@ install_salt_from_repo() {
       ;;
   esac
 
-  wget -O /mnt/usr/local/share/keyrings/salt-archive-keyring.gpg "https://repo.saltproject.io/py3/${distro}/${release}/${DPKG_ARCH}/${salt_version}/salt-archive-keyring.gpg"
+  wget -O /mnt/usr/local/share/keyrings/salt-archive-keyring.gpg "https://repo.saltproject.io/salt/py3/${distro}/${release}/${DPKG_ARCH}/${salt_version}/salt-archive-keyring.gpg"
 
-  echo "deb [signed-by=/usr/local/share/keyrings/salt-archive-keyring.gpg arch=${DPKG_ARCH}] https://repo.saltproject.io/py3/${distro}/${release}/${DPKG_ARCH}/${salt_version} ${codename} main" | tee /mnt/etc/apt/sources.list.d/salt.list
+  echo "deb [signed-by=/usr/local/share/keyrings/salt-archive-keyring.gpg arch=${DPKG_ARCH}] https://repo.saltproject.io/salt/py3/${distro}/${release}/${DPKG_ARCH}/${salt_version} ${codename} main" | tee /mnt/etc/apt/sources.list.d/salt.list
 
   chroot_run_updates
   chroot_install salt-minion
 }
 
+install_salt_from_bootstrap() {
+  print_info "Installing saltstack from bootstrap"
+
+  curl -fsSL https://bootstrap.saltproject.io -o /home/user/install_salt.sh
+  curl -fsSL https://bootstrap.saltproject.io/sha256 -o /home/user/install_salt_sha256
+
+  local SHA_OF_FILE
+  SHA_OF_FILE=$(sha256sum /home/user/install_salt.sh | cut -d' ' -f1)
+  local SHA_FOR_VALIDATION
+  SHA_FOR_VALIDATION=$(cat /home/user/install_salt_sha256)
+
+  if [[ "${SHA_OF_FILE}" == "${SHA_FOR_VALIDATION}" ]]
+  then
+    cp /home/user/install_salt.sh /mnt/usr/local/src/install_salt.sh
+    sync
+
+    arch-chroot /mnt sh install_salt.sh -P -x python3 stable
+  else
+    error_msg "WARNING: Salt script is corrupt or has been tampered with."
+  fi
+}
+
 install_puppet_from_repo() {
+  print_info "Installing puppet from repo"
+
   local codename
   codename=$(arch-chroot /mnt lsb_release -c -s)
 
