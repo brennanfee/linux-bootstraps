@@ -2175,10 +2175,11 @@ install_configuration_management() {
   print_info "Installing configuration management software (if requested)"
   case "${AUTO_CONFIG_MANAGEMENT}" in
     ansible)
-      chroot_install ansible
+      chroot_install ansible ansible-mitogen
       ;;
     ansible-pip)
       arch-chroot /mnt pipx install --include-deps ansible
+      arch-chroot /mnt pipx inject ansible mitogen
       arch-chroot /mnt pipx inject ansible cryptography
       arch-chroot /mnt pipx inject ansible paramiko
       ;;
