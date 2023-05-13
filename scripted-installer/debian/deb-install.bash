@@ -114,6 +114,9 @@ AUTO_KEYMAP="${AUTO_KEYMAP:=us}"
 # The system locale to use.
 AUTO_LOCALE="${AUTO_LOCALE:=en_US.UTF-8}"
 
+# The system languages to use.
+AUTO_LANGUAGE="${AUTO_LANGUAGE:=en_US:en:C}"
+
 # The time zone for the machine being created.
 AUTO_TIMEZONE="${AUTO_TIMEZONE:=America/Chicago}" # Suck it east and west coast!  ;-)
 
@@ -272,6 +275,7 @@ log_values() {
 
   write_log "AUTO_KEYMAP: '${AUTO_KEYMAP}'"
   write_log "AUTO_LOCALE: '${AUTO_LOCALE}'"
+  write_log "AUTO_LANGUAGE: '${AUTO_LANGUAGE}'"
   write_log "AUTO_TIMEZONE: '${AUTO_TIMEZONE}'"
   write_log_blank
 
@@ -360,7 +364,7 @@ confirm_with_user() {
     print_status "It appears you are installing from a '${INSTALLER_DISTRO}' installer medium."
     blank_line
 
-    print_status "The selected keymap is '${AUTO_KEYMAP}', locale is '${AUTO_LOCALE}', and the selected timezone is '${AUTO_TIMEZONE}'."
+    print_status "The selected keymap is '${AUTO_KEYMAP}', locale is '${AUTO_LOCALE}', language is '${AUTO_LANGUAGE}', and the selected timezone is '${AUTO_TIMEZONE}'."
 
     print_status "The distribution to install is '${AUTO_INSTALL_OS}', '${SELECTED_INSTALL_EDITION}' edition."
 
@@ -611,12 +615,11 @@ setup_installer_environment() {
   SELECTED_CHARMAP=$(grep "${AUTO_LOCALE}\s" /etc/locale.gen | cut -d' ' -f 2)
 
   write_log "Writing locale"
-  update-locale --reset LANG="${AUTO_LOCALE}" LC_ALL="${AUTO_LOCALE}"
   localectl set-locale "${AUTO_LOCALE}"
+  update-locale --reset LANG="${AUTO_LOCALE}" LANGUAGE="${AUTO_LANGUAGE}"
 
   export LANG="${AUTO_LOCALE}"
-  export LC_ALL="${AUTO_LOCALE}"
-  export LANGUAGE=""
+  export LANGUAGE="${AUTO_LANGUAGE}"
 
   ### Keymap
   write_log "Setting keymap"
@@ -1636,8 +1639,8 @@ configure_locale() {
   sed -i -E "s/^#\s${AUTO_LOCALE}\s(.*)$/${AUTO_LOCALE} \1/" /mnt/etc/locale.gen
   arch-chroot /mnt dpkg-reconfigure --frontend=noninteractive locales
 
-  arch-chroot /mnt update-locale --reset LANG="${AUTO_LOCALE}"
   arch-chroot /mnt localectl set-locale "${AUTO_LOCALE}"
+  arch-chroot /mnt update-locale --reset LANG="${AUTO_LOCALE}" LANGUAGE="${AUTO_LANGUAGE}"
 }
 
 configure_apt_debian() {
