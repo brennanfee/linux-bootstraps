@@ -26,11 +26,10 @@
 #
 # Bash strict mode
 ([[ -n ${ZSH_EVAL_CONTEXT:-} && ${ZSH_EVAL_CONTEXT:-} =~ :file$ ]] ||
- [[ -n ${BASH_VERSION:-} ]] && (return 0 2>/dev/null)) && SOURCED=true || SOURCED=false
-if ! ${SOURCED}
-then
-  set -o errexit # same as set -e
-  set -o nounset # same as set -u
+  [[ -n ${BASH_VERSION:-} ]] && (return 0 2>/dev/null)) && SOURCED=true || SOURCED=false
+if ! ${SOURCED}; then
+  set -o errexit  # same as set -e
+  set -o nounset  # same as set -u
   set -o errtrace # same as set -E
   set -o pipefail
   set -o posix
@@ -40,7 +39,7 @@ then
   shopt -s extdebug
   IFS=$(printf '\n\t')
 fi
-# END Bash scrict mode
+# END Bash strict mode
 
 ### Start: Data
 
@@ -57,7 +56,7 @@ SUPPORTED_OSES_DISPLAY=('Debian' 'Ubuntu')
 
 ### Start: Constants & Global Variables
 
-# Should only be on during testing.  Primarly this turns on the output of passwords.
+# Should only be on during testing.  Primarily this turns on the output of passwords.
 IS_DEBUG=${AUTO_IS_DEBUG:=0}
 
 # Paths
@@ -65,10 +64,10 @@ WORKING_DIR=$(pwd)
 LOG="${WORKING_DIR}/interactive-install.log"
 [[ -f ${LOG} ]] && rm -f "${LOG}"
 INSTALL_DATE=$(date -Is)
-echo "Start log: ${INSTALL_DATE}" >> "${LOG}"
-echo "------------" >> "${LOG}"
+echo "Start log: ${INSTALL_DATE}" >>"${LOG}"
+echo "------------" >>"${LOG}"
 
-# Console font size, I pre-configure the console font to enlarge it which shoudl work better on higher resolution screens.
+# Console font size, I pre-configure the console font to enlarge it which should work better on higher resolution screens.
 # The font family chosen is the Lat15-Terminus font family.  The only value changed here is the final size.
 #
 # Others small-ish: Lat15-Terminus14,Lat15-Terminus16,Lat15-Terminus18x10
@@ -83,7 +82,7 @@ CONSOLE_FONT_SIZE="20x10"
 
 DEFAULT_KEYMAP="us"
 DEFAULT_LOCALE="en_US.UTF-8"
-DEFAULT_TIMEZONE="America/Chicago"  # Suck it east and west coast!  ;-)
+DEFAULT_TIMEZONE="America/Chicago" # Suck it east and west coast!  ;-)
 
 DEFAULT_INSTALL_OS="debian"
 DEFAULT_INSTALL_EDITION="default"
@@ -163,16 +162,16 @@ SELECTED_EXPORT_FILE="my-config.bash"
 ### START: Log Functions
 
 write_log() {
-  echo -e "LOG: ${1}" >> "${LOG}"
+  echo -e "LOG: ${1}" >>"${LOG}"
 }
 
 write_log_password() {
   if [[ ${IS_DEBUG} == "1" ]]; then
-    echo -e "LOG: ${1}" >> "${LOG}"
+    echo -e "LOG: ${1}" >>"${LOG}"
   else
     local val
     val=${1//:*/: ******}
-    echo -e "LOG: ${val}" >> "${LOG}"
+    echo -e "LOG: ${val}" >>"${LOG}"
   fi
 }
 
@@ -217,7 +216,7 @@ print_section() {
   clear
   print_line
   echo -e "# ${BOLD}$1${RESET}"
-  echo -e "SECTION: ${1}" >> "${LOG}"
+  echo -e "SECTION: ${1}" >>"${LOG}"
   print_line
   blank_line
 }
@@ -227,7 +226,7 @@ print_section_info() {
   echo -e "${BOLD}$1${RESET}\n" | fold -sw $((T_COLS - 18)) | sed 's/^/\t/'
   print_line
   blank_line
-  echo -e "SECTION-INFO: ${1}" >> "${LOG}"
+  echo -e "SECTION-INFO: ${1}" >>"${LOG}"
 }
 
 print_summary_header() {
@@ -242,13 +241,13 @@ print_summary_header() {
 print_status() {
   T_COLS=$(tput cols)
   echo -e "$1${RESET}" | fold -sw $((T_COLS - 1))
-  echo -e "STATUS: ${1}" >> "${LOG}"
+  echo -e "STATUS: ${1}" >>"${LOG}"
 }
 
 print_info() {
   T_COLS=$(tput cols)
   echo -e "${BOLD}$1${RESET}" | fold -sw $((T_COLS - 1))
-  echo -e "INFO: ${1}" >> "${LOG}"
+  echo -e "INFO: ${1}" >>"${LOG}"
 }
 
 print_warning() {
@@ -289,8 +288,7 @@ pause_output() {
 
 invalid_option() {
   print_line
-  if [[ ${1:=} == "" ]]
-  then
+  if [[ ${1:=} == "" ]]; then
     print_warning "Invalid option. Try again."
   else
     print_warning "$1"
@@ -312,7 +310,7 @@ get_exit_code() {
   set +e
   (
     # Then we set it again inside a subshell
-    set -e;
+    set -e
     # ...and run the function
     "$@"
   )
@@ -323,8 +321,7 @@ get_exit_code() {
 
 contains_element() {
   #check if an element exist in a string
-  for e in "${@:2}"
-  do
+  for e in "${@:2}"; do
     [[ ${e} == "$1" ]] && break
   done
 }
@@ -343,8 +340,7 @@ check_root() {
 
   local user_id
   user_id=$(id -u)
-  if [[ "${user_id}" != "0" ]]
-  then
+  if [[ "${user_id}" != "0" ]]; then
     error_msg "ERROR! You must execute the script as the 'root' user."
   fi
 }
@@ -353,12 +349,10 @@ check_netcheck_network_connection() {
   print_info "Checking network connectivity..."
 
   # Check localhost first (if network stack is up at all)
-  if ping -q -w 3 -c 2 localhost &> /dev/null
-  then
+  if ping -q -w 3 -c 2 localhost &>/dev/null; then
     # Test the gateway
     gateway_ip=$(ip r | grep default | awk 'NR==1 {print $3}')
-    if ping -q -w 3 -c 2 "${gateway_ip}" &> /dev/null
-    then
+    if ping -q -w 3 -c 2 "${gateway_ip}" &>/dev/null; then
       # Should we also ping the install mirror?
       print_info "Connection found."
     else
@@ -384,17 +378,14 @@ install_prereqs() {
   local prereq_packages=('vim' 'console-data' 'locales' 'fbset')
   local package
 
-  for package in "${prereq_packages[@]}"
-  do
-    if ! dpkg-query -f '${binary:Package}\n' -W | grep "^${package}$"
-    then
+  for package in "${prereq_packages[@]}"; do
+    if ! dpkg-query -f '${binary:Package}\n' -W | grep "^${package}$"; then
       missing_packages=1
       break
     fi
   done
 
-  if [[ ${missing_packages} == "1" ]]
-  then
+  if [[ ${missing_packages} == "1" ]]; then
     print_info "Installing prerequisites"
     DEBIAN_FRONTEND=noninteractive apt-get -y -q update || true
     DEBIAN_FRONTEND=noninteractive apt-get -y -q full-upgrade || true
@@ -410,8 +401,7 @@ setup_installer_environment() {
   # Locale
   local current_locale
   current_locale=$(localectl status | grep -i 'system locale' | cut -d: -f 2 | cut -d= -f 2)
-  if [[ ${current_locale} != "${AUTO_LOCALE}" ]]
-  then
+  if [[ ${current_locale} != "${AUTO_LOCALE}" ]]; then
     localectl set-locale "${AUTO_LOCALE}"
     export LC_ALL="${AUTO_LOCALE}"
   fi
@@ -422,8 +412,7 @@ setup_installer_environment() {
   # Resolution
   local detected_virt
   detected_virt=$(systemd-detect-virt || true)
-  if [[ ${detected_virt} == "oracle" ]]
-  then
+  if [[ ${detected_virt} == "oracle" ]]; then
     fbset -xres 1280 -yres 720 -depth 32
   fi
 
@@ -444,7 +433,7 @@ welcome_screen() {
   blank_line
   print_line
   blank_line
-  print_status "Script can be cancelled at any time with CTRL+C"
+  print_status "Script can be canceled at any time with CTRL+C"
   blank_line
   pause_output
 }
@@ -456,8 +445,7 @@ ask_for_keymap() {
   print_section_info "Pick a keymap for the machine.  Press enter to accept the default."
   local input
   read -rp "Keymap [${AUTO_KEYMAP}]: " input
-  if [[ ${input} != "" ]]
-  then
+  if [[ ${input} != "" ]]; then
     AUTO_KEYMAP=${input}
   fi
 
@@ -471,8 +459,7 @@ ask_for_locale() {
   print_section_info "Pick the locale to use for the machine.  Press enter to accept the default."
   local input
   read -rp "Locale [${AUTO_LOCALE}]: " input
-  if [[ ${input} != "" ]]
-  then
+  if [[ ${input} != "" ]]; then
     AUTO_LOCALE=${input}
   fi
 
@@ -501,11 +488,9 @@ ask_for_os_to_install() {
   print_section "OS To Install"
   print_section_info "Pick an OS to install."
   local input_os
-  select input_os in "${SUPPORTED_OSES_DISPLAY[@]}"
-  do
+  select input_os in "${SUPPORTED_OSES_DISPLAY[@]}"; do
     get_exit_code contains_element "${input_os}" "${SUPPORTED_OSES_DISPLAY[@]}"
-    if [[ ${EXIT_CODE} == "0" ]]
-    then
+    if [[ ${EXIT_CODE} == "0" ]]; then
       break
     else
       invalid_option
@@ -520,8 +505,7 @@ ask_for_os_to_install() {
   # Validate it
   get_exit_code contains_element "${install_os}" "${SUPPORTED_OSES[@]}"
   print_status "exit code: ${EXIT_CODE}"
-  if [[ ${EXIT_CODE} != "0" ]]
-  then
+  if [[ ${EXIT_CODE} != "0" ]]; then
     error_msg "Invalid OS to install selected."
   else
     AUTO_INSTALL_OS="${install_os}"
@@ -554,15 +538,15 @@ ask_for_kernel_version() {
   write_log "In ask for kernel version."
 
   case "${AUTO_INSTALL_OS}" in
-    debian)
-      ask_for_debian_kernel_version
-      ;;
-    ubuntu)
-      ask_for_ubuntu_kernel_version
-      ;;
-    *)
-      error_msg "ERROR! OS to install not supported: '${AUTO_INSTALL_OS}'"
-      ;;
+  debian)
+    ask_for_debian_kernel_version
+    ;;
+  ubuntu)
+    ask_for_ubuntu_kernel_version
+    ;;
+  *)
+    error_msg "ERROR! OS to install not supported: '${AUTO_INSTALL_OS}'"
+    ;;
   esac
 }
 
@@ -572,19 +556,16 @@ ask_for_debian_kernel_version() {
   # For Debian, we only need to ask about kernel version for certain release (which support backports).
   local dont_support_backports=("sid" "unstable" "rc-buggy" "experimental" "testing")
   get_exit_code contains_element "${AUTO_INSTALL_EDITION}" "${dont_support_backports[@]}"
-  if [[ ! ${EXIT_CODE} == "0" ]]
-  then
+  if [[ ! ${EXIT_CODE} == "0" ]]; then
     print_section "Kernel Version To Install"
     print_section_info "Pick a Kernel Version to install.  Note that if the backport kernel is requested but it is not available, the default kernel will be installed."
 
     local options=('default' 'backports')
 
     local input_version
-    select input_version in "${options[@]}"
-    do
+    select input_version in "${options[@]}"; do
       get_exit_code contains_element "${input_version}" "${options[@]}"
-      if [[ ${EXIT_CODE} == "0" ]]
-      then
+      if [[ ${EXIT_CODE} == "0" ]]; then
         break
       else
         invalid_option
@@ -601,16 +582,14 @@ ask_for_ubuntu_kernel_version() {
   write_log "In ask for UBUNTU kernel version."
 
   print_section "Kernel Version To Install"
-  print_section_info "Pick a Kernel Version to install.  Note that the installer will regressively fall back if the requested kernel edition is not available.  If hwe-edge is requested but only hwe is avialable, you will get hwe.  If neither are aviable, the default kernel will be installed."
+  print_section_info "Pick a Kernel Version to install.  Note that the installer will regressively fall back if the requested kernel edition is not available.  If hwe-edge is requested but only hwe is available, you will get hwe.  If neither are aviable, the default kernel will be installed."
 
   local options=('default' 'hwe' 'hwe-edge')
 
   local input_version
-  select input_version in "${options[@]}"
-  do
+  select input_version in "${options[@]}"; do
     get_exit_code contains_element "${input_version}" "${options[@]}"
-    if [[ ${EXIT_CODE} == "0" ]]
-    then
+    if [[ ${EXIT_CODE} == "0" ]]; then
       break
     else
       invalid_option
@@ -674,11 +653,9 @@ ask_should_skip_partitioning() {
 
   local yes_no=('No' 'Yes')
   local option
-  select option in "${yes_no[@]}"
-  do
+  select option in "${yes_no[@]}"; do
     get_exit_code contains_element "${option}" "${yes_no[@]}"
-    if [[ ${EXIT_CODE} == "0" ]]
-    then
+    if [[ ${EXIT_CODE} == "0" ]]; then
       break
     else
       invalid_option
@@ -687,15 +664,15 @@ ask_should_skip_partitioning() {
 
   option=$(echo "${option}" | tr "[:upper:]" "[:lower:]")
   case "${option}" in
-    yes)
-      AUTO_SKIP_PARTITIONING=1
-      ;;
-    no)
-      AUTO_SKIP_PARTITIONING=0
-      ;;
-    *)
-      error_msg "Invalid selection for skipping automatic disk partitioning."
-      ;;
+  yes)
+    AUTO_SKIP_PARTITIONING=1
+    ;;
+  no)
+    AUTO_SKIP_PARTITIONING=0
+    ;;
+  *)
+    error_msg "Invalid selection for skipping automatic disk partitioning."
+    ;;
   esac
 
   write_log "Should skip disk partitioning: ${AUTO_SKIP_PARTITIONING}"
@@ -704,8 +681,7 @@ ask_should_skip_partitioning() {
 ask_for_main_disk() {
   write_log "In ask for main disk."
 
-  if [[ ${AUTO_SKIP_PARTITIONING} == 1 ]]
-  then
+  if [[ ${AUTO_SKIP_PARTITIONING} == 1 ]]; then
     ask_for_main_disk_skipped_partition
   else
     print_section "Main Disk Selection"
@@ -713,11 +689,9 @@ ask_for_main_disk() {
 
     local disk_options=('Smallest' 'Largest' 'Direct')
     local option
-    select option in "${disk_options[@]}"
-    do
+    select option in "${disk_options[@]}"; do
       get_exit_code contains_element "${option}" "${disk_options[@]}"
-      if [[ ${EXIT_CODE} == "0" ]]
-      then
+      if [[ ${EXIT_CODE} == "0" ]]; then
         break
       else
         invalid_option
@@ -726,30 +700,28 @@ ask_for_main_disk() {
 
     option=$(echo "${option}" | tr "[:upper:]" "[:lower:]")
     case "${option}" in
-      smallest)
-        AUTO_MAIN_DISK="smallest"
-        ;;
-      largest)
-        AUTO_MAIN_DISK="largest"
-        ;;
-      direct)
-        while :
-        do
-          blank_line
-          local input
-          read -rp "Enter in the device: " input
-          if [[ ${input} == /dev/* ]]
-          then
-            AUTO_MAIN_DISK=${input}
-            break
-          else
-            invalid_option "You must input a device such as /dev/sda, starting with /dev/"
-          fi
-        done
-        ;;
-      *)
-        error_msg "Invalid main disk selection method provided."
-        ;;
+    smallest)
+      AUTO_MAIN_DISK="smallest"
+      ;;
+    largest)
+      AUTO_MAIN_DISK="largest"
+      ;;
+    direct)
+      while :; do
+        blank_line
+        local input
+        read -rp "Enter in the device: " input
+        if [[ ${input} == /dev/* ]]; then
+          AUTO_MAIN_DISK=${input}
+          break
+        else
+          invalid_option "You must input a device such as /dev/sda, starting with /dev/"
+        fi
+      done
+      ;;
+    *)
+      error_msg "Invalid main disk selection method provided."
+      ;;
     esac
 
     write_log "Main disk selected: ${AUTO_MAIN_DISK}"
@@ -762,13 +734,11 @@ ask_for_main_disk_skipped_partition() {
   print_section "Main Disk Selection"
   print_section_info "Even when skipping automatic partitioning, you still need to indicate which disk should be used to install the GRUB bootloader to.  This must be manually entered as a device name (no auto selection option is supported)."
 
-  while :
-  do
+  while :; do
     blank_line
     local input
     read -rp "Enter in the device: " input
-    if [[ ${input} == /dev/* ]]
-    then
+    if [[ ${input} == /dev/* ]]; then
       AUTO_MAIN_DISK=${input}
       break
     else
@@ -784,18 +754,15 @@ ask_for_second_disk() {
 
   # Only need to ask about second disks if doing auto partitioning
   AUTO_SECOND_DISK="ignore" # the default
-  if [[ ${AUTO_SKIP_PARTITIONING} == 0 ]]
-  then
+  if [[ ${AUTO_SKIP_PARTITIONING} == 0 ]]; then
     print_section "Second Disk Selection"
     print_section_info "What to do if the system has a second (or more) disks.  Select 'Ignore' (the default) to ignore the other disks and only use the main disk, 'Smallest' to auto-select the smallest disk (or next smallest, after the main disk), 'Largest' to auto-select the largest disk (or next largest, after the main disk), or 'Direct' to type in a device to use manually."
 
     local disk_options=('Ignore' 'Smallest' 'Largest' 'Direct')
     local option
-    select option in "${disk_options[@]}"
-    do
+    select option in "${disk_options[@]}"; do
       get_exit_code contains_element "${option}" "${disk_options[@]}"
-      if [[ ${EXIT_CODE} == "0" ]]
-      then
+      if [[ ${EXIT_CODE} == "0" ]]; then
         break
       else
         invalid_option
@@ -804,38 +771,35 @@ ask_for_second_disk() {
 
     option=$(echo "${option}" | tr "[:upper:]" "[:lower:]")
     case "${option}" in
-      ignore)
-        AUTO_SECOND_DISK="ignore"
-        ;;
-      smallest)
-        AUTO_SECOND_DISK="smallest"
-        ;;
-      largest)
-        AUTO_SECOND_DISK="largest"
-        ;;
-      direct)
-        while :
-        do
-          blank_line
-          local input
-          read -rp "Enter in the device: " input
-          if [[ ${input} == /dev/* ]]
-          then
-            if [[ ${input} == "${AUTO_MAIN_DISK}" ]]
-            then
-              invalid_option "The second disk cannot match the main disk.  Enter a different device."
-            else
-              AUTO_SECOND_DISK=${input}
-              break
-            fi
+    ignore)
+      AUTO_SECOND_DISK="ignore"
+      ;;
+    smallest)
+      AUTO_SECOND_DISK="smallest"
+      ;;
+    largest)
+      AUTO_SECOND_DISK="largest"
+      ;;
+    direct)
+      while :; do
+        blank_line
+        local input
+        read -rp "Enter in the device: " input
+        if [[ ${input} == /dev/* ]]; then
+          if [[ ${input} == "${AUTO_MAIN_DISK}" ]]; then
+            invalid_option "The second disk cannot match the main disk.  Enter a different device."
           else
-            invalid_option "You must input a device such as /dev/sda, starting with /dev/"
+            AUTO_SECOND_DISK=${input}
+            break
           fi
-        done
-        ;;
-      *)
-        error_msg "Invalid second disk selection method provided."
-        ;;
+        else
+          invalid_option "You must input a device such as /dev/sda, starting with /dev/"
+        fi
+      done
+      ;;
+    *)
+      error_msg "Invalid second disk selection method provided."
+      ;;
     esac
   fi
 
@@ -847,17 +811,14 @@ ask_should_encrypt_disks() {
 
   # Only need to ask about encryption if doing auto partitioning
   AUTO_ENCRYPT_DISKS="0" # the default
-  if [[ ${AUTO_SKIP_PARTITIONING} == 0 ]]
-  then
+  if [[ ${AUTO_SKIP_PARTITIONING} == 0 ]]; then
     print_section "Disk Encryption"
     print_section_info "Should the disks be encrypted?"
     local yes_no=('Yes' 'No')
     local option
-    select option in "${yes_no[@]}"
-    do
+    select option in "${yes_no[@]}"; do
       get_exit_code contains_element "${option}" "${yes_no[@]}"
-      if [[ ${EXIT_CODE} == "0" ]]
-      then
+      if [[ ${EXIT_CODE} == "0" ]]; then
         break
       else
         invalid_option
@@ -866,15 +827,15 @@ ask_should_encrypt_disks() {
 
     option=$(echo "${option}" | tr "[:upper:]" "[:lower:]")
     case "${option}" in
-      yes)
-        AUTO_ENCRYPT_DISKS=1
-        ;;
-      no)
-        AUTO_ENCRYPT_DISKS=0
-        ;;
-      *)
-        error_msg "Invalid selection for disk encryption."
-        ;;
+    yes)
+      AUTO_ENCRYPT_DISKS=1
+      ;;
+    no)
+      AUTO_ENCRYPT_DISKS=0
+      ;;
+    *)
+      error_msg "Invalid selection for disk encryption."
+      ;;
     esac
   fi
 
@@ -886,18 +847,15 @@ ask_for_disk_password() {
 
   # Only need to ask if disk encryption was selected
   AUTO_DISK_PWD="file"
-  if [[ ${AUTO_ENCRYPT_DISKS} == 1 ]]
-  then
+  if [[ ${AUTO_ENCRYPT_DISKS} == 1 ]]; then
     print_section "Disk Passphrase"
     print_section_info "How do you want the disk passphrase to be selected.  You can select 'File' (the default) and an randomly generated encryption file will be used, 'Path' and you can provide a path to a file to use, or 'URL' for a downloadable file to use.  These three options are best used for automated environments where a password entry for boot would be inconvenient yet encrypting the disks is still desired.  It also allows changing the encryption key setup later on after the machine is bootstrapped, which is highly secure given the default setup does not secure the key files.  Lastly, you can select 'Passphrase' to enter a passhprase to use.  Please note that using 'Passphrase' may break any automations in the system configuration as entering the password manually will be required at boot."
 
     local encryption_options=('File' 'Path' 'URL' 'Passphrase')
     local option
-    select option in "${encryption_options[@]}"
-    do
+    select option in "${encryption_options[@]}"; do
       get_exit_code contains_element "${option}" "${encryption_options[@]}"
-      if [[ ${EXIT_CODE} == "0" ]]
-      then
+      if [[ ${EXIT_CODE} == "0" ]]; then
         break
       else
         invalid_option
@@ -906,65 +864,61 @@ ask_for_disk_password() {
 
     option=$(echo "${option}" | tr "[:upper:]" "[:lower:]")
     case "${option}" in
-      file)
-        AUTO_DISK_PWD="file"
-        ;;
-      tpm) # Future
-        AUTO_DISK_PWD="tpm"
-        ;;
-      path)
-        while :
-        do
-          blank_line
-          local input
-          read -rp "Enter in the file: " input
-          if [[ ${input} == /* ]]
-          then
-            AUTO_DISK_PWD=${input}
-            break
-          else
-            invalid_option "You must input a full path to the file, releative paths are not supported."
-          fi
-        done
-        ;;
-      url)
-        while :
-        do
-          blank_line
-          local input
-          read -rp "Enter in the URL: " input
-          if [[ ${input} == http://* || ${input} == https:// ]]
-          then
-            AUTO_DISK_PWD=${input}
-            break
-          else
-            invalid_option "You must input a valid URL.  At present only HTTP and HTTPS are supported URL schemas."
-          fi
-        done
-        ;;
-      passphrase)
-        local was_set=0
-
+    file)
+      AUTO_DISK_PWD="file"
+      ;;
+    tpm) # Future
+      AUTO_DISK_PWD="tpm"
+      ;;
+    path)
+      while :; do
         blank_line
-        while [[ ${was_set} == 0 ]]; do
-          local pwd1=""
-          local pwd2=""
-          read -srp "Disk passphrase: " pwd1
-          echo -e ""
-          read -srp "Once again: " pwd2
+        local input
+        read -rp "Enter in the file: " input
+        if [[ ${input} == /* ]]; then
+          AUTO_DISK_PWD=${input}
+          break
+        else
+          invalid_option "You must input a full path to the file, releative paths are not supported."
+        fi
+      done
+      ;;
+    url)
+      while :; do
+        blank_line
+        local input
+        read -rp "Enter in the URL: " input
+        if [[ ${input} == http://* || ${input} == https:// ]]; then
+          AUTO_DISK_PWD=${input}
+          break
+        else
+          invalid_option "You must input a valid URL.  At present only HTTP and HTTPS are supported URL schemas."
+        fi
+      done
+      ;;
+    passphrase)
+      local was_set=0
 
-          if [[ "${pwd1}" == "${pwd2}" ]]; then
-            AUTO_DISK_PWD="${pwd1}"
-            was_set=1
-          else
-            blank_line
-            print_warning "The passwords entered did not match... try again."
-          fi
-        done
-        ;;
-      *)
-        error_msg "Invalid disk password option selected."
-        ;;
+      blank_line
+      while [[ ${was_set} == 0 ]]; do
+        local pwd1=""
+        local pwd2=""
+        read -srp "Disk passphrase: " pwd1
+        echo -e ""
+        read -srp "Once again: " pwd2
+
+        if [[ "${pwd1}" == "${pwd2}" ]]; then
+          AUTO_DISK_PWD="${pwd1}"
+          was_set=1
+        else
+          blank_line
+          print_warning "The passwords entered did not match... try again."
+        fi
+      done
+      ;;
+    *)
+      error_msg "Invalid disk password option selected."
+      ;;
     esac
   fi
 
@@ -979,11 +933,9 @@ ask_should_enable_root() {
 
   local yes_no=('No' 'Yes')
   local option
-  select option in "${yes_no[@]}"
-  do
+  select option in "${yes_no[@]}"; do
     get_exit_code contains_element "${option}" "${yes_no[@]}"
-    if [[ ${EXIT_CODE} == "0" ]]
-    then
+    if [[ ${EXIT_CODE} == "0" ]]; then
       break
     else
       invalid_option
@@ -992,15 +944,15 @@ ask_should_enable_root() {
 
   option=$(echo "${option}" | tr "[:upper:]" "[:lower:]")
   case "${option}" in
-    yes)
-      AUTO_ROOT_DISABLED=1
-      ;;
-    no)
-      AUTO_ROOT_DISABLED=0
-      ;;
-    *)
-      error_msg "Invalid selection for disable root account."
-      ;;
+  yes)
+    AUTO_ROOT_DISABLED=1
+    ;;
+  no)
+    AUTO_ROOT_DISABLED=0
+    ;;
+  *)
+    error_msg "Invalid selection for disable root account."
+    ;;
   esac
 
   write_log "Should root be disabled: ${AUTO_ROOT_DISABLED}"
@@ -1056,11 +1008,9 @@ ask_should_create_user() {
 
   local yes_no=('No' 'Yes')
   local option
-  select option in "${yes_no[@]}"
-  do
+  select option in "${yes_no[@]}"; do
     get_exit_code contains_element "${option}" "${yes_no[@]}"
-    if [[ ${EXIT_CODE} == "0" ]]
-    then
+    if [[ ${EXIT_CODE} == "0" ]]; then
       break
     else
       invalid_option
@@ -1069,15 +1019,15 @@ ask_should_create_user() {
 
   option=$(echo "${option}" | tr "[:upper:]" "[:lower:]")
   case "${option}" in
-    yes)
-      AUTO_CREATE_USER=1
-      ;;
-    no)
-      AUTO_CREATE_USER=0
-      ;;
-    *)
-      error_msg "Invalid selection for creating user account."
-      ;;
+  yes)
+    AUTO_CREATE_USER=1
+    ;;
+  no)
+    AUTO_CREATE_USER=0
+    ;;
+  *)
+    error_msg "Invalid selection for creating user account."
+    ;;
   esac
 
   write_log "Should a user be created: ${AUTO_CREATE_USER}"
@@ -1102,8 +1052,7 @@ ask_for_user_name() {
   fi
 
   local username=${AUTO_USERNAME}
-  if [[ ${username} == "" ]]
-  then
+  if [[ ${username} == "" ]]; then
     username=${AUTO_INSTALL_OS}
   fi
 
@@ -1121,8 +1070,7 @@ ask_for_user_password() {
   fi
 
   local username=${AUTO_USERNAME}
-  if [[ ${username} == "" ]]
-  then
+  if [[ ${username} == "" ]]; then
     username=${AUTO_INSTALL_OS}
   fi
 
@@ -1159,11 +1107,9 @@ ask_should_use_data_folder() {
 
   local yes_no=('No' 'Yes')
   local option
-  select option in "${yes_no[@]}"
-  do
+  select option in "${yes_no[@]}"; do
     get_exit_code contains_element "${option}" "${yes_no[@]}"
-    if [[ ${EXIT_CODE} == "0" ]]
-    then
+    if [[ ${EXIT_CODE} == "0" ]]; then
       break
     else
       invalid_option
@@ -1172,15 +1118,15 @@ ask_should_use_data_folder() {
 
   option=$(echo "${option}" | tr "[:upper:]" "[:lower:]")
   case "${option}" in
-    yes)
-      AUTO_USE_DATA_FOLDER=1
-      ;;
-    no)
-      AUTO_USE_DATA_FOLDER=0
-      ;;
-    *)
-      error_msg "Invalid selection for using data folder."
-      ;;
+  yes)
+    AUTO_USE_DATA_FOLDER=1
+    ;;
+  no)
+    AUTO_USE_DATA_FOLDER=0
+    ;;
+  *)
+    error_msg "Invalid selection for using data folder."
+    ;;
   esac
 
   write_log "Use data folder: ${AUTO_USE_DATA_FOLDER}"
@@ -1209,11 +1155,9 @@ ask_install_configuration_management() {
 
   local config_options=('None' 'Ansible (From Apt)' 'Ansible (Using Pip)' 'Salt (From Apt)' 'Salt (From Repo)' 'Puppet (From Apt)' 'Puppet (From Repo)')
   local option
-  select option in "${config_options[@]}"
-  do
+  select option in "${config_options[@]}"; do
     get_exit_code contains_element "${option}" "${config_options[@]}"
-    if [[ ${EXIT_CODE} == "0" ]]
-    then
+    if [[ ${EXIT_CODE} == "0" ]]; then
       break
     else
       invalid_option
@@ -1221,30 +1165,30 @@ ask_install_configuration_management() {
   done
 
   case "${option}" in
-    "None")
-      AUTO_CONFIG_MANAGEMENT="none"
-      ;;
-    "Ansible (From Apt)")
-      AUTO_CONFIG_MANAGEMENT="ansible"
-      ;;
-    "Ansible (Using Pip)")
-      AUTO_CONFIG_MANAGEMENT="ansible-pip"
-      ;;
-    "Salt (From Apt)")
-      AUTO_CONFIG_MANAGEMENT="salt"
-      ;;
-    "Salt (From Repo)")
-      AUTO_CONFIG_MANAGEMENT="salt-repo"
-      ;;
-    "Puppet (From Apt)")
-      AUTO_CONFIG_MANAGEMENT="puppet"
-      ;;
-    "Puppet (From Repo)")
-      AUTO_CONFIG_MANAGEMENT="puppet-repo"
-      ;;
-    *)
-      error_msg "Invalid option for configuration management."
-      ;;
+  "None")
+    AUTO_CONFIG_MANAGEMENT="none"
+    ;;
+  "Ansible (From Apt)")
+    AUTO_CONFIG_MANAGEMENT="ansible"
+    ;;
+  "Ansible (Using Pip)")
+    AUTO_CONFIG_MANAGEMENT="ansible-pip"
+    ;;
+  "Salt (From Apt)")
+    AUTO_CONFIG_MANAGEMENT="salt"
+    ;;
+  "Salt (From Repo)")
+    AUTO_CONFIG_MANAGEMENT="salt-repo"
+    ;;
+  "Puppet (From Apt)")
+    AUTO_CONFIG_MANAGEMENT="puppet"
+    ;;
+  "Puppet (From Repo)")
+    AUTO_CONFIG_MANAGEMENT="puppet-repo"
+    ;;
+  *)
+    error_msg "Invalid option for configuration management."
+    ;;
   esac
 
   write_log "Configuration Management To Install: ${AUTO_CONFIG_MANAGEMENT}"
@@ -1283,7 +1227,7 @@ ask_for_before_script() {
   write_log "In ask for before script."
 
   print_section "Execute A 'Before' Script"
-  print_section_info "You can, optionally, provide a script that will run before the installation script runs.  This 'before' script can perform advanced actions such as disk partitioning.  Note that the target environment is not yet mounted at /mnt and therefore you cannot perform any chroot functionality.  The script can also export script options (export AUTO_TIMEZONE='value') which will be respected by the main script.  So, if you want settings to be based on some kind of logic or based on machine inspection, you may use the 'before' script to perform that logic.  The script does not have to be a bash script, but MUST have a shebang that properly indicates how the script should be run.  Please note that you will need to investigate that your prefered script language is supported in the pre-installation envrionment.  The value provided should be a URL that will be accessible by the installation machine.  The script will be downloaded from that location using wget, so any URL supported by wget will work.  Leaving this blank will skip execution of any 'before' script."
+  print_section_info "You can, optionally, provide a script that will run before the installation script runs.  This 'before' script can perform advanced actions such as disk partitioning.  Note that the target environment is not yet mounted at /mnt and therefore you cannot perform any chroot functionality.  The script can also export script options (export AUTO_TIMEZONE='value') which will be respected by the main script.  So, if you want settings to be based on some kind of logic or based on machine inspection, you may use the 'before' script to perform that logic.  The script does not have to be a bash script, but MUST have a shebang that properly indicates how the script should be run.  Please note that you will need to investigate that your preferred script language is supported in the pre-installation environment.  The value provided should be a URL that will be accessible by the installation machine.  The script will be downloaded from that location using wget, so any URL supported by wget will work.  Leaving this blank will skip execution of any 'before' script."
 
   local input
   read -rp "'Before' script to execute: " input
@@ -1298,7 +1242,7 @@ ask_for_after_script() {
   write_log "In ask for after script."
 
   print_section "Execute A 'After' Script"
-  print_section_info "You can, optionally, provide a script that will run after the main installation but before the machine is rebooted (if reboot was requested).  This script can preform any extra configurations for the target installation.  The /mnt folder will still be available and chroot into that location is supported (you can even use the provided arch-chroot command to make tasks simpler).  The 'after' script SHOULD NOT unmount the /mnt folder.    The script does not have to be a bash script, but MUST have a shebang that properly indicates how the script should be run.  Please note that you will need to investigate that your prefered script language is supported in the pre-installation envrionment.  The value provided should be a URL that will be accessible by the installation machine.  The script will be downloaded from that location using wget, so any URL supported by wget will work.  Leaving this blank will skip execution of any 'after' script."
+  print_section_info "You can, optionally, provide a script that will run after the main installation but before the machine is rebooted (if reboot was requested).  This script can preform any extra configurations for the target installation.  The /mnt folder will still be available and chroot into that location is supported (you can even use the provided arch-chroot command to make tasks simpler).  The 'after' script SHOULD NOT unmount the /mnt folder.    The script does not have to be a bash script, but MUST have a shebang that properly indicates how the script should be run.  Please note that you will need to investigate that your preferred script language is supported in the pre-installation environment.  The value provided should be a URL that will be accessible by the installation machine.  The script will be downloaded from that location using wget, so any URL supported by wget will work.  Leaving this blank will skip execution of any 'after' script."
 
   local input
   read -rp "'After' script to execute: " input
@@ -1313,7 +1257,7 @@ ask_for_first_boot_script() {
   write_log "In ask for after first boot script."
 
   print_section "Execute A 'First Boot' Script"
-  print_section_info "You can, optionally, provide a script that will run on the first boot of the machine.  This script will run only once.  It can be used to perform after installation steps or kick off some external configuraiton process or basically do any kind of post-installation steps you might want.  The script will be named '/usr/local/sbin/first-boot.script' and it will not be removed after execution.  The script does not have to be a bash script, but MUST have a shebang that properly indicates how the script should be run.  Please note that you will need to ensure that the script language used is installed and supported in your taget envrionment (for instance by using AUTO_EXTRA_PACKAGES).  The value provided should be a URL that will be accessible by the installation machine.  The script will be downloaded from that location using wget, so any URL supported by wget will work.  Leaving this blank will skip execution of any 'first boot' script."
+  print_section_info "You can, optionally, provide a script that will run on the first boot of the machine.  This script will run only once.  It can be used to perform after installation steps or kick off some external configuration process or basically do any kind of post-installation steps you might want.  The script will be named '/usr/local/sbin/first-boot.script' and it will not be removed after execution.  The script does not have to be a bash script, but MUST have a shebang that properly indicates how the script should be run.  Please note that you will need to ensure that the script language used is installed and supported in your taget environment (for instance by using AUTO_EXTRA_PACKAGES).  The value provided should be a URL that will be accessible by the installation machine.  The script will be downloaded from that location using wget, so any URL supported by wget will work.  Leaving this blank will skip execution of any 'first boot' script."
 
   local input
   read -rp "'First Boot' script to execute: " input
@@ -1332,11 +1276,9 @@ ask_about_settings_confirmation() {
 
   local yes_no=('No' 'Yes')
   local option
-  select option in "${yes_no[@]}"
-  do
+  select option in "${yes_no[@]}"; do
     get_exit_code contains_element "${option}" "${yes_no[@]}"
-    if [[ ${EXIT_CODE} == "0" ]]
-    then
+    if [[ ${EXIT_CODE} == "0" ]]; then
       break
     else
       invalid_option
@@ -1345,15 +1287,15 @@ ask_about_settings_confirmation() {
 
   option=$(echo "${option}" | tr "[:upper:]" "[:lower:]")
   case "${option}" in
-    yes)
-      AUTO_CONFIRM_SETTINGS=1
-      ;;
-    no)
-      AUTO_CONFIRM_SETTINGS=0
-      ;;
-    *)
-      error_msg "Invalid selection for settings confirmation."
-      ;;
+  yes)
+    AUTO_CONFIRM_SETTINGS=1
+    ;;
+  no)
+    AUTO_CONFIRM_SETTINGS=0
+    ;;
+  *)
+    error_msg "Invalid selection for settings confirmation."
+    ;;
   esac
 
   write_log "Pause for settings confirmation: ${AUTO_CONFIRM_SETTINGS}"
@@ -1367,11 +1309,9 @@ ask_about_auto_reboot() {
 
   local yes_no=('No' 'Yes')
   local option
-  select option in "${yes_no[@]}"
-  do
+  select option in "${yes_no[@]}"; do
     get_exit_code contains_element "${option}" "${yes_no[@]}"
-    if [[ ${EXIT_CODE} == "0" ]]
-    then
+    if [[ ${EXIT_CODE} == "0" ]]; then
       break
     else
       invalid_option
@@ -1380,15 +1320,15 @@ ask_about_auto_reboot() {
 
   option=$(echo "${option}" | tr "[:upper:]" "[:lower:]")
   case "${option}" in
-    yes)
-      AUTO_REBOOT=1
-      ;;
-    no)
-      AUTO_REBOOT=0
-      ;;
-    *)
-      error_msg "Invalid selection for auto reboot."
-      ;;
+  yes)
+    AUTO_REBOOT=1
+    ;;
+  no)
+    AUTO_REBOOT=0
+    ;;
+  *)
+    error_msg "Invalid selection for auto reboot."
+    ;;
   esac
 
   write_log "Should auto reboot: ${AUTO_REBOOT}"
@@ -1405,31 +1345,27 @@ print_summary() {
 
   print_status "The kernel version to install, if available, is '${AUTO_KERNEL_VERSION}'."
 
-  if [[ ${AUTO_REPO_OVERRIDE_URL} == "" ]]
-  then
-    print_status "The installation repository URL will not be overriden."
+  if [[ ${AUTO_REPO_OVERRIDE_URL} == "" ]]; then
+    print_status "The installation repository URL will not be overridden."
   else
-    print_status "The installation repository will be overriden, the URL to use is '${AUTO_REPO_OVERRIDE_URL}'."
+    print_status "The installation repository will be overridden, the URL to use is '${AUTO_REPO_OVERRIDE_URL}'."
   fi
   blank_line
 
   local domain_info
-  if [[ ${AUTO_DOMAIN} != "" ]]
-  then
+  if [[ ${AUTO_DOMAIN} != "" ]]; then
     domain_info="The domain selected is '${AUTO_DOMAIN}'."
   else
     domain_info="No domain was provided."
   fi
-  if [[ ${AUTO_HOSTNAME} == "" ]]
-  then
+  if [[ ${AUTO_HOSTNAME} == "" ]]; then
     print_status "The hostname will be auto-generated. ${domain_info}"
   else
     print_status "The hostname selected is '${AUTO_HOSTNAME}'. ${domain_info}"
   fi
   blank_line
 
-  if [[ ${AUTO_SKIP_PARTITIONING} == "1" ]]
-  then
+  if [[ ${AUTO_SKIP_PARTITIONING} == "1" ]]; then
     print_status "Automatic disk partitioning has been DISABLED.  You will need to manually setup the target /mnt directory, performing any needed disk partitioning and mounting.  This can be done either manually before calling this deb-install script or in a provided 'before' script."
 
     blank_line
@@ -1440,28 +1376,27 @@ print_summary() {
 
     local encryption_method
     case "${AUTO_DISK_PWD}" in
-      file)
-        encryption_method="generated file"
-        ;;
-      tpm) # Future
-        encryption_method="tpm"
-        ;;
-      /*)
-        encryption_method="provided file"
-        ;;
-      http://*)
-        encryption_method="provided url"
-        ;;
-      https://*)
-        encryption_method="provided url"
-        ;;
-      *)
-        encryption_method="password"
-        ;;
+    file)
+      encryption_method="generated file"
+      ;;
+    tpm) # Future
+      encryption_method="tpm"
+      ;;
+    /*)
+      encryption_method="provided file"
+      ;;
+    http://*)
+      encryption_method="provided url"
+      ;;
+    https://*)
+      encryption_method="provided url"
+      ;;
+    *)
+      encryption_method="password"
+      ;;
     esac
 
-    if [[ ${AUTO_ENCRYPT_DISKS} == "1" ]]
-    then
+    if [[ ${AUTO_ENCRYPT_DISKS} == "1" ]]; then
       print_status "The disks will be encrypted.  Encryption method is: '${encryption_method}'."
     else
       print_status "The disks will NOT be encrypted."
@@ -1469,17 +1404,14 @@ print_summary() {
   fi
   blank_line
 
-  if [[ ${AUTO_ROOT_DISABLED} == "1" ]]
-  then
+  if [[ ${AUTO_ROOT_DISABLED} == "1" ]]; then
     print_status "The root account will be disabled."
   else
     print_status "The root account will be activated."
   fi
 
-  if [[ ${AUTO_CREATE_USER} == "1" ]]
-  then
-    if [[ ${AUTO_USERNAME} == "" ]]
-    then
+  if [[ ${AUTO_CREATE_USER} == "1" ]]; then
+    if [[ ${AUTO_USERNAME} == "" ]]; then
       print_status "A default user '${AUTO_INSTALL_OS}' will be created and granted sudo permissions."
     else
       print_status "User '${AUTO_USERNAME}' will be created and granted sudo permissions."
@@ -1496,73 +1428,63 @@ print_summary() {
   print_summary_header "Install Summary (Part 2)" "Below are more of your selections.  Review them carefully.  If anything is wrong cancel out now with Ctrl-C.  Otherwise press any key to continue."
   print_line
 
-  if [[ ${AUTO_USE_DATA_FOLDER} == "1" ]]
-  then
+  if [[ ${AUTO_USE_DATA_FOLDER} == "1" ]]; then
     print_status "The data folder and related configurations will be deployed."
   else
     print_status "The data folder and related configurations are being SKIPPED."
   fi
 
-  if [[ ${AUTO_STAMP_LOCATION} == "" ]]
-  then
+  if [[ ${AUTO_STAMP_LOCATION} == "" ]]; then
     print_status "The default stamp location will be used."
   else
     print_status "The stamp location will be '${AUTO_STAMP_LOCATION}'."
   fi
   blank_line
 
-  if [[ ${AUTO_CONFIG_MANAGEMENT} == "none" ]]
-  then
+  if [[ ${AUTO_CONFIG_MANAGEMENT} == "none" ]]; then
     print_status "No configuration management software will be pre-installed."
   else
     print_status "Configuration management software will be pre-installed: '${AUTO_CONFIG_MANAGEMENT}'."
   fi
 
-  if [[ ${AUTO_EXTRA_PACKAGES} == "" ]]
-  then
+  if [[ ${AUTO_EXTRA_PACKAGES} == "" ]]; then
     print_status "No extra packages have been requested to be pre-installed."
   else
     print_status "Extra packages have been selected to be pre-installed: '${AUTO_EXTRA_PACKAGES}'."
   fi
-  if [[ ${AUTO_EXTRA_PREREQ_PACKAGES} == "" ]]
-  then
+  if [[ ${AUTO_EXTRA_PREREQ_PACKAGES} == "" ]]; then
     print_status "No extra prerequisite pre-installation packages have been requested to be installed."
   else
     print_status "Extra prerequisite pre-installation packages have been selected to be installed: '${AUTO_EXTRA_PREREQ_PACKAGES}'."
   fi
   blank_line
 
-  if [[ ${AUTO_BEFORE_SCRIPT} == "" ]]
-  then
+  if [[ ${AUTO_BEFORE_SCRIPT} == "" ]]; then
     print_status "No 'before' script has been provided."
   else
     print_status "'Before' script selected is '${AUTO_BEFORE_SCRIPT}'."
   fi
 
-  if [[ ${AUTO_AFTER_SCRIPT} == "" ]]
-  then
+  if [[ ${AUTO_AFTER_SCRIPT} == "" ]]; then
     print_status "No 'after' script has been provided."
   else
     print_status "'After' script selected is '${AUTO_AFTER_SCRIPT}'."
   fi
 
-  if [[ ${AUTO_FIRST_BOOT_SCRIPT} == "" ]]
-  then
+  if [[ ${AUTO_FIRST_BOOT_SCRIPT} == "" ]]; then
     print_status "No 'first boot' script has been provided."
   else
     print_status "'First boot' script selected is '${AUTO_FIRST_BOOT_SCRIPT}'."
   fi
   blank_line
 
-  if [[ ${AUTO_CONFIRM_SETTINGS} == "1" ]]
-  then
+  if [[ ${AUTO_CONFIRM_SETTINGS} == "1" ]]; then
     print_status "The installation will pause and confirm settings with the user."
   else
     print_status "The system will NOT confirm settings with the user and will automatically proceed to installation."
   fi
 
-  if [[ ${AUTO_REBOOT} == "1" ]]
-  then
+  if [[ ${AUTO_REBOOT} == "1" ]]; then
     print_status "The system will automatically reboot after installation."
   else
     print_status "The system will NOT automatically reboot after installation."
@@ -1580,11 +1502,9 @@ ask_export_or_execute() {
 
   local options=('Export' 'Execute' 'Exit')
   local option
-  select option in "${options[@]}"
-  do
+  select option in "${options[@]}"; do
     get_exit_code contains_element "${option}" "${options[@]}"
-    if [[ ${EXIT_CODE} == "0" ]]
-    then
+    if [[ ${EXIT_CODE} == "0" ]]; then
       break
     else
       invalid_option
@@ -1615,128 +1535,99 @@ ask_for_export_file() {
 output_exports() {
   write_log "In output_exports."
 
-  if [[ ${DEFAULT_KEYMAP} != "${AUTO_KEYMAP}" ]]
-  then
-    echo "  export AUTO_KEYMAP=${AUTO_KEYMAP}" >> "${SELECTED_EXPORT_FILE}"
+  if [[ ${DEFAULT_KEYMAP} != "${AUTO_KEYMAP}" ]]; then
+    echo "  export AUTO_KEYMAP=${AUTO_KEYMAP}" >>"${SELECTED_EXPORT_FILE}"
   fi
-  if [[ ${DEFAULT_LOCALE} != "${AUTO_LOCALE}" ]]
-  then
-    echo "  export AUTO_LOCALE=${AUTO_LOCALE}" >> "${SELECTED_EXPORT_FILE}"
+  if [[ ${DEFAULT_LOCALE} != "${AUTO_LOCALE}" ]]; then
+    echo "  export AUTO_LOCALE=${AUTO_LOCALE}" >>"${SELECTED_EXPORT_FILE}"
   fi
-  if [[ ${DEFAULT_TIMEZONE} != "${AUTO_TIMEZONE}" ]]
-  then
-    echo "  export AUTO_TIMEZONE=${AUTO_TIMEZONE}" >> "${SELECTED_EXPORT_FILE}"
+  if [[ ${DEFAULT_TIMEZONE} != "${AUTO_TIMEZONE}" ]]; then
+    echo "  export AUTO_TIMEZONE=${AUTO_TIMEZONE}" >>"${SELECTED_EXPORT_FILE}"
   fi
 
-  if [[ ${DEFAULT_INSTALL_OS} != "${AUTO_INSTALL_OS}" ]]
-  then
-    echo "  export AUTO_INSTALL_OS=${AUTO_INSTALL_OS}" >> "${SELECTED_EXPORT_FILE}"
+  if [[ ${DEFAULT_INSTALL_OS} != "${AUTO_INSTALL_OS}" ]]; then
+    echo "  export AUTO_INSTALL_OS=${AUTO_INSTALL_OS}" >>"${SELECTED_EXPORT_FILE}"
   fi
-  if [[ ${DEFAULT_INSTALL_EDITION} != "${AUTO_INSTALL_EDITION}" ]]
-  then
-    echo "  export AUTO_INSTALL_EDITION=${AUTO_INSTALL_EDITION}" >> "${SELECTED_EXPORT_FILE}"
+  if [[ ${DEFAULT_INSTALL_EDITION} != "${AUTO_INSTALL_EDITION}" ]]; then
+    echo "  export AUTO_INSTALL_EDITION=${AUTO_INSTALL_EDITION}" >>"${SELECTED_EXPORT_FILE}"
   fi
-  if [[ ${DEFAULT_KERNEL_VERSION} != "${AUTO_KERNEL_VERSION}" ]]
-  then
-    echo "  export AUTO_KERNEL_VERSION=${AUTO_KERNEL_VERSION}" >> "${SELECTED_EXPORT_FILE}"
+  if [[ ${DEFAULT_KERNEL_VERSION} != "${AUTO_KERNEL_VERSION}" ]]; then
+    echo "  export AUTO_KERNEL_VERSION=${AUTO_KERNEL_VERSION}" >>"${SELECTED_EXPORT_FILE}"
   fi
-  if [[ ${DEFAULT_REPO_OVERRIDE_URL} != "${AUTO_REPO_OVERRIDE_URL}" ]]
-  then
-    echo "  export AUTO_REPO_OVERRIDE_URL=${AUTO_REPO_OVERRIDE_URL}" >> "${SELECTED_EXPORT_FILE}"
+  if [[ ${DEFAULT_REPO_OVERRIDE_URL} != "${AUTO_REPO_OVERRIDE_URL}" ]]; then
+    echo "  export AUTO_REPO_OVERRIDE_URL=${AUTO_REPO_OVERRIDE_URL}" >>"${SELECTED_EXPORT_FILE}"
   fi
 
-  if [[ ${DEFAULT_HOSTNAME} != "${AUTO_HOSTNAME}" ]]
-  then
-    echo "  export AUTO_HOSTNAME=${AUTO_HOSTNAME}" >> "${SELECTED_EXPORT_FILE}"
+  if [[ ${DEFAULT_HOSTNAME} != "${AUTO_HOSTNAME}" ]]; then
+    echo "  export AUTO_HOSTNAME=${AUTO_HOSTNAME}" >>"${SELECTED_EXPORT_FILE}"
   fi
-  if [[ ${DEFAULT_DOMAIN} != "${AUTO_DOMAIN}" ]]
-  then
-    echo "  export AUTO_DOMAIN=${AUTO_DOMAIN}" >> "${SELECTED_EXPORT_FILE}"
+  if [[ ${DEFAULT_DOMAIN} != "${AUTO_DOMAIN}" ]]; then
+    echo "  export AUTO_DOMAIN=${AUTO_DOMAIN}" >>"${SELECTED_EXPORT_FILE}"
   fi
 
-  if [[ ${DEFAULT_SKIP_PARTITIONING} != "${AUTO_SKIP_PARTITIONING}" ]]
-  then
-    echo "  export AUTO_SKIP_PARTITIONING=${AUTO_SKIP_PARTITIONING}" >> "${SELECTED_EXPORT_FILE}"
+  if [[ ${DEFAULT_SKIP_PARTITIONING} != "${AUTO_SKIP_PARTITIONING}" ]]; then
+    echo "  export AUTO_SKIP_PARTITIONING=${AUTO_SKIP_PARTITIONING}" >>"${SELECTED_EXPORT_FILE}"
   fi
-  if [[ ${DEFAULT_MAIN_DISK} != "${AUTO_MAIN_DISK}" ]]
-  then
-    echo "  export AUTO_MAIN_DISK=${AUTO_MAIN_DISK}" >> "${SELECTED_EXPORT_FILE}"
+  if [[ ${DEFAULT_MAIN_DISK} != "${AUTO_MAIN_DISK}" ]]; then
+    echo "  export AUTO_MAIN_DISK=${AUTO_MAIN_DISK}" >>"${SELECTED_EXPORT_FILE}"
   fi
-  if [[ ${DEFAULT_SECOND_DISK} != "${AUTO_SECOND_DISK}" ]]
-  then
-    echo "  export AUTO_SECOND_DISK=${AUTO_SECOND_DISK}" >> "${SELECTED_EXPORT_FILE}"
+  if [[ ${DEFAULT_SECOND_DISK} != "${AUTO_SECOND_DISK}" ]]; then
+    echo "  export AUTO_SECOND_DISK=${AUTO_SECOND_DISK}" >>"${SELECTED_EXPORT_FILE}"
   fi
-  if [[ ${DEFAULT_ENCRYPT_DISKS} != "${AUTO_ENCRYPT_DISKS}" ]]
-  then
-    echo "  export AUTO_ENCRYPT_DISKS=${AUTO_ENCRYPT_DISKS}" >> "${SELECTED_EXPORT_FILE}"
+  if [[ ${DEFAULT_ENCRYPT_DISKS} != "${AUTO_ENCRYPT_DISKS}" ]]; then
+    echo "  export AUTO_ENCRYPT_DISKS=${AUTO_ENCRYPT_DISKS}" >>"${SELECTED_EXPORT_FILE}"
   fi
-  if [[ ${DEFAULT_DISK_PWD} != "${AUTO_DISK_PWD}" ]]
-  then
-    echo "  export AUTO_DISK_PWD=${AUTO_DISK_PWD}" >> "${SELECTED_EXPORT_FILE}"
+  if [[ ${DEFAULT_DISK_PWD} != "${AUTO_DISK_PWD}" ]]; then
+    echo "  export AUTO_DISK_PWD=${AUTO_DISK_PWD}" >>"${SELECTED_EXPORT_FILE}"
   fi
 
-  if [[ ${DEFAULT_ROOT_DISABLED} != "${AUTO_ROOT_DISABLED}" ]]
-  then
-    echo "  export AUTO_ROOT_DISABLED=${AUTO_ROOT_DISABLED}" >> "${SELECTED_EXPORT_FILE}"
+  if [[ ${DEFAULT_ROOT_DISABLED} != "${AUTO_ROOT_DISABLED}" ]]; then
+    echo "  export AUTO_ROOT_DISABLED=${AUTO_ROOT_DISABLED}" >>"${SELECTED_EXPORT_FILE}"
   fi
-  if [[ ${DEFAULT_ROOT_PWD} != "${AUTO_ROOT_PWD}" ]]
-  then
-    echo "  export AUTO_ROOT_PWD=${AUTO_ROOT_PWD}" >> "${SELECTED_EXPORT_FILE}"
+  if [[ ${DEFAULT_ROOT_PWD} != "${AUTO_ROOT_PWD}" ]]; then
+    echo "  export AUTO_ROOT_PWD=${AUTO_ROOT_PWD}" >>"${SELECTED_EXPORT_FILE}"
   fi
-  if [[ ${DEFAULT_CREATE_USER} != "${AUTO_CREATE_USER}" ]]
-  then
-    echo "  export AUTO_CREATE_USER=${AUTO_CREATE_USER}" >> "${SELECTED_EXPORT_FILE}"
+  if [[ ${DEFAULT_CREATE_USER} != "${AUTO_CREATE_USER}" ]]; then
+    echo "  export AUTO_CREATE_USER=${AUTO_CREATE_USER}" >>"${SELECTED_EXPORT_FILE}"
   fi
-  if [[ ${DEFAULT_USERNAME} != "${AUTO_USERNAME}" ]]
-  then
-    echo "  export AUTO_USERNAME=${AUTO_USERNAME}" >> "${SELECTED_EXPORT_FILE}"
+  if [[ ${DEFAULT_USERNAME} != "${AUTO_USERNAME}" ]]; then
+    echo "  export AUTO_USERNAME=${AUTO_USERNAME}" >>"${SELECTED_EXPORT_FILE}"
   fi
-  if [[ ${DEFAULT_USER_PWD} != "${AUTO_USER_PWD}" ]]
-  then
-    echo "  export AUTO_USER_PWD=${AUTO_USER_PWD}" >> "${SELECTED_EXPORT_FILE}"
+  if [[ ${DEFAULT_USER_PWD} != "${AUTO_USER_PWD}" ]]; then
+    echo "  export AUTO_USER_PWD=${AUTO_USER_PWD}" >>"${SELECTED_EXPORT_FILE}"
   fi
 
-  if [[ ${DEFAULT_USE_DATA_FOLDER} != "${AUTO_USE_DATA_FOLDER}" ]]
-  then
-    echo "  export AUTO_USE_DATA_FOLDER=${AUTO_USE_DATA_FOLDER}" >> "${SELECTED_EXPORT_FILE}"
+  if [[ ${DEFAULT_USE_DATA_FOLDER} != "${AUTO_USE_DATA_FOLDER}" ]]; then
+    echo "  export AUTO_USE_DATA_FOLDER=${AUTO_USE_DATA_FOLDER}" >>"${SELECTED_EXPORT_FILE}"
   fi
-  if [[ ${DEFAULT_STAMP_LOCATION} != "${AUTO_STAMP_LOCATION}" ]]
-  then
-    echo "  export AUTO_STAMP_LOCATION=${AUTO_STAMP_LOCATION}" >> "${SELECTED_EXPORT_FILE}"
+  if [[ ${DEFAULT_STAMP_LOCATION} != "${AUTO_STAMP_LOCATION}" ]]; then
+    echo "  export AUTO_STAMP_LOCATION=${AUTO_STAMP_LOCATION}" >>"${SELECTED_EXPORT_FILE}"
   fi
-  if [[ ${DEFAULT_CONFIG_MANAGEMENT} != "${AUTO_CONFIG_MANAGEMENT}" ]]
-  then
-    echo "  export AUTO_CONFIG_MANAGEMENT=${AUTO_CONFIG_MANAGEMENT}" >> "${SELECTED_EXPORT_FILE}"
+  if [[ ${DEFAULT_CONFIG_MANAGEMENT} != "${AUTO_CONFIG_MANAGEMENT}" ]]; then
+    echo "  export AUTO_CONFIG_MANAGEMENT=${AUTO_CONFIG_MANAGEMENT}" >>"${SELECTED_EXPORT_FILE}"
   fi
-  if [[ ${DEFAULT_EXTRA_PACKAGES} != "${AUTO_EXTRA_PACKAGES}" ]]
-  then
-    echo "  export AUTO_EXTRA_PACKAGES=${AUTO_EXTRA_PACKAGES}" >> "${SELECTED_EXPORT_FILE}"
+  if [[ ${DEFAULT_EXTRA_PACKAGES} != "${AUTO_EXTRA_PACKAGES}" ]]; then
+    echo "  export AUTO_EXTRA_PACKAGES=${AUTO_EXTRA_PACKAGES}" >>"${SELECTED_EXPORT_FILE}"
   fi
-  if [[ ${DEFAULT_EXTRA_PREREQ_PACKAGES} != "${AUTO_EXTRA_PREREQ_PACKAGES}" ]]
-  then
-    echo "  export AUTO_EXTRA_PREREQ_PACKAGES=${AUTO_EXTRA_PREREQ_PACKAGES}" >> "${SELECTED_EXPORT_FILE}"
+  if [[ ${DEFAULT_EXTRA_PREREQ_PACKAGES} != "${AUTO_EXTRA_PREREQ_PACKAGES}" ]]; then
+    echo "  export AUTO_EXTRA_PREREQ_PACKAGES=${AUTO_EXTRA_PREREQ_PACKAGES}" >>"${SELECTED_EXPORT_FILE}"
   fi
 
-  if [[ ${DEFAULT_BEFORE_SCRIPT} != "${AUTO_BEFORE_SCRIPT}" ]]
-  then
-    echo "  export AUTO_BEFORE_SCRIPT=${AUTO_BEFORE_SCRIPT}" >> "${SELECTED_EXPORT_FILE}"
+  if [[ ${DEFAULT_BEFORE_SCRIPT} != "${AUTO_BEFORE_SCRIPT}" ]]; then
+    echo "  export AUTO_BEFORE_SCRIPT=${AUTO_BEFORE_SCRIPT}" >>"${SELECTED_EXPORT_FILE}"
   fi
-  if [[ ${DEFAULT_AFTER_SCRIPT} != "${AUTO_AFTER_SCRIPT}" ]]
-  then
-    echo "  export AUTO_AFTER_SCRIPT=${AUTO_AFTER_SCRIPT}" >> "${SELECTED_EXPORT_FILE}"
+  if [[ ${DEFAULT_AFTER_SCRIPT} != "${AUTO_AFTER_SCRIPT}" ]]; then
+    echo "  export AUTO_AFTER_SCRIPT=${AUTO_AFTER_SCRIPT}" >>"${SELECTED_EXPORT_FILE}"
   fi
-  if [[ ${DEFAULT_FIRST_BOOT_SCRIPT} != "${AUTO_FIRST_BOOT_SCRIPT}" ]]
-  then
-    echo "  export AUTO_FIRST_BOOT_SCRIPT=${AUTO_FIRST_BOOT_SCRIPT}" >> "${SELECTED_EXPORT_FILE}"
+  if [[ ${DEFAULT_FIRST_BOOT_SCRIPT} != "${AUTO_FIRST_BOOT_SCRIPT}" ]]; then
+    echo "  export AUTO_FIRST_BOOT_SCRIPT=${AUTO_FIRST_BOOT_SCRIPT}" >>"${SELECTED_EXPORT_FILE}"
   fi
 
-  if [[ ${DEFAULT_CONFIRM_SETTINGS} != "${AUTO_CONFIRM_SETTINGS}" ]]
-  then
-    echo "  export AUTO_CONFIRM_SETTINGS=${AUTO_CONFIRM_SETTINGS}" >> "${SELECTED_EXPORT_FILE}"
+  if [[ ${DEFAULT_CONFIRM_SETTINGS} != "${AUTO_CONFIRM_SETTINGS}" ]]; then
+    echo "  export AUTO_CONFIRM_SETTINGS=${AUTO_CONFIRM_SETTINGS}" >>"${SELECTED_EXPORT_FILE}"
   fi
-  if [[ ${DEFAULT_REBOOT} != "${AUTO_REBOOT}" ]]
-  then
-    echo "  export AUTO_REBOOT=${AUTO_REBOOT}" >> "${SELECTED_EXPORT_FILE}"
+  if [[ ${DEFAULT_REBOOT} != "${AUTO_REBOOT}" ]]; then
+    echo "  export AUTO_REBOOT=${AUTO_REBOOT}" >>"${SELECTED_EXPORT_FILE}"
   fi
 }
 
@@ -1746,7 +1637,7 @@ export_config() {
   ask_for_export_file
 
   # First part of file...
-  cat <<- 'EOF' > "${SELECTED_EXPORT_FILE}"
+  cat <<-'EOF' >"${SELECTED_EXPORT_FILE}"
 #!/usr/bin/env bash
 # Author: Generated by deb-install-interactive.bash script
 # License: MIT License
@@ -1767,7 +1658,7 @@ EOF
   output_exports
 
   ## Remaining part of file
-  cat <<- 'EOF' >> "${SELECTED_EXPORT_FILE}"
+  cat <<-'EOF' >>"${SELECTED_EXPORT_FILE}"
 }
 ##################  DO NOT MODIFY BELOW THIS SECTION
 
@@ -1881,11 +1772,9 @@ download_deb_installer() {
 
   local script_url="https://raw.githubusercontent.com/brennanfee/linux-bootstraps/main/scripted-installer/debian/deb-install.bash"
 
-  if [[ ! -f "${script_file}" ]]
-  then
+  if [[ ! -f "${script_file}" ]]; then
     # To support testing of other versions of the install script (local versions, branches, etc.)
-    if [[ "${CONFIG_SCRIPT_SOURCE:=}" != "" ]]
-    then
+    if [[ "${CONFIG_SCRIPT_SOURCE:=}" != "" ]]; then
       curl -fsSL "${CONFIG_SCRIPT_SOURCE}" --output "${script_file}"
     else
       curl -fsSL "${script_url}" --output "${script_file}"
@@ -1896,127 +1785,98 @@ download_deb_installer() {
 run_exports() {
   write_log "In run_exports."
 
-  if [[ ${DEFAULT_KEYMAP} != "${AUTO_KEYMAP}" ]]
-  then
+  if [[ ${DEFAULT_KEYMAP} != "${AUTO_KEYMAP}" ]]; then
     export AUTO_KEYMAP=${AUTO_KEYMAP}
   fi
-  if [[ ${DEFAULT_LOCALE} != "${AUTO_LOCALE}" ]]
-  then
+  if [[ ${DEFAULT_LOCALE} != "${AUTO_LOCALE}" ]]; then
     export AUTO_LOCALE=${AUTO_LOCALE}
   fi
-  if [[ ${DEFAULT_TIMEZONE} != "${AUTO_TIMEZONE}" ]]
-  then
+  if [[ ${DEFAULT_TIMEZONE} != "${AUTO_TIMEZONE}" ]]; then
     export AUTO_TIMEZONE=${AUTO_TIMEZONE}
   fi
 
-  if [[ ${DEFAULT_INSTALL_OS} != "${AUTO_INSTALL_OS}" ]]
-  then
+  if [[ ${DEFAULT_INSTALL_OS} != "${AUTO_INSTALL_OS}" ]]; then
     export AUTO_INSTALL_OS=${AUTO_INSTALL_OS}
   fi
-  if [[ ${DEFAULT_INSTALL_EDITION} != "${AUTO_INSTALL_EDITION}" ]]
-  then
+  if [[ ${DEFAULT_INSTALL_EDITION} != "${AUTO_INSTALL_EDITION}" ]]; then
     export AUTO_INSTALL_EDITION=${AUTO_INSTALL_EDITION}
   fi
-  if [[ ${DEFAULT_KERNEL_VERSION} != "${AUTO_KERNEL_VERSION}" ]]
-  then
+  if [[ ${DEFAULT_KERNEL_VERSION} != "${AUTO_KERNEL_VERSION}" ]]; then
     export AUTO_KERNEL_VERSION=${AUTO_KERNEL_VERSION}
   fi
-  if [[ ${DEFAULT_REPO_OVERRIDE_URL} != "${AUTO_REPO_OVERRIDE_URL}" ]]
-  then
+  if [[ ${DEFAULT_REPO_OVERRIDE_URL} != "${AUTO_REPO_OVERRIDE_URL}" ]]; then
     export AUTO_REPO_OVERRIDE_URL=${AUTO_REPO_OVERRIDE_URL}
   fi
 
-  if [[ ${DEFAULT_HOSTNAME} != "${AUTO_HOSTNAME}" ]]
-  then
+  if [[ ${DEFAULT_HOSTNAME} != "${AUTO_HOSTNAME}" ]]; then
     export AUTO_HOSTNAME=${AUTO_HOSTNAME}
   fi
-  if [[ ${DEFAULT_DOMAIN} != "${AUTO_DOMAIN}" ]]
-  then
+  if [[ ${DEFAULT_DOMAIN} != "${AUTO_DOMAIN}" ]]; then
     export AUTO_DOMAIN=${AUTO_DOMAIN}
   fi
 
-  if [[ ${DEFAULT_SKIP_PARTITIONING} != "${AUTO_SKIP_PARTITIONING}" ]]
-  then
+  if [[ ${DEFAULT_SKIP_PARTITIONING} != "${AUTO_SKIP_PARTITIONING}" ]]; then
     export AUTO_SKIP_PARTITIONING=${AUTO_SKIP_PARTITIONING}
   fi
-  if [[ ${DEFAULT_MAIN_DISK} != "${AUTO_MAIN_DISK}" ]]
-  then
+  if [[ ${DEFAULT_MAIN_DISK} != "${AUTO_MAIN_DISK}" ]]; then
     export AUTO_MAIN_DISK=${AUTO_MAIN_DISK}
   fi
-  if [[ ${DEFAULT_SECOND_DISK} != "${AUTO_SECOND_DISK}" ]]
-  then
+  if [[ ${DEFAULT_SECOND_DISK} != "${AUTO_SECOND_DISK}" ]]; then
     export AUTO_SECOND_DISK=${AUTO_SECOND_DISK}
   fi
-  if [[ ${DEFAULT_ENCRYPT_DISKS} != "${AUTO_ENCRYPT_DISKS}" ]]
-  then
+  if [[ ${DEFAULT_ENCRYPT_DISKS} != "${AUTO_ENCRYPT_DISKS}" ]]; then
     export AUTO_ENCRYPT_DISKS=${AUTO_ENCRYPT_DISKS}
   fi
-  if [[ ${DEFAULT_DISK_PWD} != "${AUTO_DISK_PWD}" ]]
-  then
+  if [[ ${DEFAULT_DISK_PWD} != "${AUTO_DISK_PWD}" ]]; then
     export AUTO_DISK_PWD=${AUTO_DISK_PWD}
   fi
 
-  if [[ ${DEFAULT_ROOT_DISABLED} != "${AUTO_ROOT_DISABLED}" ]]
-  then
+  if [[ ${DEFAULT_ROOT_DISABLED} != "${AUTO_ROOT_DISABLED}" ]]; then
     export AUTO_ROOT_DISABLED=${AUTO_ROOT_DISABLED}
   fi
-  if [[ ${DEFAULT_ROOT_PWD} != "${AUTO_ROOT_PWD}" ]]
-  then
+  if [[ ${DEFAULT_ROOT_PWD} != "${AUTO_ROOT_PWD}" ]]; then
     export AUTO_ROOT_PWD=${AUTO_ROOT_PWD}
   fi
-  if [[ ${DEFAULT_CREATE_USER} != "${AUTO_CREATE_USER}" ]]
-  then
+  if [[ ${DEFAULT_CREATE_USER} != "${AUTO_CREATE_USER}" ]]; then
     export AUTO_CREATE_USER=${AUTO_CREATE_USER}
   fi
-  if [[ ${DEFAULT_USERNAME} != "${AUTO_USERNAME}" ]]
-  then
+  if [[ ${DEFAULT_USERNAME} != "${AUTO_USERNAME}" ]]; then
     export AUTO_USERNAME=${AUTO_USERNAME}
   fi
-  if [[ ${DEFAULT_USER_PWD} != "${AUTO_USER_PWD}" ]]
-  then
+  if [[ ${DEFAULT_USER_PWD} != "${AUTO_USER_PWD}" ]]; then
     export AUTO_USER_PWD=${AUTO_USER_PWD}
   fi
 
-  if [[ ${DEFAULT_USE_DATA_FOLDER} != "${AUTO_USE_DATA_FOLDER}" ]]
-  then
+  if [[ ${DEFAULT_USE_DATA_FOLDER} != "${AUTO_USE_DATA_FOLDER}" ]]; then
     export AUTO_USE_DATA_FOLDER=${AUTO_USE_DATA_FOLDER}
   fi
-  if [[ ${DEFAULT_STAMP_LOCATION} != "${AUTO_STAMP_LOCATION}" ]]
-  then
+  if [[ ${DEFAULT_STAMP_LOCATION} != "${AUTO_STAMP_LOCATION}" ]]; then
     export AUTO_STAMP_LOCATION=${AUTO_STAMP_LOCATION}
   fi
-  if [[ ${DEFAULT_CONFIG_MANAGEMENT} != "${AUTO_CONFIG_MANAGEMENT}" ]]
-  then
+  if [[ ${DEFAULT_CONFIG_MANAGEMENT} != "${AUTO_CONFIG_MANAGEMENT}" ]]; then
     export AUTO_CONFIG_MANAGEMENT=${AUTO_CONFIG_MANAGEMENT}
   fi
-  if [[ ${DEFAULT_EXTRA_PACKAGES} != "${AUTO_EXTRA_PACKAGES}" ]]
-  then
+  if [[ ${DEFAULT_EXTRA_PACKAGES} != "${AUTO_EXTRA_PACKAGES}" ]]; then
     export AUTO_EXTRA_PACKAGES=${AUTO_EXTRA_PACKAGES}
   fi
-  if [[ ${DEFAULT_EXTRA_PREREQ_PACKAGES} != "${AUTO_EXTRA_PREREQ_PACKAGES}" ]]
-  then
+  if [[ ${DEFAULT_EXTRA_PREREQ_PACKAGES} != "${AUTO_EXTRA_PREREQ_PACKAGES}" ]]; then
     export AUTO_EXTRA_PREREQ_PACKAGES=${AUTO_EXTRA_PREREQ_PACKAGES}
   fi
 
-  if [[ ${DEFAULT_BEFORE_SCRIPT} != "${AUTO_BEFORE_SCRIPT}" ]]
-  then
+  if [[ ${DEFAULT_BEFORE_SCRIPT} != "${AUTO_BEFORE_SCRIPT}" ]]; then
     export AUTO_BEFORE_SCRIPT=${AUTO_BEFORE_SCRIPT}
   fi
-  if [[ ${DEFAULT_AFTER_SCRIPT} != "${AUTO_AFTER_SCRIPT}" ]]
-  then
+  if [[ ${DEFAULT_AFTER_SCRIPT} != "${AUTO_AFTER_SCRIPT}" ]]; then
     export AUTO_AFTER_SCRIPT=${AUTO_AFTER_SCRIPT}
   fi
-  if [[ ${DEFAULT_FIRST_BOOT_SCRIPT} != "${AUTO_FIRST_BOOT_SCRIPT}" ]]
-  then
+  if [[ ${DEFAULT_FIRST_BOOT_SCRIPT} != "${AUTO_FIRST_BOOT_SCRIPT}" ]]; then
     export AUTO_FIRST_BOOT_SCRIPT=${AUTO_FIRST_BOOT_SCRIPT}
   fi
 
-  if [[ ${DEFAULT_CONFIRM_SETTINGS} != "${AUTO_CONFIRM_SETTINGS}" ]]
-  then
+  if [[ ${DEFAULT_CONFIRM_SETTINGS} != "${AUTO_CONFIRM_SETTINGS}" ]]; then
     export AUTO_CONFIRM_SETTINGS=${AUTO_CONFIRM_SETTINGS}
   fi
-  if [[ ${DEFAULT_REBOOT} != "${AUTO_REBOOT}" ]]
-  then
+  if [[ ${DEFAULT_REBOOT} != "${AUTO_REBOOT}" ]]; then
     export AUTO_REBOOT=${AUTO_REBOOT}
   fi
 }
@@ -2034,11 +1894,9 @@ execute_now() {
 
   local yes_no=('No' 'Yes')
   local option
-  select option in "${yes_no[@]}"
-  do
+  select option in "${yes_no[@]}"; do
     get_exit_code contains_element "${option}" "${yes_no[@]}"
-    if [[ ${EXIT_CODE} == "0" ]]
-    then
+    if [[ ${EXIT_CODE} == "0" ]]; then
       break
     else
       invalid_option
@@ -2047,21 +1905,20 @@ execute_now() {
 
   option=$(echo "${option}" | tr "[:upper:]" "[:lower:]")
   case "${option}" in
-    yes)
-      proceed=1
-      ;;
-    no)
-      proceed=0
-      ;;
-    *)
-      error_msg "Invalid selection for proceed with location installation."
-      ;;
+  yes)
+    proceed=1
+    ;;
+  no)
+    proceed=0
+    ;;
+  *)
+    error_msg "Invalid selection for proceed with location installation."
+    ;;
   esac
 
   write_log "Should proceed with local installation: ${proceed}"
 
-  if [[ "${proceed}" == "1" ]]
-  then
+  if [[ "${proceed}" == "1" ]]; then
     run_exports
 
     download_deb_installer "${script_file}"
@@ -2071,7 +1928,7 @@ execute_now() {
   fi
 }
 
-prompts_for_options(){
+prompts_for_options() {
   ask_for_keymap
   ask_for_locale
   ask_for_timezone
@@ -2125,18 +1982,18 @@ main() {
   ask_export_or_execute
 
   case "${SELECTED_ACTION}" in
-    export)
-      export_config
-      ;;
-    execute)
-      execute_now
-      ;;
-    exit)
-      noop
-      ;;
-    *)
-      error_msg "Invalid selection script action."
-      ;;
+  export)
+    export_config
+    ;;
+  execute)
+    execute_now
+    ;;
+  exit)
+    noop
+    ;;
+  *)
+    error_msg "Invalid selection script action."
+    ;;
   esac
 }
 
