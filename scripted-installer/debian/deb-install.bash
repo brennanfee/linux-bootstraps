@@ -1503,7 +1503,7 @@ install_base_system_ubuntu() {
 
   write_log "Running debootstrap"
 
-  DEBOOTSTRAP_DIR="/debootstrap" /debootstrap/debootstrap --arch "${DPKG_ARCH}" --include=lsb-release,tasksel "${SELECTED_INSTALL_EDITION}" "/mnt" "${SELECTED_REPO_URL}"
+  DEBOOTSTRAP_DIR="/debootstrap" /debootstrap/debootstrap --arch "${DPKG_ARCH}" --include=lsb-release"${SELECTED_INSTALL_EDITION}" "/mnt" "${SELECTED_REPO_URL}"
 
   write_log "Debootstrap complete"
 
@@ -1516,7 +1516,7 @@ install_base_system_ubuntu() {
   chroot_run_updates
 
   # Standard server setup
-  arch-chroot /mnt tasksel --new-install install standard
+  #arch-chroot /mnt tasksel --new-install install standard
 
   # The HWE kernels use the Ubuntu version numbers rather than the codename
   local release_ver
