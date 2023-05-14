@@ -1439,7 +1439,7 @@ install_base_system_debian() {
 
   write_log "Running debootstrap"
 
-  DEBOOTSTRAP_DIR="/debootstrap" /debootstrap/debootstrap --arch "${DPKG_ARCH}" --include=lsb-release "${SELECTED_INSTALL_EDITION}" "/mnt" "${SELECTED_REPO_URL}"
+  DEBOOTSTRAP_DIR="/debootstrap" /debootstrap/debootstrap --arch "${DPKG_ARCH}" --include=lsb-release,tasksel "${SELECTED_INSTALL_EDITION}" "/mnt" "${SELECTED_REPO_URL}"
 
   write_log "Debootstrap complete"
 
@@ -1503,7 +1503,7 @@ install_base_system_ubuntu() {
 
   write_log "Running debootstrap"
 
-  DEBOOTSTRAP_DIR="/debootstrap" /debootstrap/debootstrap --arch "${DPKG_ARCH}" --include=lsb-release "${SELECTED_INSTALL_EDITION}" "/mnt" "${SELECTED_REPO_URL}"
+  DEBOOTSTRAP_DIR="/debootstrap" /debootstrap/debootstrap --arch "${DPKG_ARCH}" --include=lsb-release,tasksel "${SELECTED_INSTALL_EDITION}" "/mnt" "${SELECTED_REPO_URL}"
 
   write_log "Debootstrap complete"
 
