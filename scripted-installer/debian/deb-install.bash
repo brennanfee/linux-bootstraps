@@ -1935,11 +1935,11 @@ configure_boot() {
   # fi
   sed -i "s/^GRUB_CMDLINE_LINUX_DEFAULT=.*$/${grub_cmdline_linux_default}/g" /mnt/etc/default/grub
 
-  sed -i 's/^#?GRUB_GFXMODE=.*$/GRUB_GFXMODE=1920x1080/g' /mnt/etc/default/grub
+  sed -i -E '/GRUB_GFXMODE=/ c\GRUB_GFXMODE=1920x1080' /mnt/etc/default/grub
 
   # Run updates
-  arch-chroot /mnt update-grub
   arch-chroot /mnt update-initramfs -u
+  arch-chroot /mnt update-grub
 }
 
 configure_swap() {
