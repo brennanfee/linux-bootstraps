@@ -1861,7 +1861,7 @@ configure_hostname() {
   if [[ "${AUTO_DOMAIN}" == "" ]]; then
     the_line="127.0.1.1 ${hostname}"
   else
-    the_line="127.0.1.1 ${hostname}.${AUTO_DOMAIN} ${hostname}"
+    the_line="127.0.1.1 ${hostname} ${hostname}.${AUTO_DOMAIN}"
   fi
 
   if grep -q '^127.0.1.1[[:blank:]]' /mnt/etc/hosts; then
