@@ -2280,9 +2280,9 @@ setup_user() {
 
     ssh_group_exists=$(arch-chroot /mnt getent group "_ssh" | wc -l || true)
     if [[ "${ssh_group_exists}" == "1" ]]; then
-      echo "AllowGroups ssh _ssh" >>/etc/ssh/sshd_config.d/allow-groups.config
+      echo "AllowGroups ssh _ssh" >>/mnt/etc/ssh/sshd_config.d/allow-groups.config
     else
-      echo "AllowGroups ssh" >>/etc/ssh/sshd_config.d/allow-groups.config
+      echo "AllowGroups ssh" >>/mnt/etc/ssh/sshd_config.d/allow-groups.config
     fi
   fi
 }
