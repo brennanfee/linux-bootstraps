@@ -2277,13 +2277,6 @@ setup_user() {
         arch-chroot /mnt usermod -a -G "${groupToAdd}" "${user_name}"
       fi
     done
-
-    ssh_group_exists=$(arch-chroot /mnt getent group "_ssh" | wc -l || true)
-    if [[ "${ssh_group_exists}" == "1" ]]; then
-      echo "AllowGroups ssh _ssh" >>/mnt/etc/ssh/sshd_config.d/allow-groups.config
-    else
-      echo "AllowGroups ssh" >>/mnt/etc/ssh/sshd_config.d/allow-groups.config
-    fi
   fi
 }
 
