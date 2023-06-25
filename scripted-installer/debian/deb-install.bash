@@ -50,8 +50,8 @@ SCRIPT_DATE="2023-04-02"
 SUPPORTED_OSES=('debian' 'ubuntu')
 
 # Should be updated whenever a new Debian stable is released
-CURRENT_DEB_STABLE_CODENAME="bullseye"
-CURRENT_DEB_TESTING_CODENAME="bookworm"
+CURRENT_DEB_STABLE_CODENAME="bookworm"
+CURRENT_DEB_TESTING_CODENAME="trixie"
 
 # Should be updated with new Ubuntu releases
 CURRENT_UBUNTU_LTS_CODENAME="jammy"
@@ -64,7 +64,7 @@ DEFAULT_UBUNTU_REPO="http://archive.ubuntu.com/ubuntu"
 # Debootstrap download filenames
 DEBOOTSTRAP_PATH="pool/main/d/debootstrap"
 CURRENT_DEBIAN_DEBOOTSTRAP_FILE="debootstrap_1.0.128+nmu2~bpo11+1.tar.gz"
-CURRENT_UBUNTU_DEBOOTSTRAP_FILE="debootstrap_1.0.128+nmu2ubuntu1.tar.gz"
+CURRENT_UBUNTU_DEBOOTSTRAP_FILE="debootstrap_1.0.128+nmu2ubuntu5.tar.gz"
 
 ### End: Data
 
@@ -615,7 +615,6 @@ setup_installer_environment() {
   SELECTED_CHARMAP=$(grep "${AUTO_LOCALE}\s" /etc/locale.gen | cut -d' ' -f 2)
 
   write_log "Writing locale"
-  localectl set-locale "${AUTO_LOCALE}"
   update-locale --reset LANG="${AUTO_LOCALE}" LANGUAGE="${AUTO_LANGUAGE}"
 
   export LANG="${AUTO_LOCALE}"
@@ -915,7 +914,9 @@ verify_kernel_version() {
 
 verify_timezone() {
   print_info "Verifying Timezone"
-  if ! timedatectl list-timezones | grep -q -c "^${AUTO_TIMEZONE}$"; then
+  local tz_exists
+  tz_exists=$(timedatectl list-timezones | grep -c "^${AUTO_TIMEZONE}$")
+  if [[ ${tz_exists} -ne 1 ]]; then
     error_msg "ERROR! Invalid time zone selected: '${AUTO_TIMEZONE}'"
   fi
 }
@@ -942,7 +943,7 @@ verify_disk_password() {
 verify_mount_point() {
   print_info "Verifying mount point"
   # All we need is that /mnt is a mountpoint
-  if mount | grep -q -c ' /mnt '; then
+  if [[ $(mount | grep -c ' /mnt ') -eq 0 ]]; then
     error_msg "Bypass of automatic partitioning has been selected but the mount point (/mnt) for the target machine is not mounted.  To skip automatic partitioning, you first must perform the partitioning manually or by script and ensure that the intended target / (root) and all sub-paths desired are mounted at /mnt."
   fi
 }
@@ -1230,6 +1231,9 @@ create_secondary_partitions() {
 query_disk_partitions() {
   print_info "Querying partitions"
 
+  partprobe "${SELECTED_MAIN_DISK}" 2>/dev/null || true
+  sync
+
   MAIN_DISK_FIRST_PART=$(lsblk -lnp --output PATH,TYPE "${SELECTED_MAIN_DISK}" | grep "part" | sed -n '1p' | cut -d' ' -f 1)
 
   MAIN_DISK_SECOND_PART=$(lsblk -lnp --output PATH,TYPE "${SELECTED_MAIN_DISK}" | grep "part" | sed -n '2p' | cut -d' ' -f 1)
@@ -1237,6 +1241,9 @@ query_disk_partitions() {
   MAIN_DISK_THIRD_PART=$(lsblk -lnp --output PATH,TYPE "${SELECTED_MAIN_DISK}" | grep "part" | sed -n '3p' | cut -d' ' -f 1)
 
   if [[ "${SELECTED_SECOND_DISK}" != "ignore" ]]; then
+    partprobe "${SELECTED_SECOND_DISK}" 2>/dev/null || true
+    sync
+
     SECOND_DISK_FIRST_PART=$(lsblk -lnp --output PATH,TYPE "${SELECTED_SECOND_DISK}" | grep "part" | sed -n '1p' | cut -d' ' -f 1)
   else
     SECOND_DISK_FIRST_PART="/zzz/zzz"
@@ -1462,8 +1469,8 @@ install_base_system_debian() {
   # Kernel & Firmware
   local kernel_to_install="default"
   if [[ "${AUTO_KERNEL_VERSION}" == "backport" || "${AUTO_KERNEL_VERSION}" == "backports" ]]; then
-    # Will need to regularly update the codename for testing here, currently "bookworm"
-    local dont_support_backports=("bookworm" "testing" "sid" "unstable" "rc-buggy" "experimental")
+    # Will need to regularly update the codename for testing here, currently "trixie"
+    local dont_support_backports=("trixie" "testing" "sid" "unstable" "rc-buggy" "experimental")
     get_exit_code contains_element "${SELECTED_INSTALL_EDITION}" "${dont_support_backports[@]}"
     if [[ ! "${EXIT_CODE}" == "0" ]]; then
       # Check to see the package exists in backports, if not we'll just install the default kernel
@@ -1642,7 +1649,6 @@ configure_locale() {
   sed -i -E "s/^#\s${AUTO_LOCALE}\s(.*)$/${AUTO_LOCALE} \1/" /mnt/etc/locale.gen
   arch-chroot /mnt dpkg-reconfigure --frontend=noninteractive locales
 
-  arch-chroot /mnt localectl set-locale "${AUTO_LOCALE}"
   arch-chroot /mnt update-locale --reset LANG="${AUTO_LOCALE}" LANGUAGE="${AUTO_LANGUAGE}"
 }
 
@@ -1655,7 +1661,7 @@ configure_apt_debian() {
   local components="main contrib non-free non-free-firmware"
 
   # This list should shrink over time until all releases support the new "non-free-firmware" component that was introduced in "bookworm"
-  local old_editions=("oldoldstable" "stretch" "oldstable" "buster" "stable" "bullseye")
+  local old_editions=("oldoldstable" "buster" "oldstable" "bullseye")
   get_exit_code contains_element "${SELECTED_INSTALL_EDITION}" "${old_editions[@]}"
   if [[ "${EXIT_CODE}" == "0" ]]; then
     components="main contrib non-free"
@@ -1676,8 +1682,8 @@ configure_apt_debian() {
     } >>/mnt/etc/apt/sources.list
   fi
 
-  # Will need to regularly update the codename for testing here, currently "bookworm"
-  local dont_support_backports=("bookworm" "testing" "sid" "unstable" "rc-buggy" "experimental")
+  # Will need to regularly update the codename for testing here, currently "trixie"
+  local dont_support_backports=("trixie" "testing" "sid" "unstable" "rc-buggy" "experimental")
   get_exit_code contains_element "${SELECTED_INSTALL_EDITION}" "${dont_support_alt_repos[@]}"
   if [[ ! "${EXIT_CODE}" == "0" ]]; then
     # Can't use branches like "stable" or "oldstable" must convert to the codename like "bullseye" or "bookworm"
