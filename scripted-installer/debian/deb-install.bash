@@ -176,6 +176,9 @@ AUTO_USERNAME="${AUTO_USERNAME:=}"
 # The password for the created user.  If you do not provide a password it will default to the target installed OS in all lower case ("debian" or "ubuntu", etc.). The password can be a plain text password or a crypted password.
 AUTO_USER_PWD="${AUTO_USER_PWD:=}"
 
+# A public SSH key to be set up in the created user account to allow SSH into the machine for the user.
+AUTO_USER_SSH_KEY="${AUTO_USER_SSH_KEY:=}"
+
 # Whether to use a /data folder or partition on the target machine.  This folder is a convention that I follow and use and is therefore disabled by default.  I use it for all non-user specific files and setups (usually of docker files, configuraitons, etc.).  If being used along with the AUTO_SECOND_DISK option, this value does affect the partition scheme used.  For further details on this read the information under the AUTO_SECOND_DISK option.  This is a boolean value.
 AUTO_USE_DATA_FOLDER="${AUTO_USE_DATA_FOLDER:=0}"
 
@@ -317,6 +320,7 @@ log_values() {
   write_log "AUTO_CREATE_USER: '${AUTO_CREATE_USER}'"
   write_log "AUTO_USERNAME: '${AUTO_USERNAME}'"
   write_log_password "AUTO_USER_PWD: '${AUTO_USER_PWD}'"
+  write_log "AUTO_USER_SSH_KEY: '${AUTO_USER_SSH_KEY}'"
   write_log_blank
 
   write_log "AUTO_USE_DATA_FOLDER: '${AUTO_USE_DATA_FOLDER}'"
@@ -432,6 +436,11 @@ confirm_with_user() {
         print_status "A default user '${AUTO_INSTALL_OS}' will be created and granted sudo permissions."
       else
         print_status "User '${AUTO_USERNAME}' will be created and granted sudo permissions."
+      fi
+      if [[ "${AUTO_USER_SSH_KEY}" != "" ]]; then
+        print_status "A public SSH key will be set up in the user account."
+      else
+        print_status "No public SSH key will be set up in the user account."
       fi
     else
       print_status "User creation was disabled."
@@ -629,7 +638,7 @@ setup_installer_environment() {
   local detected_virt
   detected_virt=$(systemd-detect-virt || true)
   if [[ "${detected_virt}" == "oracle" ]]; then
-    fbset -xres 1280 -yres 720 -depth 32
+    fbset -xres 1280 -yres 720 -depth 32 -match
   fi
 
   ### Console Font
@@ -1941,7 +1950,7 @@ configure_boot() {
   # fi
   sed -i "s/^GRUB_CMDLINE_LINUX_DEFAULT=.*$/${grub_cmdline_linux_default}/g" /mnt/etc/default/grub
 
-  sed -i -E '/GRUB_GFXMODE=/ c\GRUB_GFXMODE=1920x1080' /mnt/etc/default/grub
+  sed -i -E '/GRUB_GFXMODE=/ c\GRUB_GFXMODE=1024x768x32' /mnt/etc/default/grub
 
   # Run updates
   arch-chroot /mnt update-initramfs -u
@@ -2283,6 +2292,15 @@ setup_user() {
         arch-chroot /mnt usermod -a -G "${groupToAdd}" "${user_name}"
       fi
     done
+
+    if [[ "${AUTO_USER_SSH_KEY}" != "" ]]; then
+      print_info "Setting up user ssh key"
+      # Setup the SSH key
+      mkdir -p "/mnt/home/${user_name}/.ssh"
+      echo "${AUTO_USER_SSH_KEY}" | tee -a "/mnt/home/${user_name}/.ssh/authorized_keys"
+      chmod "0644" "/mnt/home/${user_name}/.ssh/authorized_keys"
+      chmod "0700" "/mnt/home/${user_name}/.ssh"
+    fi
   fi
 }
 
@@ -2587,4 +2605,4 @@ main() {
 
 ### END: The Main Function
 
-main
+main "$@"

@@ -103,6 +103,7 @@ DEFAULT_ROOT_PWD=""
 DEFAULT_CREATE_USER="1"
 DEFAULT_USERNAME=""
 DEFAULT_USER_PWD=""
+DEFAULT_USER_SSH_KEY=""
 
 DEFAULT_USE_DATA_FOLDER="0"
 DEFAULT_STAMP_LOCATION=""
@@ -140,6 +141,7 @@ AUTO_ROOT_PWD="${DEFAULT_ROOT_PWD}"
 AUTO_CREATE_USER="${DEFAULT_CREATE_USER}"
 AUTO_USERNAME="${DEFAULT_USERNAME}"
 AUTO_USER_PWD="${DEFAULT_USER_PWD}"
+AUTO_USER_SSH_KEY="${DEFAULT_USER_SSH_KEY}"
 
 AUTO_USE_DATA_FOLDER="${DEFAULT_USE_DATA_FOLDER}"
 AUTO_STAMP_LOCATION="${DEFAULT_STAMP_LOCATION}"
@@ -413,7 +415,7 @@ setup_installer_environment() {
   local detected_virt
   detected_virt=$(systemd-detect-virt || true)
   if [[ ${detected_virt} == "oracle" ]]; then
-    fbset -xres 1280 -yres 720 -depth 32
+    fbset -xres 1280 -yres 720 -depth 32 -match
   fi
 
   # Font
@@ -1099,6 +1101,33 @@ ask_for_user_password() {
   write_log_password "User password: ${AUTO_USER_PWD}"
 }
 
+ask_for_user_ssh_key() {
+  write_log "In ask for user ssh key."
+
+  AUTO_USER_SSH_KEY="" # the default
+
+  if [[ ${AUTO_CREATE_USER} == 0 ]]; then
+    print_info "Skipping user ssh key prompt as user creation was disabled."
+    return
+  fi
+
+  local username=${AUTO_USERNAME}
+  if [[ ${username} == "" ]]; then
+    username=${AUTO_INSTALL_OS}
+  fi
+
+  print_section "User SSH Key (Optional)"
+  print_section_info "Enter a private SSH Key to use for the user '${username}'.  You can enter nothing to accept the default of not providing an SSH key to use (password SSH will still be supported initially)."
+
+  local input=""
+  read -rp "User SSH Key: " input
+  if [[ ${input} != "" ]]; then
+    AUTO_USER_SSH_KEY=${input}
+  fi
+
+  write_log_password "User SSH Key: ${AUTO_USER_SSH_KEY}"
+}
+
 ask_should_use_data_folder() {
   write_log "In ask should use data folder."
 
@@ -1416,6 +1445,11 @@ print_summary() {
     else
       print_status "User '${AUTO_USERNAME}' will be created and granted sudo permissions."
     fi
+    if [[ ${AUTO_USER_SSH_KEY} != "" ]]; then
+      print_status "A public SSH key will be set up in the user account."
+    else
+      print_status "No public SSH key will be set up in the user account."
+    fi
   else
     print_status "User creation was disabled."
   fi
@@ -1595,6 +1629,9 @@ output_exports() {
   fi
   if [[ ${DEFAULT_USER_PWD} != "${AUTO_USER_PWD}" ]]; then
     echo "  export AUTO_USER_PWD=${AUTO_USER_PWD}" >>"${SELECTED_EXPORT_FILE}"
+  fi
+  if [[ ${DEFAULT_USER_SSH_KEY} != "${AUTO_USER_SSH_KEY}" ]]; then
+    echo "  export AUTO_USER_SSH_KEY=${AUTO_USER_SSH_KEY}" >>"${SELECTED_EXPORT_FILE}"
   fi
 
   if [[ ${DEFAULT_USE_DATA_FOLDER} != "${AUTO_USE_DATA_FOLDER}" ]]; then
@@ -1846,6 +1883,9 @@ run_exports() {
   if [[ ${DEFAULT_USER_PWD} != "${AUTO_USER_PWD}" ]]; then
     export AUTO_USER_PWD=${AUTO_USER_PWD}
   fi
+  if [[ ${DEFAULT_USER_SSH_KEY} != "${AUTO_USER_SSH_KEY}" ]]; then
+    export AUTO_USER_SSH_KEY=${AUTO_USER_SSH_KEY}
+  fi
 
   if [[ ${DEFAULT_USE_DATA_FOLDER} != "${AUTO_USE_DATA_FOLDER}" ]]; then
     export AUTO_USE_DATA_FOLDER=${AUTO_USE_DATA_FOLDER}
@@ -1952,6 +1992,7 @@ prompts_for_options() {
   ask_should_create_user
   ask_for_user_name
   ask_for_user_password
+  ask_for_user_ssh_key
 
   ask_should_use_data_folder
   ask_override_stamp_location
@@ -1997,4 +2038,4 @@ main() {
   esac
 }
 
-main
+main "$@"
