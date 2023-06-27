@@ -1243,17 +1243,17 @@ query_disk_partitions() {
   partprobe "${SELECTED_MAIN_DISK}" 2>/dev/null || true
   sync
 
-  MAIN_DISK_FIRST_PART=$(lsblk -lnp --output PATH,TYPE "${SELECTED_MAIN_DISK}" | grep "part" | sed -n '1p' | cut -d' ' -f 1)
+  MAIN_DISK_FIRST_PART=$(lsblk -lnp --output PATH,TYPE "${SELECTED_MAIN_DISK}" | grep "part" | sed -n '1p' | cut -d' ' -f 1 || true)
 
-  MAIN_DISK_SECOND_PART=$(lsblk -lnp --output PATH,TYPE "${SELECTED_MAIN_DISK}" | grep "part" | sed -n '2p' | cut -d' ' -f 1)
+  MAIN_DISK_SECOND_PART=$(lsblk -lnp --output PATH,TYPE "${SELECTED_MAIN_DISK}" | grep "part" | sed -n '2p' | cut -d' ' -f 1 || true)
 
-  MAIN_DISK_THIRD_PART=$(lsblk -lnp --output PATH,TYPE "${SELECTED_MAIN_DISK}" | grep "part" | sed -n '3p' | cut -d' ' -f 1)
+  MAIN_DISK_THIRD_PART=$(lsblk -lnp --output PATH,TYPE "${SELECTED_MAIN_DISK}" | grep "part" | sed -n '3p' | cut -d' ' -f 1 || true)
 
   if [[ "${SELECTED_SECOND_DISK}" != "ignore" ]]; then
     partprobe "${SELECTED_SECOND_DISK}" 2>/dev/null || true
     sync
 
-    SECOND_DISK_FIRST_PART=$(lsblk -lnp --output PATH,TYPE "${SELECTED_SECOND_DISK}" | grep "part" | sed -n '1p' | cut -d' ' -f 1)
+    SECOND_DISK_FIRST_PART=$(lsblk -lnp --output PATH,TYPE "${SELECTED_SECOND_DISK}" | grep "part" | sed -n '1p' | cut -d' ' -f 1 || true)
   else
     SECOND_DISK_FIRST_PART="/zzz/zzz"
   fi
