@@ -70,8 +70,11 @@ CURRENT_UBUNTU_DEBOOTSTRAP_FILE="debootstrap_1.0.128+nmu2ubuntu5.tar.gz"
 
 ### Start: Constants & Global Variables
 
-# Should only be on during testing.  Primarily this turns on the output of passwords.
+# Should only be on during testing.  Primarily this turns on the output of passwords and tracing
 IS_DEBUG="${AUTO_IS_DEBUG:=0}"
+if [[ "${IS_DEBUG}" == "1" ]]; then
+  set -o xtrace # same as set -x
+fi
 
 # Paths
 WORKING_DIR=$(pwd)
@@ -245,6 +248,10 @@ write_log_password() {
     val=${1//:*/: ******}
     write_log "${val}"
   fi
+}
+
+write_debug() {
+  write_log "DEBUG: ${1}"
 }
 
 write_log_blank() {
@@ -1244,10 +1251,13 @@ query_disk_partitions() {
   sync
 
   MAIN_DISK_FIRST_PART=$(lsblk -lnp --output PATH,TYPE "${SELECTED_MAIN_DISK}" | grep "part" | sed -n '1p' | cut -d' ' -f 1 || true)
+  write_debug "MAIN_DISK_FIRST_PART=${MAIN_DISK_FIRST_PART}"
 
   MAIN_DISK_SECOND_PART=$(lsblk -lnp --output PATH,TYPE "${SELECTED_MAIN_DISK}" | grep "part" | sed -n '2p' | cut -d' ' -f 1 || true)
+  write_debug "MAIN_DISK_SECOND_PART=${MAIN_DISK_SECOND_PART}"
 
   MAIN_DISK_THIRD_PART=$(lsblk -lnp --output PATH,TYPE "${SELECTED_MAIN_DISK}" | grep "part" | sed -n '3p' | cut -d' ' -f 1 || true)
+  write_debug "MAIN_DISK_THIRD_PART=${MAIN_DISK_THIRD_PART}"
 
   if [[ "${SELECTED_SECOND_DISK}" != "ignore" ]]; then
     partprobe "${SELECTED_SECOND_DISK}" 2>/dev/null || true
@@ -1257,6 +1267,7 @@ query_disk_partitions() {
   else
     SECOND_DISK_FIRST_PART="/zzz/zzz"
   fi
+  write_debug "SECOND_DISK_FIRST_PART=${SECOND_DISK_FIRST_PART}"
 }
 
 setup_encryption() {
