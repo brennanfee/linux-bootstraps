@@ -693,8 +693,13 @@ local_install() {
 }
 
 package_exists() {
-  arch-chroot /mnt apt-cache show "$1" &>/dev/null
-  return $?
+  local apt
+  apt=$(arch-chroot /mnt apt-cache -q=2 show "$1" 2>&1 | head -n 1 || true)
+  if [[ "${apt}" == Package* ]]; then
+    return 0
+  else
+    return 1
+  fi
 }
 
 ### END: Helper Functions
@@ -1494,8 +1499,7 @@ install_base_system_debian() {
     get_exit_code contains_element "${SELECTED_INSTALL_EDITION}" "${dont_support_backports[@]}"
     if [[ ! "${EXIT_CODE}" == "0" ]]; then
       # Check to see the package exists in backports, if not we'll just install the default kernel
-      get_exit_code package_exists "linux-image-${DPKG_ARCH}/${edition}-backports"
-      if [[ "${EXIT_CODE}" == "0" ]]; then
+      if package_exists "linux-image-${DPKG_ARCH}/${edition}-backports"; then
         kernel_to_install="backports"
       else
         write_log "Backport kernel was requested, but no backport kernel found.  Falling back to default kernel."
@@ -1552,11 +1556,15 @@ install_base_system_ubuntu() {
   local release_ver
   release_ver=$(arch-chroot /mnt lsb_release -r -s)
 
-  get_exit_code package_exists "linux-generic-hwe-${release_ver}-edge"
-  local hwe_edge_exists="${EXIT_CODE}"
+  local hwe_edge_exists=0
+  if package_exists "linux-generic-hwe-${release_ver}-edge"; then
+    hwe_edge_exists=1
+  fi
 
-  get_exit_code package_exists "linux-generic-hwe-${release_ver}"
-  local hwe_exists="${EXIT_CODE}"
+  local hwe_exists=0
+  if package_exists "linux-generic-hwe-${release_ver}"; then
+    hwe_exists=1
+  fi
 
   local kernel_to_install="default"
   if [[ "${AUTO_KERNEL_VERSION}" == "hwe-edge" ]]; then
@@ -2131,11 +2139,10 @@ install_configuration_management() {
 install_salt() {
   print_info "Installing saltstack"
 
-  get_exit_code package_exists "salt-minion"
-  if [[ "${EXIT_CODE}" == "0" ]]; then
+  if package_exists "salt-minion"; then
     chroot_install salt-minion
   else
-    print_warning "Salt package not available in default repositories, falling back installing from Salt bootstrap."
+    print_warning "Salt package not available in default repositories, falling back to installing from Salt bootstrap."
 
     install_salt_from_bootstrap
   fi
