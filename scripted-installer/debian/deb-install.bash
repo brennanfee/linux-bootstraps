@@ -2151,7 +2151,8 @@ install_salt() {
 install_salt_from_repo() {
   print_info "Installing saltstack from repo"
 
-  mkdir -p /mnt/usr/local/share/keyrings
+  mkdir -p /mnt/etc/apt/keyrings
+  chmod "0755" /mnt/etc/apt/keyrings
 
   local salt_version="latest" # alternatively something like 3005
   local distro
@@ -2170,9 +2171,9 @@ install_salt_from_repo() {
 
   esac
 
-  wget -O /mnt/usr/local/share/keyrings/salt-archive-keyring.gpg "https://repo.saltproject.io/salt/py3/${distro}/${release}/${DPKG_ARCH}/${salt_version}/salt-archive-keyring.gpg"
+  wget -O /mnt/etc/apt/keyrings/salt-archive-keyring.gpg "https://repo.saltproject.io/salt/py3/${distro}/${release}/${DPKG_ARCH}/${salt_version}/salt-archive-keyring.gpg"
 
-  echo "deb [signed-by=/usr/local/share/keyrings/salt-archive-keyring.gpg arch=${DPKG_ARCH}] https://repo.saltproject.io/salt/py3/${distro}/${release}/${DPKG_ARCH}/${salt_version} ${codename} main" | tee /mnt/etc/apt/sources.list.d/salt.list
+  echo "deb [signed-by=/etc/apt/keyrings/salt-archive-keyring.gpg arch=${DPKG_ARCH}] https://repo.saltproject.io/salt/py3/${distro}/${release}/${DPKG_ARCH}/${salt_version} ${codename} main" | tee /mnt/etc/apt/sources.list.d/salt.list
 
   chroot_run_updates
   chroot_install salt-minion
