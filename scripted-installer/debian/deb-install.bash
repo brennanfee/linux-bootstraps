@@ -750,19 +750,35 @@ detect_if_eufi() {
 check_network_connection() {
   print_info "Checking network connectivity..."
 
-  # Check localhost first (if network stack is up at all)
-  if ping -q -w 3 -c 2 localhost &>/dev/null; then
-    # Test the gateway
-    gateway_ip=$(ip r | grep default | awk 'NR==1 {print $3}')
-    if ping -q -w 3 -c 2 "${gateway_ip}" &>/dev/null; then
-      # Should we also ping the install mirror?
-      print_info "Connection found."
-    else
-      error_msg "Gateway connection not accessible.  Exiting."
+  local attempts=0
+  local sleepLength=2
+
+  while true; do
+    attempts=$((attempts + 1))
+    if [[ ${attempts} -gt 5 ]]; then
+      error_msg "No connection found after 5 attempts."
     fi
-  else
-    error_msg "Localhost network connection not found.  Exiting."
-  fi
+
+    if [[ "$(hostname -I)" != "" ]]; then
+      # Check localhost first (if network stack is up at all)
+      if ping -q -w 3 -c 2 localhost &>/dev/null; then
+        # Test the internet
+        if wget -q --spider https://www.google.com; then
+          print_info "Connection found."
+          break
+        else
+          write_debug "wget failed, retrying..."
+          sleep "${sleepLength}"
+        fi
+      else
+        write_debug "ping failed, retrying..."
+        sleep "${sleepLength}"
+      fi
+    else
+      write_debug "hostname check failed, retrying..."
+      sleep "${sleepLength}"
+    fi
+  done
 }
 
 ### END: System Verification Functions
