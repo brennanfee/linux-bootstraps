@@ -1268,25 +1268,49 @@ create_secondary_partitions() {
 query_disk_partitions() {
   print_info "Querying partitions"
 
-  partprobe "${SELECTED_MAIN_DISK}" 2>/dev/null || true
-  sync
+  local disk_part_string
+  local disk_parts=()
+  disk_part_string=$(lsblk -lnp --output "PATH,TYPE" "${SELECTED_MAIN_DISK}" | grep -F "part" | cut -d' ' -f 1)
+  while IFS= read -r -d $'\n' line; do
+    disk_parts+=("${line}")
+  done <<<"${disk_part_string}"
 
-  MAIN_DISK_FIRST_PART=$(lsblk -lnp --output PATH,TYPE "${SELECTED_MAIN_DISK}" | grep "part" | sed -n '1p' | cut -d' ' -f 1 || true)
+  if [[ "${#disk_parts[@]}" -ne 3 ]]; then
+    error_msg "Invalid number of partitions on main disk, something went wrong."
+  fi
+
+  MAIN_DISK_FIRST_PART="${disk_parts[0]}"
   write_debug "MAIN_DISK_FIRST_PART=${MAIN_DISK_FIRST_PART}"
 
-  MAIN_DISK_SECOND_PART=$(lsblk -lnp --output PATH,TYPE "${SELECTED_MAIN_DISK}" | grep "part" | sed -n '2p' | cut -d' ' -f 1 || true)
+  MAIN_DISK_SECOND_PART="${disk_parts[1]}"
   write_debug "MAIN_DISK_SECOND_PART=${MAIN_DISK_SECOND_PART}"
 
-  MAIN_DISK_THIRD_PART=$(lsblk -lnp --output PATH,TYPE "${SELECTED_MAIN_DISK}" | grep "part" | sed -n '3p' | cut -d' ' -f 1 || true)
+  MAIN_DISK_THIRD_PART="${disk_parts[2]}"
   write_debug "MAIN_DISK_THIRD_PART=${MAIN_DISK_THIRD_PART}"
 
-  if [[ "${SELECTED_SECOND_DISK}" != "ignore" ]]; then
-    partprobe "${SELECTED_SECOND_DISK}" 2>/dev/null || true
-    sync
+  if [[ "${MAIN_DISK_FIRST_PART}" == "" || "${MAIN_DISK_SECOND_PART}" == "" || "${MAIN_DISK_THIRD_PART}" = "" ]]; then
+    error_msg "Unable to read main disk partition information."
+  fi
 
-    SECOND_DISK_FIRST_PART=$(lsblk -lnp --output PATH,TYPE "${SELECTED_SECOND_DISK}" | grep "part" | sed -n '1p' | cut -d' ' -f 1 || true)
+  if [[ "${SELECTED_SECOND_DISK}" != "ignore" ]]; then
+    local second_disk_part_string
+    local second_disk_parts=()
+    second_disk_part_string=$(lsblk -lnp --output PATH,TYPE "${SELECTED_SECOND_DISK}" | grep -F "part" | cut -d' ' -f 1)
+    while IFS= read -r -d $'\n' line; do
+      second_disk_parts+=("${line}")
+    done <<<"${second_disk_part_string}"
+    # convert to an array
+    if [[ "${#second_disk_parts[@]}" -ne 1 ]]; then
+      error_msg "Invalid number of partitions on second disk, something went wrong."
+    fi
+
+    SECOND_DISK_FIRST_PART="${second_disk_parts[0]}"
   else
     SECOND_DISK_FIRST_PART="/zzz/zzz"
+  fi
+
+  if [[ "${SECOND_DISK_FIRST_PART}" == "" ]]; then
+    error_msg "Unable to read second disk partition information."
   fi
   write_debug "SECOND_DISK_FIRST_PART=${SECOND_DISK_FIRST_PART}"
 }
