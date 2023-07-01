@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Author: Brennan Fee
 # License: MIT License
-# Version: 1.6
-# Date: 2023-06-26
+# Version: 1.7
+# Date: 2023-07-01
 #
 # Example to run directly from URL: bash <(curl -fsSL <url here>)
 #
@@ -45,8 +45,8 @@ fi
 
 SCRIPT_AUTHOR="Brennan Fee"
 SCRIPT_LICENSE="MIT License"
-SCRIPT_VERSION="1.6"
-SCRIPT_DATE="2023-06-26"
+SCRIPT_VERSION="1.7"
+SCRIPT_DATE="2023-07-01"
 
 # The supported target OSes to be installed
 SUPPORTED_OSES=('debian' 'ubuntu')
