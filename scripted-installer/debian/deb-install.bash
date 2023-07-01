@@ -182,14 +182,23 @@ AUTO_USER_PWD="${AUTO_USER_PWD:=}"
 # A public SSH key to be set up in the created user account to allow SSH into the machine for the user.
 AUTO_USER_SSH_KEY="${AUTO_USER_SSH_KEY:=}"
 
-# Whether to use a /data folder or partition on the target machine.  This folder is a convention that I follow and use and is therefore disabled by default.  I use it for all non-user specific files and setups (usually of docker files, configuraitons, etc.).  If being used along with the AUTO_SECOND_DISK option, this value does affect the partition scheme used.  For further details on this read the information under the AUTO_SECOND_DISK option.  This is a boolean value.
+# Whether to create a system 'Service Account'.  This is something I do in my setups as the service account is used for
+# remote access by configuration management (Ansilbe, Salt Stack) and sometimes to run various services or scheduled
+# jobs that should not run as root but should also not run as a "regular" user.  Given this is highly specific
+# to my setups it is likely you will want to leave this disabled, which is the default.  This is a boolean value.
+AUTO_CREATE_SERVICE_ACCT="${AUTO_CREATE_SERVICE_ACCT:=0}"
+
+# A public SSH key to be set up for the 'Service Account'.
+AUTO_SERVICE_ACCT_SSH_KEY="${AUTO_SERVICE_ACCT_SSH_KEY:=}"
+
+# Whether to use a /data folder or partition on the target machine.  This folder is a convention that I follow and use and is therefore disabled by default.  I use it for all non-user specific files and setups (usually of docker files, configurations, etc.).  If being used along with the AUTO_SECOND_DISK option, this value does affect the partition scheme used.  For further details on this read the information under the AUTO_SECOND_DISK option.  This is a boolean value.
 AUTO_USE_DATA_FOLDER="${AUTO_USE_DATA_FOLDER:=0}"
 
 # After installation, the install log and some other files are copied to the target machine.  This indicates (overrides) the default location.  By default, the files are copied to the /srv folder unless AUTO_USE_DATA_FOLDER is enabled.  With AUTO_USE_DATA_FOLDER turned on the files are copied to the /data folder instead of /srv.  You can override these defaults by providing a path here.  Note that your path MUST start with a full path (must start with /).
 AUTO_STAMP_LOCATION="${AUTO_STAMP_LOCATION:=}"
 
 # Install a configuration management system, helpful to have here so that on first boot it can already be installed ready to locally or remotely configure the instance.  Default is "none".  Options are: none, ansible, ansible-pip, saltstack, saltstack-repo, saltstack-bootstrap, puppet, puppet-repo
-## Yes, I don't support puppet and chef because they are hot garbage
+# At present I do not support Chef
 AUTO_CONFIG_MANAGEMENT="${AUTO_CONFIG_MANAGEMENT:=none}"
 
 # A list of other\extra packages to install to the target machine during the setup.
@@ -328,6 +337,8 @@ log_values() {
   write_log "AUTO_USERNAME: '${AUTO_USERNAME}'"
   write_log_password "AUTO_USER_PWD: '${AUTO_USER_PWD}'"
   write_log "AUTO_USER_SSH_KEY: '${AUTO_USER_SSH_KEY}'"
+  write_log "AUTO_CREATE_SERVICE_ACCT: '${AUTO_CREATE_SERVICE_ACCT}'"
+  write_log "AUTO_SERVICE_ACCT_SSH_KEY: '${AUTO_SERVICE_ACCT_SSH_KEY}'"
   write_log_blank
 
   write_log "AUTO_USE_DATA_FOLDER: '${AUTO_USE_DATA_FOLDER}'"
@@ -453,6 +464,11 @@ confirm_with_user() {
       print_status "User creation was disabled."
     fi
     blank_line
+
+    if [[ "${AUTO_CREATE_SERVICE_ACCT}" == "1" ]]; then
+      print_status "The 'Service Account' will be created and configured."
+      blank_line
+    fi
 
     pause_output
 
@@ -881,6 +897,7 @@ normalize_parameters() {
   normalize_variable_boolean "AUTO_ENCRYPT_DISKS"
   normalize_variable_boolean "AUTO_ROOT_DISABLED"
   normalize_variable_boolean "AUTO_CREATE_USER"
+  normalize_variable_boolean "AUTO_CREATE_SERVICE_ACCT"
   normalize_variable_boolean "AUTO_CONFIRM_SETTINGS"
   normalize_variable_boolean "AUTO_REBOOT"
 }
@@ -960,8 +977,8 @@ verify_timezone() {
 
 verify_user_configuration() {
   print_info "Verifying User Configuration"
-  # If the root user is disabled, we need to force the normal user to be created
-  if [[ "${AUTO_ROOT_DISABLED}" == "1" ]]; then
+  # If the root user and service account user is disabled, we need to force the normal user to be created
+  if [[ "${AUTO_ROOT_DISABLED}" == "1" && "${AUTO_CREATE_SERVICE_ACCT}" == "0" ]]; then
     AUTO_CREATE_USER=1
   fi
 
@@ -1268,6 +1285,9 @@ create_secondary_partitions() {
 query_disk_partitions() {
   print_info "Querying partitions"
 
+  # Sleeping to resolve some race conditions with the disk partitions being read incorrectly
+  sleep 1s
+
   local disk_part_string
   local disk_parts=()
   disk_part_string=$(lsblk -lnp --output "PATH,TYPE" "${SELECTED_MAIN_DISK}" | grep -F "part" | cut -d' ' -f 1)
@@ -1419,6 +1439,9 @@ setup_lvm() {
 
 format_partitions() {
   print_info "Formatting partitions"
+
+  # Sleeping to resolve some race conditions with the disk partitions being read incorrectly
+  sleep 1s
 
   if [[ "${UEFI}" == "1" ]]; then
     # Format the EFI partition
@@ -2274,11 +2297,12 @@ setup_root() {
     print_info "Setting up root"
 
     # Unlock the root account
-    arch-chroot /mnt passwd -u root
+    passwd --root /mnt -u root
 
     local root_pwd
     root_pwd="${AUTO_ROOT_PWD}"
-    # If they did not pass a password, default it to the install os
+    # If they did not pass a password, default it to the provided user pwd,
+    # otherwise to the install os name (debian, ubuntu)
     if [[ "${root_pwd}" == "" ]]; then
       if [[ "${AUTO_CREATE_USER}" == "1" && "${AUTO_USER_PWD}" != "" ]]; then
         root_pwd="${AUTO_USER_PWD}"
@@ -2290,30 +2314,81 @@ setup_root() {
     # Check if the password is encrypted
     if echo "${root_pwd}" | grep -q '^\$[[:digit:]]\$.*$'; then
       # Password is encrypted
-      arch-chroot /mnt usermod --password "${root_pwd}" root
+      usermod --root /mnt --password "${root_pwd}" root
     else
       # Password is plaintext
       local encrypted
       encrypted=$(echo "${root_pwd}" | openssl passwd -6 -stdin)
-      arch-chroot /mnt usermod --password "${encrypted}" root
+      usermod --root /mnt --password "${encrypted}" root
     fi
 
     # If root is the only user, allow login with root through SSH.  Users can of course (and should) change this after initial boot, this just allows a remote connection to start things off.
     if [[ "${AUTO_CREATE_USER}" == "0" ]]; then
       sed -i '/PermitRootLogin[[:blank:]]/ c\PermitRootLogin yes' /mnt/etc/ssh/sshd_config
+    else
+      sed -i '/PermitRootLogin[[:blank:]]/ c\PermitRootLogin no' /mnt/etc/ssh/sshd_config
     fi
+  fi
+}
+
+setup_data_folder() {
+  print_info "In Setup Data Folder"
+  if [[ "${AUTO_USE_DATA_FOLDER}" == "1" ]]; then
+    groupadd --root /mnt --system data-user
+    arch-chroot /mnt chown -R root:data-user /data
+    arch-chroot /mnt chown -R root:data-user /srv
+    chmod -R g+w /mnt/data
+    chmod -R g+w /mnt/srv
+  fi
+}
+
+setup_service_user() {
+  print_info "In Setup Service User"
+
+  if [[ "${AUTO_CREATE_SERVICE_ACCT}" == "1" ]]; then
+    print_info "Setting up Service User"
+
+    local user_name="svcacct"
+
+    useradd --root /mnt --create-home --shell /bin/bash --no-user-group \
+      -g users --system "${user_name}"
+    chfn --root /mnt --full-name "Service Account"
+
+    # Password will always be initialized to the install os (debian, ubuntu, etc.)
+    local encrypted
+    encrypted=$(echo "${AUTO_INSTALL_OS}" | openssl passwd -6 -stdin)
+    usermod --root /mnt --password "${encrypted}" "${user_name}"
+
+    # _ssh is the new name for the ssh group going forward, but I attempt to add both (ssh, _ssh) just in case
+    groupsToAdd=(audio video plugdev netdev sudo ssh _ssh users data-user vboxsf)
+    for groupToAdd in "${groupsToAdd[@]}"; do
+      group_exists=$(arch-chroot /mnt getent group "${groupToAdd}" | wc -l || true)
+      if [[ "${group_exists}" == "1" ]]; then
+        usermod --root /mnt -a -G "${groupToAdd}" "${user_name}"
+      fi
+    done
+
+    if [[ "${AUTO_SERVICE_ACCT_SSH_KEY}" != "" ]]; then
+      print_info "Setting up Service Account ssh key"
+      # Setup the SSH key
+      mkdir -p "/mnt/home/${user_name}/.ssh"
+      echo "${AUTO_SERVICE_ACCT_SSH_KEY}" | tee -a "/mnt/home/${user_name}/.ssh/authorized_keys"
+      chmod "0644" "/mnt/home/${user_name}/.ssh/authorized_keys"
+      chmod "0700" "/mnt/home/${user_name}/.ssh"
+    fi
+
+    # Setup Service Account for passwordless sudo
+    cat <<EOF >/mnt/etc/sudoers.d/svcacct
+Defaults:svcacct !requiretty
+svcacct ALL=(ALL) NOPASSWD: ALL
+EOF
+
+    chmod "0440" /mnt/etc/sudoers.d/svcacct
   fi
 }
 
 setup_user() {
   print_info "In Setup User"
-  if [[ "${AUTO_USE_DATA_FOLDER}" == "1" ]]; then
-    arch-chroot /mnt groupadd --system data-user
-    arch-chroot /mnt chown -R root:data-user /data
-    arch-chroot /mnt chown -R root:data-user /srv
-    arch-chroot /mnt chmod -R g+w /data
-    arch-chroot /mnt chmod -R g+w /srv
-  fi
 
   if [[ "${AUTO_CREATE_USER}" == "1" ]]; then
     print_info "Setting up user"
@@ -2331,24 +2406,26 @@ setup_user() {
       user_pwd="${AUTO_INSTALL_OS}"
     fi
 
-    arch-chroot /mnt adduser --quiet --disabled-password --gecos "${user_name}" "${user_name}"
+    useradd --root /mnt --create-home --shell /bin/bash "${user_name}"
+    chfn --root /mnt --full-name "${user_name}"
+
     # Check if the password is encrypted
     if echo "${user_pwd}" | grep -q '^\$[[:digit:]]\$.*$'; then
       # Password is encrypted
-      arch-chroot /mnt usermod --password "${user_pwd}" "${user_name}"
+      usermod --root /mnt --password "${user_pwd}" "${user_name}"
     else
       # Password is plaintext
       local encrypted
       encrypted=$(echo "${user_pwd}" | openssl passwd -6 -stdin)
-      arch-chroot /mnt usermod --password "${encrypted}" "${user_name}"
+      usermod --root /mnt --password "${encrypted}" "${user_name}"
     fi
 
-    # NOTE: I added _ssh as a group because it seems that Debian testing is currently not creating the standard ssh group but instead naming it _ssh, need to investigate further.
+    # _ssh is the new name for the ssh group going forward, but I attempt to add both (ssh, _ssh) just in case
     groupsToAdd=(audio video plugdev netdev sudo ssh _ssh users data-user vboxsf)
     for groupToAdd in "${groupsToAdd[@]}"; do
       group_exists=$(arch-chroot /mnt getent group "${groupToAdd}" | wc -l || true)
       if [[ "${group_exists}" == "1" ]]; then
-        arch-chroot /mnt usermod -a -G "${groupToAdd}" "${user_name}"
+        usermod --root /mnt -a -G "${groupToAdd}" "${user_name}"
       fi
     done
 
@@ -2591,6 +2668,8 @@ install_applications() {
 
 setup_users() {
   setup_root
+  setup_data_folder
+  setup_service_user
   setup_user
 }
 
