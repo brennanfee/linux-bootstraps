@@ -64,7 +64,7 @@ DEFAULT_UBUNTU_REPO="http://archive.ubuntu.com/ubuntu"
 # Debootstrap download filenames
 DEBOOTSTRAP_PATH="pool/main/d/debootstrap"
 CURRENT_DEBIAN_DEBOOTSTRAP_FILE="debootstrap_1.0.128+nmu2~bpo11+1.tar.gz"
-CURRENT_UBUNTU_DEBOOTSTRAP_FILE="debootstrap_1.0.128+nmu2ubuntu5.tar.gz"
+CURRENT_UBUNTU_DEBOOTSTRAP_FILE="debootstrap_1.0.128+nmu2ubuntu1.tar.gz"
 
 ### End: Data
 
