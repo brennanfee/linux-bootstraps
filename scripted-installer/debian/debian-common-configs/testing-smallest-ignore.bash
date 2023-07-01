@@ -25,8 +25,7 @@ set_exports() {
 check_root() {
   local user_id
   user_id=$(id -u)
-  if [[ "${user_id}" != "0" ]]
-  then
+  if [[ "${user_id}" != "0" ]]; then
     local RED
     local RESET
     RED="$(tput setaf 1)"
@@ -41,11 +40,9 @@ download_deb_installer() {
 
   local script_url="https://raw.githubusercontent.com/brennanfee/linux-bootstraps/main/scripted-installer/debian/deb-install.bash"
 
-  if [[ ! -f "${script_file}" ]]
-  then
+  if [[ ! -f "${script_file}" ]]; then
     # To support testing of other versions of the install script (local versions, branches, etc.)
-    if [[ "${CONFIG_SCRIPT_SOURCE:=}" != "" ]]
-    then
+    if [[ "${CONFIG_SCRIPT_SOURCE:=}" != "" ]]; then
       wget -O "${script_file}" "${CONFIG_SCRIPT_SOURCE}"
     else
       wget -O "${script_file}" "${script_url}"
@@ -58,49 +55,48 @@ read_input_options() {
   export AUTO_ENCRYPT_DISKS=${AUTO_ENCRYPT_DISKS:=1}
   export AUTO_CONFIRM_SETTINGS=${AUTO_CONFIRM_SETTINGS:=1}
   export AUTO_REBOOT=${AUTO_REBOOT:=0}
-  export AUTO_USE_DATA_FOLDER=${AUTO_USE_DATA_FOLDER:=0}
+  export AUTO_USE_DATA_DIR=${AUTO_USE_DATA_DIR:=0}
 
-  while [[ "${1:-}" != "" ]]
-  do
+  while [[ "${1:-}" != "" ]]; do
     case $1 in
-      -a | --auto | --automatic | --automode | --auto-mode)
-        export AUTO_CONFIRM_SETTINGS=0
-        export AUTO_REBOOT=1
-        ;;
-      -c | --confirm | --confirmation)
-        export AUTO_CONFIRM_SETTINGS=1
-        ;;
-      -q | --quiet | --skip-confirm | --skipconfirm | --skip-confirmation | --skipconfirmation | --no-confirm | --noconfirm | --no-confirmation | --noconfirmation)
-        export AUTO_CONFIRM_SETTINGS=0
-        ;;
-      -d | --debug)
-        export AUTO_IS_DEBUG=1
-        ;;
-      --data | --usedata | --use-data)
-        export AUTO_USE_DATA_FOLDER=1
-        ;;
-      --nodata | --no-data | --nousedata | --no-use-data)
-        export AUTO_USE_DATA_FOLDER=0
-        ;;
-      -r | --reboot)
-        export AUTO_REBOOT=1
-        ;;
-      -n | --no-reboot | --noreboot)
-        export AUTO_REBOOT=0
-        ;;
-      -s | --script)
-        shift
-        CONFIG_SCRIPT_SOURCE=$1
-        ;;
-      -e | --encrypt | --encrypted)
-        export AUTO_ENCRYPT_DISKS=1
-        ;;
-      -u | --unencrypt | --unencrypted | --not-encrypted | --notencrypted)
-        export AUTO_ENCRYPT_DISKS=0
-        ;;
-      *)
-        noop
-        ;;
+    -a | --auto | --automatic | --automode | --auto-mode)
+      export AUTO_CONFIRM_SETTINGS=0
+      export AUTO_REBOOT=1
+      ;;
+    -c | --confirm | --confirmation)
+      export AUTO_CONFIRM_SETTINGS=1
+      ;;
+    -q | --quiet | --skip-confirm | --skipconfirm | --skip-confirmation | --skipconfirmation | --no-confirm | --noconfirm | --no-confirmation | --noconfirmation)
+      export AUTO_CONFIRM_SETTINGS=0
+      ;;
+    -d | --debug)
+      export AUTO_IS_DEBUG=1
+      ;;
+    --data | --usedata | --use-data)
+      export AUTO_USE_DATA_DIR=1
+      ;;
+    --nodata | --no-data | --nousedata | --no-use-data)
+      export AUTO_USE_DATA_DIR=0
+      ;;
+    -r | --reboot)
+      export AUTO_REBOOT=1
+      ;;
+    -n | --no-reboot | --noreboot)
+      export AUTO_REBOOT=0
+      ;;
+    -s | --script)
+      shift
+      CONFIG_SCRIPT_SOURCE=$1
+      ;;
+    -e | --encrypt | --encrypted)
+      export AUTO_ENCRYPT_DISKS=1
+      ;;
+    -u | --unencrypt | --unencrypted | --not-encrypted | --notencrypted)
+      export AUTO_ENCRYPT_DISKS=0
+      ;;
+    *)
+      noop
+      ;;
     esac
 
     shift

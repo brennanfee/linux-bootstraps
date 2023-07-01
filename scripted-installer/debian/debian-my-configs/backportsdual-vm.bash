@@ -25,7 +25,7 @@ set_exports() {
 
   # Forced settings
   export AUTO_ENCRYPT_DISKS=0
-  export AUTO_USE_DATA_FOLDER=1
+  export AUTO_USE_DATA_DIR=1
 }
 ##################  DO NOT MODIFY BELOW THIS SECTION
 
@@ -62,7 +62,7 @@ read_input_options() {
   export AUTO_ENCRYPT_DISKS=${AUTO_ENCRYPT_DISKS:=1}
   export AUTO_CONFIRM_SETTINGS=${AUTO_CONFIRM_SETTINGS:=1}
   export AUTO_REBOOT=${AUTO_REBOOT:=0}
-  export AUTO_USE_DATA_FOLDER=${AUTO_USE_DATA_FOLDER:=0}
+  export AUTO_USE_DATA_DIR=${AUTO_USE_DATA_DIR:=0}
 
   while [[ "${1:-}" != "" ]]; do
     case $1 in
@@ -80,10 +80,10 @@ read_input_options() {
       export AUTO_IS_DEBUG=1
       ;;
     --data | --usedata | --use-data)
-      export AUTO_USE_DATA_FOLDER=1
+      export AUTO_USE_DATA_DIR=1
       ;;
     --nodata | --no-data | --nousedata | --no-use-data)
-      export AUTO_USE_DATA_FOLDER=0
+      export AUTO_USE_DATA_DIR=0
       ;;
     -r | --reboot)
       export AUTO_REBOOT=1

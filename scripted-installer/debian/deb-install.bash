@@ -151,7 +151,7 @@ AUTO_MAIN_DISK="${AUTO_MAIN_DISK:=smallest}"
 #
 # At no time can the second disk refer or resolve to the same disk as the main disk.  Such situations will result in an error and the script exiting.
 #
-# In dual disk automatic partitioning, no change is made to the main disk layout.  For the second disk, this script creates a single LVM volume on the second disk with one of two layouts (based on the AUTO_USE_DATA_FOLDER value).  Without the data option you get a single LVM partition of 80% for /home with 20% space free for later LVM expansion\use.  With the data folder option you get two partitions, 70% for /home, 20% for /data, and 10% empty and free for later LVM expansion\use.
+# In dual disk automatic partitioning, no change is made to the main disk layout.  For the second disk, this script creates a single LVM volume on the second disk with one of two layouts (based on the AUTO_USE_DATA_DIR value).  Without the data option you get a single LVM partition of 80% for /home with 20% space free for later LVM expansion\use.  With the data directory option you get two partitions, 70% for /home, 20% for /data, and 10% empty and free for later LVM expansion\use.
 AUTO_SECOND_DISK="${AUTO_SECOND_DISK:=ignore}"
 
 # Whether the volume(s) created should be encrypted.  This is a boolean value.
@@ -159,7 +159,7 @@ AUTO_ENCRYPT_DISKS="${AUTO_ENCRYPT_DISKS:=1}"
 
 # The password to use for the main encrypted volume.  A special value of "file", the default, can be passed which will generate a disk file in the /boot partition that will auto-decrypt on boot.  This is done so that any automated systems that expect a boot without the need of a password can still function.  You can also pass a full path (it must start with slash /, no relative paths) to a file to use, that file will be copied to the /boot partition to preserve the automatic boot nature required for automation.  Instead of a local file you can allso pass a URL to a file which should be downloaded and used, it must start with a schema, such as http:// or https://.  Lastly, you can still provide an actual passphrase which will be used.  However, this method will break any automations as typing the password will be required during boot.
 #
-# In all configurations, if a second disk is being used a separate file will be generated automatically as the decryption key for the second disk and stored on the root partition (in the /etc/keys folder).  The system will be configured to automatically unlock that partition after the root partition is decrypted.
+# In all configurations, if a second disk is being used a separate file will be generated automatically as the decryption key for the second disk and stored on the root partition (in the /etc/keys directory).  The system will be configured to automatically unlock that partition after the root partition is decrypted.
 #
 # NOTE: This is not intended to be a secure installation without the need for the user to modify things post bootstrap.  This merely "initializes" the encryption as it is much easier to modify the encryption keys\slots later than it is to encrypt a partition which is already in use (especially root).  Therefore, it is fully expected that the user will either replace the file or otherwise manage the encryption keys after initial boot.
 AUTO_DISK_PWD="${AUTO_DISK_PWD:=file}"
@@ -191,10 +191,10 @@ AUTO_CREATE_SERVICE_ACCT="${AUTO_CREATE_SERVICE_ACCT:=0}"
 # A public SSH key to be set up for the 'Service Account'.
 AUTO_SERVICE_ACCT_SSH_KEY="${AUTO_SERVICE_ACCT_SSH_KEY:=}"
 
-# Whether to use a /data folder or partition on the target machine.  This folder is a convention that I follow and use and is therefore disabled by default.  I use it for all non-user specific files and setups (usually of docker files, configurations, etc.).  If being used along with the AUTO_SECOND_DISK option, this value does affect the partition scheme used.  For further details on this read the information under the AUTO_SECOND_DISK option.  This is a boolean value.
-AUTO_USE_DATA_FOLDER="${AUTO_USE_DATA_FOLDER:=0}"
+# Whether to use a /data directory or partition on the target machine.  This directory is a convention that I follow and use and is therefore disabled by default.  I use it for all non-user specific files and setups (usually of docker files, configurations, etc.).  If being used along with the AUTO_SECOND_DISK option, this value does affect the partition scheme used.  For further details on this read the information under the AUTO_SECOND_DISK option.  This is a boolean value.
+AUTO_USE_DATA_DIR="${AUTO_USE_DATA_DIR:=0}"
 
-# After installation, the install log and some other files are copied to the target machine.  This indicates (overrides) the default location.  By default, the files are copied to the /srv folder unless AUTO_USE_DATA_FOLDER is enabled.  With AUTO_USE_DATA_FOLDER turned on the files are copied to the /data folder instead of /srv.  You can override these defaults by providing a path here.  Note that your path MUST start with a full path (must start with /).
+# After installation, the install log and some other files are copied to the target machine.  This indicates (overrides) the default location.  By default, the files are copied to the /srv directory unless AUTO_USE_DATA_DIR is enabled.  With AUTO_USE_DATA_DIR turned on the files are copied to the /data directory instead of /srv.  You can override these defaults by providing a path here.  Note that your path MUST start with a full path (must start with /).
 AUTO_STAMP_LOCATION="${AUTO_STAMP_LOCATION:=}"
 
 # Install a configuration management system, helpful to have here so that on first boot it can already be installed ready to locally or remotely configure the instance.  Default is "none".  Options are: none, ansible, ansible-pip, saltstack, saltstack-repo, saltstack-bootstrap, puppet, puppet-repo
@@ -341,7 +341,7 @@ log_values() {
   write_log "AUTO_SERVICE_ACCT_SSH_KEY: '${AUTO_SERVICE_ACCT_SSH_KEY}'"
   write_log_blank
 
-  write_log "AUTO_USE_DATA_FOLDER: '${AUTO_USE_DATA_FOLDER}'"
+  write_log "AUTO_USE_DATA_DIR: '${AUTO_USE_DATA_DIR}'"
   write_log "AUTO_STAMP_LOCATION: '${AUTO_STAMP_LOCATION}'"
   write_log "AUTO_CONFIG_MANAGEMENT: '${AUTO_CONFIG_MANAGEMENT}'"
   write_log "AUTO_EXTRA_PACKAGES: '${AUTO_EXTRA_PACKAGES}'"
@@ -478,10 +478,10 @@ confirm_with_user() {
     print_summary_header "Install Summary (Part 2)" "Below are more of your selections and any detected system information.  If anything is wrong cancel out now with Ctrl-C.  Otherwise press any key to continue installation."
     print_line
 
-    if [[ "${AUTO_USE_DATA_FOLDER}" == "1" ]]; then
-      print_status "The data folder and related configurations will be deployed."
+    if [[ "${AUTO_USE_DATA_DIR}" == "1" ]]; then
+      print_status "The data directory and related configurations will be deployed."
     else
-      print_status "The data folder and related configurations are being SKIPPED."
+      print_status "The data directory and related configurations are being SKIPPED."
     fi
 
     print_status "The stamp location (copy location for install log files) will be '${SELECTED_STAMP_LOCATION}'."
@@ -893,7 +893,7 @@ normalize_parameters() {
   normalize_variable_string "AUTO_CONFIG_MANAGEMENT"
 
   normalize_variable_boolean "AUTO_SKIP_PARTITIONING"
-  normalize_variable_boolean "AUTO_USE_DATA_FOLDER"
+  normalize_variable_boolean "AUTO_USE_DATA_DIR"
   normalize_variable_boolean "AUTO_ENCRYPT_DISKS"
   normalize_variable_boolean "AUTO_ROOT_DISABLED"
   normalize_variable_boolean "AUTO_CREATE_USER"
@@ -1176,14 +1176,14 @@ parse_repo_url() {
   fi
 }
 
-parse_stamp_folder() {
+parse_stamp_path() {
   print_info "Determining stamp path"
 
   SELECTED_STAMP_LOCATION="${AUTO_STAMP_LOCATION}"
   if [[ "${SELECTED_STAMP_LOCATION}" == "" ]]; then
     SELECTED_STAMP_LOCATION="/srv"
 
-    if [[ "${AUTO_USE_DATA_FOLDER}" == "1" ]]; then
+    if [[ "${AUTO_USE_DATA_DIR}" == "1" ]]; then
       SELECTED_STAMP_LOCATION="/data"
     fi
   fi
@@ -1428,7 +1428,7 @@ setup_lvm() {
     pvcreate "${pv_volume}"
     vgcreate "vg_data" "${pv_volume}"
 
-    if [[ "${AUTO_USE_DATA_FOLDER}" == "1" ]]; then
+    if [[ "${AUTO_USE_DATA_DIR}" == "1" ]]; then
       lvcreate -l 50%VG "vg_data" -n lv_home
       lvcreate -l 30%VG "vg_data" -n lv_data
     else
@@ -1463,7 +1463,7 @@ format_partitions() {
 
   if [[ "${SELECTED_SECOND_DISK}" != "ignore" ]]; then
     mkfs.xfs "/dev/mapper/vg_data-lv_home"
-    if [[ "${AUTO_USE_DATA_FOLDER}" == "1" ]]; then
+    if [[ "${AUTO_USE_DATA_DIR}" == "1" ]]; then
       mkfs.xfs "/dev/mapper/vg_data-lv_data"
     fi
   fi
@@ -1495,12 +1495,12 @@ mount_partitions() {
     mkdir /mnt/home
     mount -t xfs "/dev/mapper/vg_data-lv_home" /mnt/home
 
-    if [[ "${AUTO_USE_DATA_FOLDER}" == "1" ]]; then
+    if [[ "${AUTO_USE_DATA_DIR}" == "1" ]]; then
       mkdir /mnt/data
       mount -t xfs "/dev/mapper/vg_data-lv_data" /mnt/data
     fi
   else
-    if [[ "${AUTO_USE_DATA_FOLDER}" == "1" ]]; then
+    if [[ "${AUTO_USE_DATA_DIR}" == "1" ]]; then
       # Just make a data directory on the root
       mkdir /mnt/data
     fi
@@ -2331,9 +2331,9 @@ setup_root() {
   fi
 }
 
-setup_data_folder() {
-  print_info "In Setup Data Folder"
-  if [[ "${AUTO_USE_DATA_FOLDER}" == "1" ]]; then
+setup_data_directory() {
+  print_info "In Setup Data Directory"
+  if [[ "${AUTO_USE_DATA_DIR}" == "1" ]]; then
     groupadd --root /mnt --system data-user
     arch-chroot /mnt chown -R root:data-user /data
     arch-chroot /mnt chown -R root:data-user /srv
@@ -2630,7 +2630,7 @@ verify_parameters() {
   parse_main_disk
   parse_second_disk
   parse_repo_url
-  parse_stamp_folder
+  parse_stamp_path
 }
 
 setup_disks() {
@@ -2668,7 +2668,7 @@ install_applications() {
 
 setup_users() {
   setup_root
-  setup_data_folder
+  setup_data_directory
   setup_service_user
   setup_user
 }

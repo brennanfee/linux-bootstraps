@@ -105,7 +105,7 @@ DEFAULT_USERNAME=""
 DEFAULT_USER_PWD=""
 DEFAULT_USER_SSH_KEY=""
 
-DEFAULT_USE_DATA_FOLDER="0"
+DEFAULT_USE_DATA_DIR="0"
 DEFAULT_STAMP_LOCATION=""
 DEFAULT_CONFIG_MANAGEMENT="none"
 DEFAULT_EXTRA_PACKAGES=""
@@ -143,7 +143,7 @@ AUTO_USERNAME="${DEFAULT_USERNAME}"
 AUTO_USER_PWD="${DEFAULT_USER_PWD}"
 AUTO_USER_SSH_KEY="${DEFAULT_USER_SSH_KEY}"
 
-AUTO_USE_DATA_FOLDER="${DEFAULT_USE_DATA_FOLDER}"
+AUTO_USE_DATA_DIR="${DEFAULT_USE_DATA_DIR}"
 AUTO_STAMP_LOCATION="${DEFAULT_STAMP_LOCATION}"
 AUTO_CONFIG_MANAGEMENT="${DEFAULT_CONFIG_MANAGEMENT}"
 AUTO_EXTRA_PACKAGES="${DEFAULT_EXTRA_PACKAGES}"
@@ -1128,11 +1128,11 @@ ask_for_user_ssh_key() {
   write_log_password "User SSH Key: ${AUTO_USER_SSH_KEY}"
 }
 
-ask_should_use_data_folder() {
-  write_log "In ask should use data folder."
+ask_should_use_data_directory() {
+  write_log "In ask should use data directory."
 
-  print_section "Use Data Folder"
-  print_section_info "The script provides an option to use a 'data' folder.  This selection may influence the partition scheme, mostly with multi-disk scenarios.  The script will create a group with permissions to the 'data' folder and grant the installed user (if any) permissions through that group."
+  print_section "Use Data Directory"
+  print_section_info "The script provides an option to use a 'data' directory.  This selection may influence the partition scheme, mostly with multi-disk scenarios.  The script will create a group with permissions to the 'data' directory and grant the installed user (if any) permissions through that group."
 
   local yes_no=('No' 'Yes')
   local option
@@ -1148,24 +1148,24 @@ ask_should_use_data_folder() {
   option=$(echo "${option}" | tr "[:upper:]" "[:lower:]")
   case "${option}" in
   yes)
-    AUTO_USE_DATA_FOLDER=1
+    AUTO_USE_DATA_DIR=1
     ;;
   no)
-    AUTO_USE_DATA_FOLDER=0
+    AUTO_USE_DATA_DIR=0
     ;;
   *)
-    error_msg "Invalid selection for using data folder."
+    error_msg "Invalid selection for using data directory."
     ;;
   esac
 
-  write_log "Use data folder: ${AUTO_USE_DATA_FOLDER}"
+  write_log "Use data directory: ${AUTO_USE_DATA_DIR}"
 }
 
 ask_override_stamp_location() {
   write_log "In ask override stamp location."
 
   print_section "Stamp Location"
-  print_section_info "The script automatically 'stamps' some files into an auto-selected folder on the machine.  The file contains the date and time of the installation, the log files for the installation, and some other miscellaneous bits.  By default the /srv folder (or /data folder, if that option was selected) will be used.  You can enter a different location here.  If left blank, the default will be used."
+  print_section_info "The script automatically 'stamps' some files into an auto-selected directory on the machine.  The file contains the date and time of the installation, the log files for the installation, and some other miscellaneous bits.  By default the /srv directory (or /data directory, if that option was selected) will be used.  You can enter a different location here.  If left blank, the default will be used."
   local input
   read -rp "Override Stamp Location: " input
   if [[ ${input} != "" ]]; then
@@ -1271,7 +1271,7 @@ ask_for_after_script() {
   write_log "In ask for after script."
 
   print_section "Execute A 'After' Script"
-  print_section_info "You can, optionally, provide a script that will run after the main installation but before the machine is rebooted (if reboot was requested).  This script can preform any extra configurations for the target installation.  The /mnt folder will still be available and chroot into that location is supported (you can even use the provided arch-chroot command to make tasks simpler).  The 'after' script SHOULD NOT unmount the /mnt folder.    The script does not have to be a bash script, but MUST have a shebang that properly indicates how the script should be run.  Please note that you will need to investigate that your preferred script language is supported in the pre-installation environment.  The value provided should be a URL that will be accessible by the installation machine.  The script will be downloaded from that location using wget, so any URL supported by wget will work.  Leaving this blank will skip execution of any 'after' script."
+  print_section_info "You can, optionally, provide a script that will run after the main installation but before the machine is rebooted (if reboot was requested).  This script can preform any extra configurations for the target installation.  The /mnt directory will still be available and chroot into that location is supported (you can even use the provided arch-chroot command to make tasks simpler).  The 'after' script SHOULD NOT unmount the /mnt directory.  The script does not have to be a bash script, but MUST have a shebang that properly indicates how the script should be run.  Please note that you will need to investigate that your preferred script language is supported in the pre-installation environment.  The value provided should be a URL that will be accessible by the installation machine.  The script will be downloaded from that location using wget, so any URL supported by wget will work.  Leaving this blank will skip execution of any 'after' script."
 
   local input
   read -rp "'After' script to execute: " input
@@ -1462,10 +1462,10 @@ print_summary() {
   print_summary_header "Install Summary (Part 2)" "Below are more of your selections.  Review them carefully.  If anything is wrong cancel out now with Ctrl-C.  Otherwise press any key to continue."
   print_line
 
-  if [[ ${AUTO_USE_DATA_FOLDER} == "1" ]]; then
-    print_status "The data folder and related configurations will be deployed."
+  if [[ ${AUTO_USE_DATA_DIR} == "1" ]]; then
+    print_status "The data directory and related configurations will be deployed."
   else
-    print_status "The data folder and related configurations are being SKIPPED."
+    print_status "The data directory and related configurations are being SKIPPED."
   fi
 
   if [[ ${AUTO_STAMP_LOCATION} == "" ]]; then
@@ -1634,8 +1634,8 @@ output_exports() {
     echo "  export AUTO_USER_SSH_KEY=${AUTO_USER_SSH_KEY}" >>"${SELECTED_EXPORT_FILE}"
   fi
 
-  if [[ ${DEFAULT_USE_DATA_FOLDER} != "${AUTO_USE_DATA_FOLDER}" ]]; then
-    echo "  export AUTO_USE_DATA_FOLDER=${AUTO_USE_DATA_FOLDER}" >>"${SELECTED_EXPORT_FILE}"
+  if [[ ${DEFAULT_USE_DATA_DIR} != "${AUTO_USE_DATA_DIR}" ]]; then
+    echo "  export AUTO_USE_DATA_DIR=${AUTO_USE_DATA_DIR}" >>"${SELECTED_EXPORT_FILE}"
   fi
   if [[ ${DEFAULT_STAMP_LOCATION} != "${AUTO_STAMP_LOCATION}" ]]; then
     echo "  export AUTO_STAMP_LOCATION=${AUTO_STAMP_LOCATION}" >>"${SELECTED_EXPORT_FILE}"
@@ -1735,7 +1735,7 @@ read_input_options() {
   export AUTO_ENCRYPT_DISKS=${AUTO_ENCRYPT_DISKS:=1}
   export AUTO_CONFIRM_SETTINGS=${AUTO_CONFIRM_SETTINGS:=1}
   export AUTO_REBOOT=${AUTO_REBOOT:=0}
-  export AUTO_USE_DATA_FOLDER=${AUTO_USE_DATA_FOLDER:=0}
+  export AUTO_USE_DATA_DIR=${AUTO_USE_DATA_DIR:=0}
 
   while [[ "${1:-}" != "" ]]
   do
@@ -1754,10 +1754,10 @@ read_input_options() {
         export AUTO_IS_DEBUG=1
         ;;
       --data | --usedata | --use-data)
-        export AUTO_USE_DATA_FOLDER=1
+        export AUTO_USE_DATA_DIR=1
         ;;
       --nodata | --no-data | --nousedata | --no-use-data)
-        export AUTO_USE_DATA_FOLDER=0
+        export AUTO_USE_DATA_DIR=0
         ;;
       -r | --reboot)
         export AUTO_REBOOT=1
@@ -1887,8 +1887,8 @@ run_exports() {
     export AUTO_USER_SSH_KEY=${AUTO_USER_SSH_KEY}
   fi
 
-  if [[ ${DEFAULT_USE_DATA_FOLDER} != "${AUTO_USE_DATA_FOLDER}" ]]; then
-    export AUTO_USE_DATA_FOLDER=${AUTO_USE_DATA_FOLDER}
+  if [[ ${DEFAULT_USE_DATA_DIR} != "${AUTO_USE_DATA_DIR}" ]]; then
+    export AUTO_USE_DATA_DIR=${AUTO_USE_DATA_DIR}
   fi
   if [[ ${DEFAULT_STAMP_LOCATION} != "${AUTO_STAMP_LOCATION}" ]]; then
     export AUTO_STAMP_LOCATION=${AUTO_STAMP_LOCATION}
@@ -1994,7 +1994,7 @@ prompts_for_options() {
   ask_for_user_password
   ask_for_user_ssh_key
 
-  ask_should_use_data_folder
+  ask_should_use_data_directory
   ask_override_stamp_location
   ask_install_configuration_management
   ask_install_extra_packages
