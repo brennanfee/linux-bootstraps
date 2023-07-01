@@ -62,6 +62,7 @@ read_input_options() {
   export AUTO_CONFIRM_SETTINGS=${AUTO_CONFIRM_SETTINGS:=1}
   export AUTO_REBOOT=${AUTO_REBOOT:=0}
   export AUTO_USE_DATA_DIR=${AUTO_USE_DATA_DIR:=0}
+  export AUTO_CREATE_SERVICE_ACCT=${AUTO_CREATE_SERVICE_ACCT:=0}
 
   while [[ "${1:-}" != "" ]]; do
     case $1 in
@@ -83,6 +84,12 @@ read_input_options() {
       ;;
     --nodata | --no-data | --nousedata | --no-use-data)
       export AUTO_USE_DATA_DIR=0
+      ;;
+    --service-acct | --create-service-acct | --svc-acct)
+      export AUTO_CREATE_SERVICE_ACCT=1
+      ;;
+    --no-service-acct | --no-create-service-acct | --no-svc-acct | --nosvc-acct)
+      export AUTO_CREATE_SERVICE_ACCT=0
       ;;
     -r | --reboot)
       export AUTO_REBOOT=1
