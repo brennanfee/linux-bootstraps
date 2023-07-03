@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 
 # Bash strict mode
-([[ -n ${ZSH_EVAL_CONTEXT:-} && ${ZSH_EVAL_CONTEXT:-} =~ :file$ ]] ||
- [[ -n ${BASH_VERSION:-} ]] && (return 0 2>/dev/null)) && SOURCED=true || SOURCED=false
-if ! ${SOURCED}
-then
-  set -o errexit # same as set -e
-  set -o nounset # same as set -u
+([[ -n ${ZSH_EVAL_CONTEXT:-} && ${ZSH_EVAL_CONTEXT:-} =~ :file$ ]] \
+  || [[ -n ${BASH_VERSION:-} ]] && (return 0 2> /dev/null)) && SOURCED=true || SOURCED=false
+if ! ${SOURCED}; then
+  set -o errexit  # same as set -e
+  set -o nounset  # same as set -u
   set -o errtrace # same as set -E
   set -o pipefail
   set -o posix
@@ -31,8 +30,7 @@ AUTO_PASSWORD=$(sed -n 's|^.*AUTO_PASSWORD=\([^ ]\+\).*$|\1|p' /proc/cmdline)
 
 AUTO_MAIN_DISK=$(sed -n 's|^.*AUTO_MAIN_DISK=\([^ ]\+\).*$|\1|p' /proc/cmdline)
 
-if [[ -z "${AUTO_HOSTNAME}" ]]
-then
+if [[ -z "${AUTO_HOSTNAME}" ]]; then
   AUTO_HOSTNAME="ubuntu-$((1 + RANDOM % 10000))"
 fi
 
@@ -52,15 +50,13 @@ fi
 # pattern ('$[[:digit:]]$') that is at the front of all crypted passwords.
 
 # If it is base64 encoded, decode it
-if echo "${AUTO_PASSWORD}" | grep -q '^.*=$'
-then
+if echo "${AUTO_PASSWORD}" | grep -q '^.*=$'; then
   AUTO_PASSWORD=$(echo "${AUTO_PASSWORD}" | base64 --decode)
   echo "PASSWORD(base64)=${AUTO_PASSWORD}" >> /autoinstall-inputs.txt
 fi
 
 # If it is not encrypted, encrypt it
-if ! echo "${AUTO_PASSWORD}" | grep -q '^\$[[:digit:]]\$.*$'
-then
+if ! echo "${AUTO_PASSWORD}" | grep -q '^\$[[:digit:]]\$.*$'; then
   AUTO_PASSWORD=$(echo "${AUTO_PASSWORD}" | openssl passwd -6 -stdin)
   echo "PASSWORD(encrypted)=${AUTO_PASSWORD}" >> /autoinstall-inputs.txt
 fi
@@ -71,29 +67,23 @@ fi
 
 # Use the values
 
-if [[ -n "${AUTO_HOSTNAME}" ]]
-then
+if [[ -n "${AUTO_HOSTNAME}" ]]; then
   sed -i -r "/hostname:/ s|:.*$|: ${AUTO_HOSTNAME}|" /autoinstall.yaml
 fi
 
-if [[ -n "${AUTO_USERNAME}" ]]
-then
+if [[ -n "${AUTO_USERNAME}" ]]; then
   sed -i -r "/username:/ s|:.*$|: ${AUTO_USERNAME}|" /autoinstall.yaml
 fi
 
-if [[ -n "${AUTO_PASSWORD}" ]]
-then
+if [[ -n "${AUTO_PASSWORD}" ]]; then
   sed -i -r "/password:/ s|:.*$|: ${AUTO_PASSWORD}|" /autoinstall.yaml
 fi
 
-if [[ -n "${AUTO_MAIN_DISK}" ]]
-then
-  if [[ "${AUTO_MAIN_DISK}" = "smallest" ]]
-  then
+if [[ -n "${AUTO_MAIN_DISK}" ]]; then
+  if [[ "${AUTO_MAIN_DISK}" = "smallest" ]]; then
     # Replace the "size" designator
     sed -i -r "s|size: smallest$|size: ${AUTO_MAIN_DISK}|" /autoinstall.yaml
-  elif [[ "${AUTO_MAIN_DISK}" = "largest" ]]
-  then
+  elif [[ "${AUTO_MAIN_DISK}" = "largest" ]]; then
     # Replace the "size" designator
     sed -i -r "s|size: smallest$|size: ${AUTO_MAIN_DISK}|" /autoinstall.yaml
   else

@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 
 # Bash strict mode
-([[ -n ${ZSH_EVAL_CONTEXT:-} && ${ZSH_EVAL_CONTEXT:-} =~ :file$ ]] ||
- [[ -n ${BASH_VERSION:-} ]] && (return 0 2>/dev/null)) && SOURCED=true || SOURCED=false
-if ! ${SOURCED}
-then
-  set -o errexit # same as set -e
-  set -o nounset # same as set -u
+([[ -n ${ZSH_EVAL_CONTEXT:-} && ${ZSH_EVAL_CONTEXT:-} =~ :file$ ]] \
+  || [[ -n ${BASH_VERSION:-} ]] && (return 0 2> /dev/null)) && SOURCED=true || SOURCED=false
+if ! ${SOURCED}; then
+  set -o errexit  # same as set -e
+  set -o nounset  # same as set -u
   set -o errtrace # same as set -E
   set -o pipefail
   set -o posix
@@ -31,8 +30,7 @@ main() {
 
   AUTO_MAIN_DISK=$(sed -n 's|^.*AUTO_MAIN_DISK=\([^ ]\+\).*$|\1|p' /proc/cmdline)
 
-  if [[ -z "${AUTO_HOSTNAME}" ]]
-  then
+  if [[ -z "${AUTO_HOSTNAME}" ]]; then
     AUTO_HOSTNAME="debian-$((1 + RANDOM % 10000))"
   fi
 
@@ -54,8 +52,7 @@ main() {
   # pattern ('$[[:digit:]]$') that is at the front of all crypted passwords.
 
   # If it is base64 encoded, decode it
-  if echo "${AUTO_PASSWORD}" | grep -q '^.*=$'
-  then
+  if echo "${AUTO_PASSWORD}" | grep -q '^.*=$'; then
     AUTO_PASSWORD=$(echo "${AUTO_PASSWORD}" | base64 --decode)
     echo "PASSWORD(base64)=${AUTO_PASSWORD}" >> /autoinstall-inputs.txt
   fi
@@ -66,8 +63,7 @@ d-i debconf/priority select critical
 
 END_OF_DEBCONF
 
-  if [[ -n "${AUTO_EDITION}" ]]
-  then
+  if [[ -n "${AUTO_EDITION}" ]]; then
     {
       echo "d-i mirror/suite select ${AUTO_EDITION}"
       echo "d-i mirror/codename select ${AUTO_EDITION}"
@@ -79,28 +75,23 @@ END_OF_DEBCONF
     } >> "${TMPCONF}"
   fi
 
-  if [[ -n "${AUTO_HOSTNAME}" ]]
-  then
+  if [[ -n "${AUTO_HOSTNAME}" ]]; then
     echo "d-i netcfg/get_hostname string ${AUTO_HOSTNAME}" >> "${TMPCONF}"
     echo "d-i netcfg/hostname string ${AUTO_HOSTNAME}" >> "${TMPCONF}"
   fi
 
-  if [[ -n "${AUTO_DOMAIN}" ]]
-  then
+  if [[ -n "${AUTO_DOMAIN}" ]]; then
     echo "d-i netcfg/get_domain string ${AUTO_DOMAIN}" >> "${TMPCONF}"
   fi
 
-  if [[ -n "${AUTO_USERNAME}" ]]
-  then
+  if [[ -n "${AUTO_USERNAME}" ]]; then
     echo "d-i passwd/user-fullname string ${AUTO_USERNAME}" >> "${TMPCONF}"
     echo "d-i passwd/username string ${AUTO_USERNAME}" >> "${TMPCONF}"
   fi
 
-  if [[ -n "${AUTO_PASSWORD}" ]]
-  then
+  if [[ -n "${AUTO_PASSWORD}" ]]; then
     # Detect an encrypted password
-    if echo "${AUTO_PASSWORD}" | grep -q '^\$[[:digit:]]\$.*$'
-    then
+    if echo "${AUTO_PASSWORD}" | grep -q '^\$[[:digit:]]\$.*$'; then
       {
         echo "d-i passwd/root-password password"
         echo "d-i passwd/root-password-again password"
@@ -123,14 +114,11 @@ END_OF_DEBCONF
     fi
   fi
 
-  if [[ -n "${AUTO_MAIN_DISK}" ]]
-  then
-    if [[ "${AUTO_MAIN_DISK}" = "smallest" ]]
-    then
+  if [[ -n "${AUTO_MAIN_DISK}" ]]; then
+    if [[ "${AUTO_MAIN_DISK}" = "smallest" ]]; then
       # Query the smallest disk
       selected_disk="/dev/$(lsblk --nodeps --noheading --list --include 3,8,22,65,202,253,259 --sort SIZE -o NAME | head -n 1)"
-    elif [[ "${AUTO_MAIN_DISK}" = "largest" ]]
-    then
+    elif [[ "${AUTO_MAIN_DISK}" = "largest" ]]; then
       # Query the largest disk
       selected_disk="/dev/$(lsblk --nodeps --noheading --list --include 3,8,22,65,202,253,259 --sort SIZE -o NAME | tail -1)"
     else

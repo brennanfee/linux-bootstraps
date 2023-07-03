@@ -60,50 +60,50 @@ read_input_options() {
 
   while [[ "${1:-}" != "" ]]; do
     case $1 in
-    -a | --auto | --automatic | --automode | --auto-mode)
-      export AUTO_CONFIRM_SETTINGS=0
-      export AUTO_REBOOT=1
-      ;;
-    -c | --confirm | --confirmation)
-      export AUTO_CONFIRM_SETTINGS=1
-      ;;
-    -q | --quiet | --skip-confirm | --skipconfirm | --skip-confirmation | --skipconfirmation | --no-confirm | --noconfirm | --no-confirmation | --noconfirmation)
-      export AUTO_CONFIRM_SETTINGS=0
-      ;;
-    -d | --debug)
-      export AUTO_IS_DEBUG=1
-      ;;
-    --data | --usedata | --use-data)
-      export AUTO_USE_DATA_DIR=1
-      ;;
-    --nodata | --no-data | --nousedata | --no-use-data)
-      export AUTO_USE_DATA_DIR=0
-      ;;
-    --service-acct | --create-service-acct | --svc-acct)
-      export AUTO_CREATE_SERVICE_ACCT=1
-      ;;
-    --no-service-acct | --no-create-service-acct | --no-svc-acct | --nosvc-acct)
-      export AUTO_CREATE_SERVICE_ACCT=0
-      ;;
-    -r | --reboot)
-      export AUTO_REBOOT=1
-      ;;
-    -n | --no-reboot | --noreboot)
-      export AUTO_REBOOT=0
-      ;;
-    -s | --script)
-      shift
-      CONFIG_SCRIPT_SOURCE=$1
-      ;;
-    -e | --encrypt | --encrypted)
-      export AUTO_ENCRYPT_DISKS=1
-      ;;
-    -u | --unencrypt | --unencrypted | --not-encrypted | --notencrypted)
-      export AUTO_ENCRYPT_DISKS=0
-      ;;
-    *)
-      noop
-      ;;
+      -a | --auto | --automatic | --automode | --auto-mode)
+        export AUTO_CONFIRM_SETTINGS=0
+        export AUTO_REBOOT=1
+        ;;
+      -c | --confirm | --confirmation)
+        export AUTO_CONFIRM_SETTINGS=1
+        ;;
+      -q | --quiet | --skip-confirm | --skipconfirm | --skip-confirmation | --skipconfirmation | --no-confirm | --noconfirm | --no-confirmation | --noconfirmation)
+        export AUTO_CONFIRM_SETTINGS=0
+        ;;
+      -d | --debug)
+        export AUTO_IS_DEBUG=1
+        ;;
+      --data | --usedata | --use-data)
+        export AUTO_USE_DATA_DIR=1
+        ;;
+      --nodata | --no-data | --nousedata | --no-use-data)
+        export AUTO_USE_DATA_DIR=0
+        ;;
+      --service-acct | --create-service-acct | --svc-acct)
+        export AUTO_CREATE_SERVICE_ACCT=1
+        ;;
+      --no-service-acct | --no-create-service-acct | --no-svc-acct | --nosvc-acct)
+        export AUTO_CREATE_SERVICE_ACCT=0
+        ;;
+      -r | --reboot)
+        export AUTO_REBOOT=1
+        ;;
+      -n | --no-reboot | --noreboot)
+        export AUTO_REBOOT=0
+        ;;
+      -s | --script)
+        shift
+        CONFIG_SCRIPT_SOURCE=$1
+        ;;
+      -e | --encrypt | --encrypted)
+        export AUTO_ENCRYPT_DISKS=1
+        ;;
+      -u | --unencrypt | --unencrypted | --not-encrypted | --notencrypted)
+        export AUTO_ENCRYPT_DISKS=0
+        ;;
+      *)
+        noop
+        ;;
     esac
 
     shift

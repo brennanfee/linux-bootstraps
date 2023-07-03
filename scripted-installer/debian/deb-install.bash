@@ -20,8 +20,8 @@
 # the Ubuntu ISO.
 #
 # Bash strict mode
-([[ -n ${ZSH_EVAL_CONTEXT:-} && ${ZSH_EVAL_CONTEXT:-} =~ :file$ ]] ||
-  [[ -n ${BASH_VERSION:-} ]] && (return 0 2>/dev/null)) && SOURCED=true || SOURCED=false
+([[ -n ${ZSH_EVAL_CONTEXT:-} && ${ZSH_EVAL_CONTEXT:-} =~ :file$ ]] \
+  || [[ -n ${BASH_VERSION:-} ]] && (return 0 2> /dev/null)) && SOURCED=true || SOURCED=false
 if ! ${SOURCED}; then
   set -o errexit  # same as set -e
   set -o nounset  # same as set -u
@@ -83,8 +83,8 @@ OUTPUT_LOG="${WORKING_DIR}/install-output.log"
 [[ -f ${LOG} ]] && rm -f "${LOG}"
 [[ -f ${OUTPUT_LOG} ]] && rm -f "${OUTPUT_LOG}"
 INSTALL_DATE=$(date -Is)
-echo "Start log: ${INSTALL_DATE}" >>"${LOG}"
-echo "------------" >>"${LOG}"
+echo "Start log: ${INSTALL_DATE}" >> "${LOG}"
+echo "------------" >> "${LOG}"
 echo "Start log: ${INSTALL_DATE}" | tee -a "${OUTPUT_LOG}"
 echo "------------" | tee -a "${OUTPUT_LOG}"
 
@@ -243,7 +243,7 @@ SELECTED_CHARMAP="UTF-8"
 ### START: Log Functions
 
 write_log() {
-  echo "LOG: ${1}" >>"${LOG}"
+  echo "LOG: ${1}" >> "${LOG}"
   if [[ "${IS_DEBUG}" == "1" ]]; then
     echo "LOG: ${1}" | tee -a "${OUTPUT_LOG}"
   fi
@@ -313,21 +313,21 @@ log_values() {
   write_log "AUTO_SECOND_DISK: '${AUTO_SECOND_DISK}'"
   write_log "AUTO_ENCRYPT_DISKS: '${AUTO_ENCRYPT_DISKS}'"
   case "${AUTO_DISK_PWD}" in
-  file)
-    write_log "AUTO_DISK_PWD: file"
-    ;;
-  tpm) # Future
-    write_log "AUTO_DISK_PWD: tpm"
-    ;;
-  /*)
-    write_log "AUTO_DISK_PWD: Provided local file '${AUTO_DISK_PWD}'"
-    ;;
-  http://* | https://* | ftp://* | ftps://* | sftp://* | file://*)
-    write_log "AUTO_DISK_PWD: Provided remote file '${AUTO_DISK_PWD}'"
-    ;;
-  *)
-    write_log_password "AUTO_DISK_PWD (Password): '${AUTO_DISK_PWD}'"
-    ;;
+    file)
+      write_log "AUTO_DISK_PWD: file"
+      ;;
+    tpm) # Future
+      write_log "AUTO_DISK_PWD: tpm"
+      ;;
+    /*)
+      write_log "AUTO_DISK_PWD: Provided local file '${AUTO_DISK_PWD}'"
+      ;;
+    http://* | https://* | ftp://* | ftps://* | sftp://* | file://*)
+      write_log "AUTO_DISK_PWD: Provided remote file '${AUTO_DISK_PWD}'"
+      ;;
+    *)
+      write_log_password "AUTO_DISK_PWD (Password): '${AUTO_DISK_PWD}'"
+      ;;
   esac
   write_log_blank
 
@@ -418,21 +418,21 @@ confirm_with_user() {
 
       local encryption_method
       case "${AUTO_DISK_PWD}" in
-      file)
-        encryption_method="file"
-        ;;
-      tpm) # Future
-        encryption_method="tpm"
-        ;;
-      /*)
-        encryption_method="provided local file"
-        ;;
-      http://* | https://* | ftp://* | ftps://* | sftp://* | file://*)
-        encryption_method="provided remote file"
-        ;;
-      *)
-        encryption_method="password"
-        ;;
+        file)
+          encryption_method="file"
+          ;;
+        tpm) # Future
+          encryption_method="tpm"
+          ;;
+        /*)
+          encryption_method="provided local file"
+          ;;
+        http://* | https://* | ftp://* | ftps://* | sftp://* | file://*)
+          encryption_method="provided remote file"
+          ;;
+        *)
+          encryption_method="password"
+          ;;
       esac
 
       if [[ "${AUTO_ENCRYPT_DISKS}" == "1" ]]; then
@@ -777,7 +777,7 @@ check_network_connection() {
 
     if [[ "$(hostname -I)" != "" ]]; then
       # Check localhost first (if network stack is up at all)
-      if ping -q -w 3 -c 2 localhost &>/dev/null; then
+      if ping -q -w 3 -c 2 localhost &> /dev/null; then
         # Test the internet
         if wget -q --spider https://www.google.com; then
           print_info "Connection found."
@@ -822,15 +822,15 @@ get_debootstrap() {
 
   local debootstrap_file
   case "${AUTO_INSTALL_OS}" in
-  debian)
-    debootstrap_file="${CURRENT_DEBIAN_DEBOOTSTRAP_FILE}"
-    ;;
-  ubuntu)
-    debootstrap_file="${CURRENT_UBUNTU_DEBOOTSTRAP_FILE}"
-    ;;
-  *)
-    error_msg "ERROR! OS to install not supported: '${AUTO_INSTALL_OS}'"
-    ;;
+    debian)
+      debootstrap_file="${CURRENT_DEBIAN_DEBOOTSTRAP_FILE}"
+      ;;
+    ubuntu)
+      debootstrap_file="${CURRENT_UBUNTU_DEBOOTSTRAP_FILE}"
+      ;;
+    *)
+      error_msg "ERROR! OS to install not supported: '${AUTO_INSTALL_OS}'"
+      ;;
   esac
 
   local debootstrap_url="${SELECTED_REPO_URL}/${DEBOOTSTRAP_PATH}/${debootstrap_file}"
@@ -936,33 +936,33 @@ verify_kernel_version() {
   print_info "Verifying Kernel Version"
   local options
   case "${AUTO_INSTALL_OS}" in
-  debian)
-    options=('default' 'backport' 'backports')
-    get_exit_code contains_element "${AUTO_KERNEL_VERSION}" "${options[@]}"
-    if [[ ! "${EXIT_CODE}" == "0" ]]; then
-      error_msg "Invalid Debian kernel version to install: '${AUTO_KERNEL_VERSION}'"
-    fi
-    ;;
+    debian)
+      options=('default' 'backport' 'backports')
+      get_exit_code contains_element "${AUTO_KERNEL_VERSION}" "${options[@]}"
+      if [[ ! "${EXIT_CODE}" == "0" ]]; then
+        error_msg "Invalid Debian kernel version to install: '${AUTO_KERNEL_VERSION}'"
+      fi
+      ;;
 
-  ubuntu)
-    options=('default' 'hwe' 'hwe-edge' 'hwe_edge' 'backport' 'backports')
-    get_exit_code contains_element "${AUTO_KERNEL_VERSION}" "${options[@]}"
-    if [[ ! "${EXIT_CODE}" == "0" ]]; then
-      error_msg "Invalid Ubuntu kernel version to install: '${AUTO_KERNEL_VERSION}'"
-    fi
-    # Normalize the two edge options
-    if [[ "${AUTO_KERNEL_VERSION}" == "hwe_edge" ]]; then
-      AUTO_KERNEL_VERSION="hwe-edge"
-    fi
-    # Normalize the debian backport(s)
-    if [[ "${AUTO_KERNEL_VERSION}" == "backport" || "${AUTO_KERNEL_VERSION}" == "backports" ]]; then
-      AUTO_KERNEL_VERSION="hwe-edge"
-    fi
-    ;;
+    ubuntu)
+      options=('default' 'hwe' 'hwe-edge' 'hwe_edge' 'backport' 'backports')
+      get_exit_code contains_element "${AUTO_KERNEL_VERSION}" "${options[@]}"
+      if [[ ! "${EXIT_CODE}" == "0" ]]; then
+        error_msg "Invalid Ubuntu kernel version to install: '${AUTO_KERNEL_VERSION}'"
+      fi
+      # Normalize the two edge options
+      if [[ "${AUTO_KERNEL_VERSION}" == "hwe_edge" ]]; then
+        AUTO_KERNEL_VERSION="hwe-edge"
+      fi
+      # Normalize the debian backport(s)
+      if [[ "${AUTO_KERNEL_VERSION}" == "backport" || "${AUTO_KERNEL_VERSION}" == "backports" ]]; then
+        AUTO_KERNEL_VERSION="hwe-edge"
+      fi
+      ;;
 
-  *)
-    error_msg "ERROR! OS to install not supported: '${AUTO_INSTALL_OS}'"
-    ;;
+    *)
+      error_msg "ERROR! OS to install not supported: '${AUTO_INSTALL_OS}'"
+      ;;
   esac
 }
 
@@ -1057,20 +1057,20 @@ parse_main_disk() {
     fi
 
     case "${AUTO_MAIN_DISK}" in
-    smallest)
-      MAIN_DISK_METHOD="smallest"
-      SELECTED_MAIN_DISK=$(lsblk -ndpr --output NAME,RO,MOUNTPOINT --sort SIZE | awk '$2 == "0" && $3 == "" {print $1}' | head -n 1)
-      ;;
+      smallest)
+        MAIN_DISK_METHOD="smallest"
+        SELECTED_MAIN_DISK=$(lsblk -ndpr --output NAME,RO,MOUNTPOINT --sort SIZE | awk '$2 == "0" && $3 == "" {print $1}' | head -n 1)
+        ;;
 
-    largest)
-      MAIN_DISK_METHOD="largest"
-      SELECTED_MAIN_DISK=$(lsblk -ndpr --output NAME,RO,MOUNTPOINT --sort SIZE | awk '$2 == "0" && $3 == "" {print $1}' | tail -n 1)
-      ;;
+      largest)
+        MAIN_DISK_METHOD="largest"
+        SELECTED_MAIN_DISK=$(lsblk -ndpr --output NAME,RO,MOUNTPOINT --sort SIZE | awk '$2 == "0" && $3 == "" {print $1}' | tail -n 1)
+        ;;
 
-    *)
-      # Should never happen as we have already verified thie value
-      error_msg "ERROR! Invalid main disk selection: '${AUTO_MAIN_DISK}'"
-      ;;
+      *)
+        # Should never happen as we have already verified thie value
+        error_msg "ERROR! Invalid main disk selection: '${AUTO_MAIN_DISK}'"
+        ;;
     esac
   fi
 
@@ -1096,7 +1096,7 @@ parse_second_disk() {
     if [[ "${line}" != "" ]]; then
       devices_list+=("${line}")
     fi
-  done <<<"${devices[@]}"
+  done <<< "${devices[@]}"
   write_log "Secondary devices array: ${devices_list[*]}"
   write_log "Secondary devices array count: ${#devices_list[@]}"
 
@@ -1116,30 +1116,30 @@ parse_second_disk() {
   write_log "Checking second disk"
   write_log "AUTO_SECOND_DISK=${AUTO_SECOND_DISK}"
   case "${AUTO_SECOND_DISK}" in
-  /dev/*)
-    # We have already verified the disk prior, so need need to do anything else
-    SECOND_DISK_METHOD="direct"
-    SELECTED_SECOND_DISK="${AUTO_SECOND_DISK}"
-    ;;
-  ignore)
-    SECOND_DISK_METHOD="ignore"
-    SELECTED_SECOND_DISK="ignore"
-    ;;
+    /dev/*)
+      # We have already verified the disk prior, so need need to do anything else
+      SECOND_DISK_METHOD="direct"
+      SELECTED_SECOND_DISK="${AUTO_SECOND_DISK}"
+      ;;
+    ignore)
+      SECOND_DISK_METHOD="ignore"
+      SELECTED_SECOND_DISK="ignore"
+      ;;
 
-  smallest)
-    SECOND_DISK_METHOD="smallest"
-    SELECTED_SECOND_DISK=$(lsblk -ndpr --output NAME,RO,MOUNTPOINT --sort SIZE | awk '$2 == "0" && $3 == "" {print $1}' | grep -v "${SELECTED_MAIN_DISK}" | head -n 1 || true)
-    ;;
+    smallest)
+      SECOND_DISK_METHOD="smallest"
+      SELECTED_SECOND_DISK=$(lsblk -ndpr --output NAME,RO,MOUNTPOINT --sort SIZE | awk '$2 == "0" && $3 == "" {print $1}' | grep -v "${SELECTED_MAIN_DISK}" | head -n 1 || true)
+      ;;
 
-  largest)
-    SECOND_DISK_METHOD="largest"
-    SELECTED_SECOND_DISK=$(lsblk -ndpr --output NAME,RO,MOUNTPOINT --sort SIZE | awk '$2 == "0" && $3 == "" {print $1}' | grep -v "${SELECTED_MAIN_DISK}" | tail -n 1 || true)
-    ;;
+    largest)
+      SECOND_DISK_METHOD="largest"
+      SELECTED_SECOND_DISK=$(lsblk -ndpr --output NAME,RO,MOUNTPOINT --sort SIZE | awk '$2 == "0" && $3 == "" {print $1}' | grep -v "${SELECTED_MAIN_DISK}" | tail -n 1 || true)
+      ;;
 
-  *)
-    # Should never happen as we have already verified thie value
-    error_msg "ERROR! Invalid second disk selection: '${AUTO_SECOND_DISK}'"
-    ;;
+    *)
+      # Should never happen as we have already verified thie value
+      error_msg "ERROR! Invalid second disk selection: '${AUTO_SECOND_DISK}'"
+      ;;
   esac
 
   # One more validation if it is a valid disk/device locator
@@ -1160,15 +1160,15 @@ parse_repo_url() {
   print_info "Determining repo url"
 
   case "${AUTO_INSTALL_OS}" in
-  debian)
-    SELECTED_REPO_URL="${DEFAULT_DEBIAN_REPO}"
-    ;;
-  ubuntu)
-    SELECTED_REPO_URL="${DEFAULT_UBUNTU_REPO}"
-    ;;
-  *)
-    error_msg "ERROR! OS to install not supported: '${AUTO_INSTALL_OS}'"
-    ;;
+    debian)
+      SELECTED_REPO_URL="${DEFAULT_DEBIAN_REPO}"
+      ;;
+    ubuntu)
+      SELECTED_REPO_URL="${DEFAULT_UBUNTU_REPO}"
+      ;;
+    *)
+      error_msg "ERROR! OS to install not supported: '${AUTO_INSTALL_OS}'"
+      ;;
   esac
 
   if [[ "${AUTO_REPO_OVERRIDE_URL}" != "" ]]; then
@@ -1203,7 +1203,7 @@ wipe_disks() {
   print_info "Wiping disks"
 
   print_info "    Wiping main disk partitions"
-  wipefs --all --force "${SELECTED_MAIN_DISK}*" 2>/dev/null || true
+  wipefs --all --force "${SELECTED_MAIN_DISK}*" 2> /dev/null || true
   wipefs --all --force "${SELECTED_MAIN_DISK}" || true
 
   local sector_count
@@ -1213,11 +1213,11 @@ wipe_disks() {
   dd if=/dev/zero of="${SELECTED_MAIN_DISK}" bs=512 count=100 conv=notrunc
   dd if=/dev/zero of="${SELECTED_MAIN_DISK}" bs=512 seek="${sector_count}" count=100 conv=notrunc
 
-  partprobe "${SELECTED_MAIN_DISK}" 2>/dev/null || true
+  partprobe "${SELECTED_MAIN_DISK}" 2> /dev/null || true
 
   if [[ "${SELECTED_SECOND_DISK}" != "ignore" ]]; then
     print_info "    Wiping second disk partitions"
-    wipefs --all --force "${SELECTED_SECOND_DISK}*" 2>/dev/null || true
+    wipefs --all --force "${SELECTED_SECOND_DISK}*" 2> /dev/null || true
     wipefs --all --force "${SELECTED_SECOND_DISK}" || true
 
     local second_sector_count
@@ -1227,7 +1227,7 @@ wipe_disks() {
     dd if=/dev/zero of="${SELECTED_SECOND_DISK}" bs=512 count=100 conv=notrunc
     dd if=/dev/zero of="${SELECTED_SECOND_DISK}" bs=512 seek="${second_sector_count}" count=100 conv=notrunc
 
-    partprobe "${SELECTED_SECOND_DISK}" 2>/dev/null || true
+    partprobe "${SELECTED_SECOND_DISK}" 2> /dev/null || true
   fi
 }
 
@@ -1262,7 +1262,7 @@ create_main_partitions() {
     parted --script -a optimal "${SELECTED_MAIN_DISK}" mkpart "os" ext4 1025MiB 100%
   fi
 
-  partprobe "${SELECTED_MAIN_DISK}" 2>/dev/null || true
+  partprobe "${SELECTED_MAIN_DISK}" 2> /dev/null || true
 }
 
 create_secondary_partitions() {
@@ -1278,7 +1278,7 @@ create_secondary_partitions() {
       parted --script -a optimal "${SELECTED_SECOND_DISK}" set 1 lvm on
     fi
 
-    partprobe "${SELECTED_SECOND_DISK}" 2>/dev/null || true
+    partprobe "${SELECTED_SECOND_DISK}" 2> /dev/null || true
   fi
 }
 
@@ -1293,7 +1293,7 @@ query_disk_partitions() {
   disk_part_string=$(lsblk -lnp --output "PATH,TYPE" "${SELECTED_MAIN_DISK}" | grep -F "part" | cut -d' ' -f 1)
   while IFS= read -r -d $'\n' line; do
     disk_parts+=("${line}")
-  done <<<"${disk_part_string}"
+  done <<< "${disk_part_string}"
 
   if [[ "${#disk_parts[@]}" -ne 3 ]]; then
     error_msg "Invalid number of partitions on main disk, something went wrong."
@@ -1318,7 +1318,7 @@ query_disk_partitions() {
     second_disk_part_string=$(lsblk -lnp --output PATH,TYPE "${SELECTED_SECOND_DISK}" | grep -F "part" | cut -d' ' -f 1)
     while IFS= read -r -d $'\n' line; do
       second_disk_parts+=("${line}")
-    done <<<"${second_disk_part_string}"
+    done <<< "${second_disk_part_string}"
     # convert to an array
     if [[ "${#second_disk_parts[@]}" -ne 1 ]]; then
       error_msg "Invalid number of partitions on second disk, something went wrong."
@@ -1343,17 +1343,17 @@ setup_encryption() {
     print_info "Setting up encryption"
 
     case "${AUTO_DISK_PWD}" in
-    file)
-      encrypt_main_generated_file
-      ;;
+      file)
+        encrypt_main_generated_file
+        ;;
 
-    /* | http://* | https://* | ftp://* | ftps://* | sftp://* | file://*)
-      encrypt_main_provided_file
-      ;;
+      /* | http://* | https://* | ftp://* | ftps://* | sftp://* | file://*)
+        encrypt_main_provided_file
+        ;;
 
-    *)
-      encrypt_main_passphrase
-      ;;
+      *)
+        encrypt_main_passphrase
+        ;;
     esac
 
     if [[ "${SELECTED_SECOND_DISK}" != "ignore" ]]; then
@@ -1515,17 +1515,17 @@ install_base_system() {
   print_info "Installing base system"
 
   case "${AUTO_INSTALL_OS}" in
-  debian)
-    install_base_system_debian
-    ;;
+    debian)
+      install_base_system_debian
+      ;;
 
-  ubuntu)
-    install_base_system_ubuntu
-    ;;
+    ubuntu)
+      install_base_system_ubuntu
+      ;;
 
-  *)
-    error_msg "ERROR! OS to install not supported: '${AUTO_INSTALL_OS}'"
-    ;;
+    *)
+      error_msg "ERROR! OS to install not supported: '${AUTO_INSTALL_OS}'"
+      ;;
   esac
 }
 
@@ -1578,18 +1578,18 @@ install_base_system_debian() {
   # Now install the kernel
   write_log "Installing Kernel"
   case "${kernel_to_install}" in
-  default)
-    chroot_install "linux-image-${DPKG_ARCH}" "linux-headers-${DPKG_ARCH}" firmware-linux
-    ;;
+    default)
+      chroot_install "linux-image-${DPKG_ARCH}" "linux-headers-${DPKG_ARCH}" firmware-linux
+      ;;
 
-  backports)
-    arch-chroot /mnt apt-get -y -q install -t "${edition}-backports" \
-      "linux-image-${DPKG_ARCH}" "linux-headers-${DPKG_ARCH}" firmware-linux
-    ;;
+    backports)
+      arch-chroot /mnt apt-get -y -q install -t "${edition}-backports" \
+        "linux-image-${DPKG_ARCH}" "linux-headers-${DPKG_ARCH}" firmware-linux
+      ;;
 
-  *)
-    error_msg "ERROR! Unable to determine kernel to install."
-    ;;
+    *)
+      error_msg "ERROR! Unable to determine kernel to install."
+      ;;
   esac
   write_log "Kernel install complete"
 }
@@ -1653,21 +1653,21 @@ install_base_system_ubuntu() {
   # Now install the kernel
   write_log "Installing Kernel"
   case "${kernel_to_install}" in
-  default)
-    chroot_install linux-generic linux-firmware
-    ;;
+    default)
+      chroot_install linux-generic linux-firmware
+      ;;
 
-  hwe)
-    chroot_install "linux-generic-hwe-${release_ver}" linux-firmware
-    ;;
+    hwe)
+      chroot_install "linux-generic-hwe-${release_ver}" linux-firmware
+      ;;
 
-  hwe-edge)
-    chroot_install "linux-generic-hwe-${release_ver}-edge" linux-firmware
-    ;;
+    hwe-edge)
+      chroot_install "linux-generic-hwe-${release_ver}-edge" linux-firmware
+      ;;
 
-  *)
-    error_msg "ERROR! Unable to determine kernel to install."
-    ;;
+    *)
+      error_msg "ERROR! Unable to determine kernel to install."
+      ;;
   esac
   write_log "Kernel install complete"
 }
@@ -1694,18 +1694,18 @@ install_bootloader_efi() {
 
   local target
   case "${DPKG_ARCH}" in
-  i386)
-    target="i386-pc"
-    ;;
-  arm)
-    target="arm-efi"
-    ;;
-  arm64)
-    target="arm64-efi"
-    ;;
-  *)
-    target="x86_64-efi"
-    ;;
+    i386)
+      target="i386-pc"
+      ;;
+    arm)
+      target="arm-efi"
+      ;;
+    arm64)
+      target="arm64-efi"
+      ;;
+    *)
+      target="x86_64-efi"
+      ;;
   esac
 
   arch-chroot /mnt grub-install "--target=${target}" --efi-directory=/boot/efi --bootloader-id="${AUTO_INSTALL_OS}" --recheck --no-nvram "${SELECTED_MAIN_DISK}"
@@ -1759,7 +1759,7 @@ configure_apt_debian() {
   fi
 
   # Write out sources
-  echo "deb ${SELECTED_REPO_URL} ${SELECTED_INSTALL_EDITION} ${components}" >/mnt/etc/apt/sources.list
+  echo "deb ${SELECTED_REPO_URL} ${SELECTED_INSTALL_EDITION} ${components}" > /mnt/etc/apt/sources.list
 
   # Alt repos
   local dont_support_alt_repos=("sid" "unstable" "rc-buggy" "experimental")
@@ -1770,7 +1770,7 @@ configure_apt_debian() {
       # The security repo MUST come from the main sources as mirrors will not contain a copy
       echo "deb http://deb.debian.org/debian-security ${SELECTED_INSTALL_EDITION}-security ${components}"
       echo "deb ${SELECTED_REPO_URL} ${SELECTED_INSTALL_EDITION}-updates ${components}"
-    } >>/mnt/etc/apt/sources.list
+    } >> /mnt/etc/apt/sources.list
   fi
 
   # Will need to regularly update the codename for testing here, currently "trixie"
@@ -1782,7 +1782,7 @@ configure_apt_debian() {
     edition=$(arch-chroot /mnt lsb_release -c -s)
 
     # Now backports
-    echo "deb ${SELECTED_REPO_URL} ${edition}-backports ${components}" >/mnt/etc/apt/sources.list.d/debian-backports.list
+    echo "deb ${SELECTED_REPO_URL} ${edition}-backports ${components}" > /mnt/etc/apt/sources.list.d/debian-backports.list
   fi
 
   chroot_run_updates
@@ -1800,7 +1800,7 @@ configure_apt_ubuntu() {
     echo "deb ${SELECTED_REPO_URL} ${SELECTED_INSTALL_EDITION}-updates main restricted universe multiverse"
     echo "deb ${SELECTED_REPO_URL} ${SELECTED_INSTALL_EDITION}-backports main restricted universe multiverse"
     echo "deb ${SELECTED_REPO_URL} ${SELECTED_INSTALL_EDITION}-security main restricted universe multiverse"
-  } >/mnt/etc/apt/sources.list
+  } > /mnt/etc/apt/sources.list
 
   chroot_run_updates
 }
@@ -1813,8 +1813,8 @@ configure_keymap() {
   loadkeys "${AUTO_KEYMAP}"
   arch-chroot /mnt loadkeys "${AUTO_KEYMAP}"
 
-  echo "KEYMAP=${AUTO_KEYMAP}" >/mnt/etc/vconsole.conf
-  echo "FONT=Lat15-Terminus${CONSOLE_FONT_SIZE}" >>/mnt/etc/vconsole.conf
+  echo "KEYMAP=${AUTO_KEYMAP}" > /mnt/etc/vconsole.conf
+  echo "FONT=Lat15-Terminus${CONSOLE_FONT_SIZE}" >> /mnt/etc/vconsole.conf
 
   sed -i "/^CHARMAP=/ c\CHARMAP=\"${SELECTED_CHARMAP}\"" /mnt/etc/default/console-setup
   sed -i '/^CODESET=/ c\CODESET="guess"' /mnt/etc/default/console-setup
@@ -1850,9 +1850,9 @@ configure_encryption() {
     fi
 
     if [[ "${ENCRYPTION_FILE}" != "password" ]]; then
-      echo "cryptroot UUID=${main_uuid} /dev/disk/by-uuid/${boot_uuid}:root.key luks,initramfs,keyscript=/lib/cryptsetup/scripts/passdev,tries=3${discard_option}" >>/mnt/etc/crypttab
+      echo "cryptroot UUID=${main_uuid} /dev/disk/by-uuid/${boot_uuid}:root.key luks,initramfs,keyscript=/lib/cryptsetup/scripts/passdev,tries=3${discard_option}" >> /mnt/etc/crypttab
     else
-      echo "cryptroot UUID=${main_uuid} none luks,initramfs,tries=3${discard_option}" >>/mnt/etc/crypttab
+      echo "cryptroot UUID=${main_uuid} none luks,initramfs,tries=3${discard_option}" >> /mnt/etc/crypttab
     fi
 
     fix_systemd_encryption_bug
@@ -1872,7 +1872,7 @@ configure_encryption() {
         local discard_option=",discard"
       fi
 
-      echo "cryptdata UUID=${second_uuid} ${second_key} luks,tries=3${discard_option}" >>/mnt/etc/crypttab
+      echo "cryptdata UUID=${second_uuid} ${second_key} luks,tries=3${discard_option}" >> /mnt/etc/crypttab
     fi
   fi
 
@@ -1894,7 +1894,7 @@ fix_systemd_encryption_bug() {
 
   write_log "Applying systemd fix for encryption"
 
-  cat <<-'EOF' >/mnt/etc/systemd/system/cryptsetup-first-boot.service
+  cat <<- 'EOF' > /mnt/etc/systemd/system/cryptsetup-first-boot.service
 [Unit]
 Description=First boot script to fix systemd encryption issue
 ConditionPathExists=/usr/local/sbin/fix-systemd-encryption-issue.sh
@@ -1907,7 +1907,7 @@ ExecStart=/usr/local/sbin/fix-systemd-encryption-issue.sh
 WantedBy=default.target
 EOF
 
-  cat <<-'EOF' >/mnt/usr/local/sbin/fix-systemd-encryption-issue.sh
+  cat <<- 'EOF' > /mnt/usr/local/sbin/fix-systemd-encryption-issue.sh
 #!/usr/bin/env sh
 
 # Run the generator
@@ -1940,7 +1940,7 @@ EOF
 configure_fstab() {
   print_info "Configuring fstab"
 
-  genfstab -t UUID -p /mnt >/mnt/etc/fstab
+  genfstab -t UUID -p /mnt > /mnt/etc/fstab
 }
 
 configure_hostname() {
@@ -1952,7 +1952,7 @@ configure_hostname() {
     hostname="${AUTO_INSTALL_OS}-$((1 + RANDOM % 100000))"
   fi
 
-  echo "${hostname}" >/mnt/etc/hostname
+  echo "${hostname}" > /mnt/etc/hostname
 
   local the_line
   if [[ "${AUTO_DOMAIN}" == "" ]]; then
@@ -1966,7 +1966,7 @@ configure_hostname() {
     sed -i "/^127.0.1.1[[:blank:]]/ c\\${the_line}" /mnt/etc/hosts
   else
     # Add the line
-    echo -E "${the_line}" >>/mnt/etc/hosts
+    echo -E "${the_line}" >> /mnt/etc/hosts
   fi
 }
 
@@ -1979,7 +1979,7 @@ configure_timezone() {
   # Ntp setup
   sed -i -E 's/^#FallbackNTP=(.*)$/FallbackNTP=\1/' /mnt/etc/systemd/timesyncd.conf
 
-  cat <<-'EOF' >/mnt/etc/systemd/system/timezone-first-boot.service
+  cat <<- 'EOF' > /mnt/etc/systemd/system/timezone-first-boot.service
 [Unit]
 Description=First boot script to setup timezone
 ConditionPathExists=/usr/local/sbin/setup-timezone.sh
@@ -1992,7 +1992,7 @@ ExecStart=/usr/local/sbin/setup-timezone.sh
 WantedBy=default.target
 EOF
 
-  cat <<-'EOF' >/mnt/usr/local/sbin/setup-timezone.sh
+  cat <<- 'EOF' > /mnt/usr/local/sbin/setup-timezone.sh
 #!/usr/bin/env sh
 
 the_timezone=$(cat /etc/timezone)
@@ -2072,7 +2072,7 @@ configure_swap() {
   # Remove any previous swap
   sed -i '/[[:blank:]]swap[[:blank:]]/ d' /mnt/etc/fstab
   # Now add the swap file
-  echo "/swapfile swap swap sw 0 0" >>/mnt/etc/fstab
+  echo "/swapfile swap swap sw 0 0" >> /mnt/etc/fstab
 }
 
 configure_networking() {
@@ -2080,7 +2080,7 @@ configure_networking() {
 
   chroot_install network-manager netplan.io
 
-  cat <<-'EOF' >/mnt/etc/netplan/01-network-manage-all.yaml
+  cat <<- 'EOF' > /mnt/etc/netplan/01-network-manage-all.yaml
 # Let NetworkManager manage all devices on this system
 network:
   version: 2
@@ -2100,8 +2100,8 @@ configure_virtualization() {
     print_info "Setting up Virtualbox EFI"
 
     if [[ ! -f "/mnt/boot/efi/startup.nsh" ]]; then
-      echo "FS0:" >/mnt/boot/efi/startup.nsh
-      echo "\\EFI\\${AUTO_INSTALL_OS}\\grubx64.efi" >>/mnt/boot/efi/startup.nsh
+      echo "FS0:" > /mnt/boot/efi/startup.nsh
+      echo "\\EFI\\${AUTO_INSTALL_OS}\\grubx64.efi" >> /mnt/boot/efi/startup.nsh
     fi
 
     local boot_imgs
@@ -2165,37 +2165,37 @@ install_applications_extra_packages() {
 install_configuration_management() {
   print_info "Installing configuration management software (if requested)"
   case "${AUTO_CONFIG_MANAGEMENT}" in
-  ansible)
-    chroot_install ansible ansible-mitogen dnspython
-    ;;
-  ansible-pip)
-    arch-chroot /mnt pipx install --include-deps ansible
-    arch-chroot /mnt pipx inject ansible mitogen
-    arch-chroot /mnt pipx inject ansible cryptography
-    arch-chroot /mnt pipx inject ansible paramiko
-    arch-chroot /mnt pipx inject ansible dnspython
-    ;;
-  saltstack)
-    install_salt
-    ;;
-  saltstack-repo)
-    install_salt_from_repo
-    ;;
-  saltstack-bootstrap)
-    install_salt_from_bootstrap
-    ;;
-  puppet)
-    chroot_install puppet-agent
-    ;;
-  puppet-repo)
-    install_puppet_from_repo
-    ;;
-  none)
-    print_info "Skipping configuration management software installation, none selected."
-    ;;
-  *)
-    print_info "Skipping configuration management software installation, invalid option."
-    ;;
+    ansible)
+      chroot_install ansible ansible-mitogen dnspython
+      ;;
+    ansible-pip)
+      arch-chroot /mnt pipx install --include-deps ansible
+      arch-chroot /mnt pipx inject ansible mitogen
+      arch-chroot /mnt pipx inject ansible cryptography
+      arch-chroot /mnt pipx inject ansible paramiko
+      arch-chroot /mnt pipx inject ansible dnspython
+      ;;
+    saltstack)
+      install_salt
+      ;;
+    saltstack-repo)
+      install_salt_from_repo
+      ;;
+    saltstack-bootstrap)
+      install_salt_from_bootstrap
+      ;;
+    puppet)
+      chroot_install puppet-agent
+      ;;
+    puppet-repo)
+      install_puppet_from_repo
+      ;;
+    none)
+      print_info "Skipping configuration management software installation, none selected."
+      ;;
+    *)
+      print_info "Skipping configuration management software installation, invalid option."
+      ;;
   esac
 }
 
@@ -2227,10 +2227,10 @@ install_salt_from_repo() {
 
   # Salt only supports stable releases, not testing
   case "${codename}" in
-  stable | testing | "${CURRENT_DEB_TESTING_CODENAME}")
-    codename="${CURRENT_DEB_STABLE_CODENAME}"
-    ;;
-  *) ;;
+    stable | testing | "${CURRENT_DEB_TESTING_CODENAME}")
+      codename="${CURRENT_DEB_STABLE_CODENAME}"
+      ;;
+    *) ;;
 
   esac
 
@@ -2271,10 +2271,10 @@ install_puppet_from_repo() {
 
   # Puppet only supports stable releases, not testing
   case "${codename}" in
-  stable | testing | "${CURRENT_DEB_TESTING_CODENAME}")
-    codename="${CURRENT_DEB_STABLE_CODENAME}"
-    ;;
-  *) ;;
+    stable | testing | "${CURRENT_DEB_TESTING_CODENAME}")
+      codename="${CURRENT_DEB_STABLE_CODENAME}"
+      ;;
+    *) ;;
 
   esac
 
@@ -2378,7 +2378,7 @@ setup_service_user() {
     fi
 
     # Setup Service Account for passwordless sudo
-    cat <<EOF >/mnt/etc/sudoers.d/svcacct
+    cat << EOF > /mnt/etc/sudoers.d/svcacct
 Defaults:svcacct !requiretty
 svcacct ALL=(ALL) NOPASSWD: ALL
 EOF
@@ -2494,7 +2494,7 @@ setup_first_boot_script() {
     fi
     cp "${script}" "/mnt/usr/local/sbin/first-boot.script"
 
-    cat <<-'EOF' >/mnt/etc/systemd/system/deb-install-first-boot.service
+    cat <<- 'EOF' > /mnt/etc/systemd/system/deb-install-first-boot.service
 [Unit]
 Description=Script to run on first boot of system.
 Wants=network-online.target
@@ -2509,7 +2509,7 @@ ExecStart=/usr/local/sbin/first-boot-wrapper.sh
 WantedBy=default.target
 EOF
 
-    cat <<-'EOF' >/mnt/usr/local/sbin/first-boot-wrapper.sh
+    cat <<- 'EOF' > /mnt/usr/local/sbin/first-boot-wrapper.sh
 #!/usr/bin/env sh
 
 # Run the users script
