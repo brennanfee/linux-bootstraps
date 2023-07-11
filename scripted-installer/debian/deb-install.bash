@@ -985,6 +985,10 @@ verify_user_configuration() {
   if [[ "${AUTO_USERNAME}" == "root" ]]; then
     error_msg "The user to create cannot be named 'root'."
   fi
+
+  if [[ "${AUTO_USERNAME}" == "svcacct" ]]; then
+    error_msg "The user to create cannot be named 'svcacct'."
+  fi
 }
 
 verify_disk_password() {
@@ -2350,8 +2354,7 @@ setup_service_user() {
 
     local user_name="svcacct"
 
-    useradd --root /mnt --create-home --shell /bin/bash --no-user-group \
-      -g users --system "${user_name}"
+    useradd --root /mnt --create-home --shell /bin/bash --system "${user_name}"
     chfn --root /mnt --full-name "Service Account"
 
     # Password will always be initialized to the install os (debian, ubuntu, etc.)
