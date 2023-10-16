@@ -55,7 +55,7 @@ CURRENT_DEB_TESTING_CODENAME="trixie"
 
 # Should be updated with new Ubuntu releases
 CURRENT_UBUNTU_LTS_CODENAME="jammy"
-CURRENT_UBUNTU_ROLLING_CODENAME="lunar"
+CURRENT_UBUNTU_ROLLING_CODENAME="mantic"
 
 # Default repositories - NOTE: These should NOT end in slashes
 DEFAULT_DEBIAN_REPO="https://deb.debian.org/debian"
@@ -63,8 +63,8 @@ DEFAULT_UBUNTU_REPO="http://archive.ubuntu.com/ubuntu"
 
 # Debootstrap download filenames
 DEBOOTSTRAP_PATH="pool/main/d/debootstrap"
-CURRENT_DEBIAN_DEBOOTSTRAP_FILE="debootstrap_1.0.128+nmu2~bpo11+1.tar.gz"
-CURRENT_UBUNTU_DEBOOTSTRAP_FILE="debootstrap_1.0.128+nmu2ubuntu1.tar.gz"
+CURRENT_DEBIAN_DEBOOTSTRAP_FILE="debootstrap_1.0.132.tar.gz"
+CURRENT_UBUNTU_DEBOOTSTRAP_FILE="debootstrap_1.0.132ubuntu1.tar.gz"
 
 ### End: Data
 
@@ -2132,7 +2132,7 @@ install_applications_common() {
   print_info "Installing common applications"
 
   # Required in all environments, many to true up standard server installation
-  chroot_install apt-transport-https ca-certificates curl wget gnupg lsb-release build-essential dkms sudo acl git vim-nox python3-dev python3-keyring python3-pip python-is-python3 pipx software-properties-common apparmor ssh locales console-setup console-data lz4 network-manager netplan.io cryptsetup cryptsetup-initramfs xfsprogs dictionaries-common iamerican ibritish discover discover-data laptop-detect usbutils eject util-linux-locales man-db tasksel
+  chroot_install apt-transport-https ca-certificates curl wget gnupg lsb-release build-essential dkms sudo acl git vim-nox python3-dev python3-keyring python3-pip python-is-python3 pipx software-properties-common apparmor ssh locales console-setup console-data lz4 network-manager netplan.io cryptsetup cryptsetup-initramfs xfsprogs dictionaries-common iamerican ibritish discover discover-data laptop-detect usbutils eject util-linux-locales man-db tasksel fbset
 
   setfont "Lat15-Terminus${CONSOLE_FONT_SIZE}"
 
@@ -2328,9 +2328,9 @@ setup_root() {
 
     # If root is the only user, allow login with root through SSH.  Users can of course (and should) change this after initial boot, this just allows a remote connection to start things off.
     if [[ "${AUTO_CREATE_USER}" == "0" ]]; then
-      sed -i '/PermitRootLogin[[:blank:]]/ c\PermitRootLogin yes' /mnt/etc/ssh/sshd_config
+      sed -i -r '/^#?PermitRootLogin[[:blank:]](yes|no|prohibit-password)/ c\PermitRootLogin yes' /mnt/etc/ssh/sshd_config
     else
-      sed -i '/PermitRootLogin[[:blank:]]/ c\PermitRootLogin no' /mnt/etc/ssh/sshd_config
+      sed -i -r '/^#?PermitRootLogin[[:blank:]](yes|no|prohibit-password)/ c\PermitRootLogin no' /mnt/etc/ssh/sshd_config
     fi
   fi
 }
