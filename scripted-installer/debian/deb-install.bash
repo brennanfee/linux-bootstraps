@@ -841,13 +841,13 @@ get_debootstrap() {
 
   # Protect against Ubuntu team being lazy
   chmod +x /debootstrap/debootstrap
-  if [[ ! -f "/debootstrap/debootstrap/${SELECTED_INSTALL_EDITION}" ]]; then
+  if [[ ! -f "/debootstrap/scripts/${SELECTED_INSTALL_EDITION}" ]]; then
     local destFile="debian-common"
     if [[ "${AUTO_INSTALL_OS}" == "ubuntu" ]]; then
       destFile="gutsy"
     fi
 
-    ln -s "/debootstrap/debootstrap/${destFile}" "/debootstrap/debootstrap/${SELECTED_INSTALL_EDITION}"
+    ln -s "/debootstrap/scripts/${destFile}" "/debootstrap/scripts/${SELECTED_INSTALL_EDITION}"
   fi
 }
 
