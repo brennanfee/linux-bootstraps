@@ -838,6 +838,17 @@ get_debootstrap() {
   mkdir -p "/debootstrap"
   wget -O "/home/user/debootstrap.tar.gz" "${debootstrap_url}"
   tar zxvf "/home/user/debootstrap.tar.gz" --directory="/debootstrap" --strip-components=1
+
+  # Protect against Ubuntu team being lazy
+  chmod +x /debootstrap/debootstrap
+  if [[ ! -f "/debootstrap/debootstrap/${SELECTED_INSTALL_EDITION}" ]]; then
+    local destFile="debian-common"
+    if [[ "${AUTO_INSTALL_OS}" == "ubuntu" ]]; then
+      destFile="gutsy"
+    fi
+
+    ln -s "/debootstrap/debootstrap/${destFile}" "/debootstrap/debootstrap/${SELECTED_INSTALL_EDITION}"
+  fi
 }
 
 setup_clock() {
@@ -1538,7 +1549,6 @@ install_base_system_debian() {
 
   write_log "Running debootstrap"
 
-  chmod +x /debootstrap/debootstrap
   DEBOOTSTRAP_DIR="/debootstrap" /debootstrap/debootstrap --arch "${DPKG_ARCH}" \
     --include=lsb-release,tasksel "${SELECTED_INSTALL_EDITION}" "/mnt" "${SELECTED_REPO_URL}"
 
@@ -1604,7 +1614,6 @@ install_base_system_ubuntu() {
 
   write_log "Running debootstrap"
 
-  chmod +x /debootstrap/debootstrap
   DEBOOTSTRAP_DIR="/debootstrap" /debootstrap/debootstrap --arch "${DPKG_ARCH}" \
     --include=lsb-release "${SELECTED_INSTALL_EDITION}" "/mnt" "${SELECTED_REPO_URL}"
 
