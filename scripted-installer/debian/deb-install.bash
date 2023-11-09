@@ -2102,6 +2102,7 @@ network:
   renderer: NetworkManager
 EOF
 
+  chmod 0600 /mnt/etc/netplan/01-network-manage-all.yaml
   arch-chroot /mnt netplan generate
 }
 
