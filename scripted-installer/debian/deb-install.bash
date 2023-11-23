@@ -838,9 +838,9 @@ get_debootstrap() {
   mkdir -p "/debootstrap"
   wget -O "/home/user/debootstrap.tar.gz" "${debootstrap_url}"
   tar zxvf "/home/user/debootstrap.tar.gz" --directory="/debootstrap" --strip-components=1
+  chmod +x /debootstrap/debootstrap
 
   # Protect against Ubuntu team being lazy
-  # chmod +x /debootstrap/debootstrap
   # if [[ ! -f "/debootstrap/scripts/${SELECTED_INSTALL_EDITION}" ]]; then
   #   local destFile="debian-common"
   #   if [[ "${AUTO_INSTALL_OS}" == "ubuntu" ]]; then
