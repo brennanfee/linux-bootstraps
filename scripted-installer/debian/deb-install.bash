@@ -2375,7 +2375,7 @@ setup_service_user() {
     usermod --root /mnt --password "${encrypted}" "${user_name}"
 
     # _ssh is the new name for the ssh group going forward, but I attempt to add both (ssh, _ssh) just in case
-    groupsToAdd=(audio video plugdev netdev kvm sudo ssh _ssh users data-user vboxsf)
+    groupsToAdd=(audio video plugdev netdev bluetooth kvm sudo ssh _ssh users data-user vboxsf)
     for groupToAdd in "${groupsToAdd[@]}"; do
       group_exists=$(arch-chroot /mnt getent group "${groupToAdd}" | wc -l || true)
       if [[ "${group_exists}" == "1" ]]; then
@@ -2436,7 +2436,7 @@ setup_user() {
     fi
 
     # _ssh is the new name for the ssh group going forward, but I attempt to add both (ssh, _ssh) just in case
-    groupsToAdd=(audio video plugdev netdev kvm sudo ssh _ssh users data-user vboxsf)
+    groupsToAdd=(audio video plugdev netdev bluetooth kvm sudo ssh _ssh users data-user vboxsf)
     for groupToAdd in "${groupsToAdd[@]}"; do
       group_exists=$(arch-chroot /mnt getent group "${groupToAdd}" | wc -l || true)
       if [[ "${group_exists}" == "1" ]]; then
