@@ -54,8 +54,8 @@ CURRENT_DEB_STABLE_CODENAME="bookworm"
 CURRENT_DEB_TESTING_CODENAME="trixie"
 
 # Should be updated with new Ubuntu releases
-CURRENT_UBUNTU_LTS_CODENAME="jammy"
-CURRENT_UBUNTU_ROLLING_CODENAME="mantic"
+CURRENT_UBUNTU_LTS_CODENAME="noble"
+CURRENT_UBUNTU_ROLLING_CODENAME="noble"
 
 # Default repositories - NOTE: These should NOT end in slashes
 DEFAULT_DEBIAN_REPO="https://deb.debian.org/debian"
@@ -63,8 +63,8 @@ DEFAULT_UBUNTU_REPO="http://archive.ubuntu.com/ubuntu"
 
 # Debootstrap download filenames
 DEBOOTSTRAP_PATH="pool/main/d/debootstrap"
-CURRENT_DEBIAN_DEBOOTSTRAP_FILE="debootstrap_1.0.133.tar.gz"
-CURRENT_UBUNTU_DEBOOTSTRAP_FILE="debootstrap_1.0.133ubuntu1.tar.gz"
+CURRENT_DEBIAN_DEBOOTSTRAP_FILE="debootstrap_1.0.134~bpo12+1.tar.gz"
+CURRENT_UBUNTU_DEBOOTSTRAP_FILE="debootstrap_1.0.134ubuntu1.tar.gz"
 
 ### End: Data
 
