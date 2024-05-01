@@ -2367,7 +2367,7 @@ setup_service_user() {
     local user_name="svcacct"
 
     useradd --root /mnt --create-home --shell /bin/bash --system "${user_name}"
-    chfn --root /mnt --full-name "Service Account" "${user_name}"
+    #chfn --root /mnt --full-name "Service Account" "${user_name}"
 
     # Password will always be initialized to the install os (debian, ubuntu, etc.)
     local encrypted
@@ -2422,7 +2422,7 @@ setup_user() {
     fi
 
     useradd --root /mnt --create-home --shell /bin/bash "${user_name}"
-    chfn --root /mnt --full-name "${user_name}" "${user_name}"
+    #chfn --root /mnt --full-name "${user_name}" "${user_name}"
 
     # Check if the password is encrypted
     if echo "${user_pwd}" | grep -q '^\$[[:digit:]]\$.*$'; then
