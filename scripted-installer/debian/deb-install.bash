@@ -183,7 +183,7 @@ AUTO_USER_PWD="${AUTO_USER_PWD:=}"
 AUTO_USER_SSH_KEY="${AUTO_USER_SSH_KEY:=}"
 
 # Whether to create a system 'Service Account'.  This is something I do in my setups as the service account is used for
-# remote access by configuration management (Ansilbe, Salt Stack) and sometimes to run various services or scheduled
+# remote access by configuration management (Ansible, Salt Stack) and sometimes to run various services or scheduled
 # jobs that should not run as root but should also not run as a "regular" user.  Given this is highly specific
 # to my setups it is likely you will want to leave this disabled, which is the default.  This is a boolean value.
 AUTO_CREATE_SERVICE_ACCT="${AUTO_CREATE_SERVICE_ACCT:=0}"
@@ -1022,7 +1022,7 @@ verify_disk_input() {
   input=${!1}
   shift
   if echo "${input}" | grep -q '^/dev/'; then
-    if ! lsblk -ndpr --output NAME,RO,MOUNTPOINT | awk '$2 == "0" && $3 == "" {print $1}' | grep -q "${input}"; then
+    if ! lsblk -ndpr --output NAME,RO,HOTPLUG,MOUNTPOINT | awk '$2 == "0" && $3 == "0" && $4 == "" {print $1}' | grep -q "${input}"; then
       echo "Invalid device selection option: '${input}'"
     fi
   else
@@ -1074,12 +1074,12 @@ parse_main_disk() {
     case "${AUTO_MAIN_DISK}" in
       smallest)
         MAIN_DISK_METHOD="smallest"
-        SELECTED_MAIN_DISK=$(lsblk -ndpr --output NAME,RO,MOUNTPOINT --sort SIZE | awk '$2 == "0" && $3 == "" {print $1}' | head -n 1)
+        SELECTED_MAIN_DISK=$(lsblk -ndpr --output NAME,RO,HOTPLUG,MOUNTPOINT --sort SIZE | awk '$2 == "0" && $3 == "0" && $4 == "" {print $1}' | head -n 1)
         ;;
 
       largest)
         MAIN_DISK_METHOD="largest"
-        SELECTED_MAIN_DISK=$(lsblk -ndpr --output NAME,RO,MOUNTPOINT --sort SIZE | awk '$2 == "0" && $3 == "" {print $1}' | tail -n 1)
+        SELECTED_MAIN_DISK=$(lsblk -ndpr --output NAME,RO,HOTPLUG,MOUNTPOINT --sort SIZE | awk '$2 == "0" && $3 == "0" && $4 == "" {print $1}' | tail -n 1)
         ;;
 
       *)
@@ -1103,7 +1103,7 @@ parse_second_disk() {
 
   print_status "    Collecting disks..."
   local devices
-  devices=$(lsblk -ndpr --output NAME,RO,MOUNTPOINT | awk '$2 == "0" && $3 == "" {print $1}' | grep -v "${SELECTED_MAIN_DISK}" || true)
+  devices=$(lsblk -ndpr --output NAME,RO,HOTPLUG,MOUNTPOINT | awk '$2 == "0" && $3 == "0" && $4 == "" {print $1}' | grep -v "${SELECTED_MAIN_DISK}" || true)
   write_log "Secondary devices: ${devices}"
 
   local devices_list=()
@@ -1143,12 +1143,12 @@ parse_second_disk() {
 
     smallest)
       SECOND_DISK_METHOD="smallest"
-      SELECTED_SECOND_DISK=$(lsblk -ndpr --output NAME,RO,MOUNTPOINT --sort SIZE | awk '$2 == "0" && $3 == "" {print $1}' | grep -v "${SELECTED_MAIN_DISK}" | head -n 1 || true)
+      SELECTED_SECOND_DISK=$(lsblk -ndpr --output NAME,RO,HOTPLUG,MOUNTPOINT --sort SIZE | awk '$2 == "0" && $3 == "0" && $4 == "" {print $1}' | grep -v "${SELECTED_MAIN_DISK}" | head -n 1 || true)
       ;;
 
     largest)
       SECOND_DISK_METHOD="largest"
-      SELECTED_SECOND_DISK=$(lsblk -ndpr --output NAME,RO,MOUNTPOINT --sort SIZE | awk '$2 == "0" && $3 == "" {print $1}' | grep -v "${SELECTED_MAIN_DISK}" | tail -n 1 || true)
+      SELECTED_SECOND_DISK=$(lsblk -ndpr --output NAME,RO,HOTPLUG,MOUNTPOINT --sort SIZE | awk '$2 == "0" && $3 == "0" && $4 == "" {print $1}' | grep -v "${SELECTED_MAIN_DISK}" | tail -n 1 || true)
       ;;
 
     *)
