@@ -23,10 +23,6 @@ set_exports() {
   export AUTO_DOMAIN="bfee.casa"
   export AUTO_USERNAME="brennan"
 
-  # We don't want expansion here
-  # shellcheck disable=SC2016
-  export AUTO_USER_PWD='$6$qmmPzXie3PtJUSAu$kgA4QwX1kTbvxkZlOonV8H.DBkSPfzjVEZBaUl8DNJw43RJYNcy0BSlSNMTmSA0VH9dwwfSUIvRCBlmZUZOvW/'
-
   export AUTO_USER_SSH_KEY='ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIfddRtRLofmAaLj6w3jTEBXrieMgD3+vKHwWipHi93G brennan@bfee.casa'
   export AUTO_SERVICE_ACCT_SSH_KEY='ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAH5mZH2G4fD3f5ofopNdg1NfA4wE4ASwD4drU+w8RYR ansible@bfee.casa'
 }
