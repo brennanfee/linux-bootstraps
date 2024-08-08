@@ -2390,6 +2390,7 @@ setup_service_user() {
       echo "${AUTO_SERVICE_ACCT_SSH_KEY}" | tee -a "/mnt/home/${user_name}/.ssh/authorized_keys"
       chmod "0644" "/mnt/home/${user_name}/.ssh/authorized_keys"
       chmod "0700" "/mnt/home/${user_name}/.ssh"
+      chown -R "${user_name}:${user_name}" "/mnt/home/${user_name}/.ssh"
     fi
 
     # Setup Service Account for passwordless sudo
@@ -2451,6 +2452,7 @@ setup_user() {
       echo "${AUTO_USER_SSH_KEY}" | tee -a "/mnt/home/${user_name}/.ssh/authorized_keys"
       chmod "0644" "/mnt/home/${user_name}/.ssh/authorized_keys"
       chmod "0700" "/mnt/home/${user_name}/.ssh"
+      chown -R "${user_name}:${user_name}" "/mnt/home/${user_name}/.ssh"
     fi
   fi
 }
