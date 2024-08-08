@@ -2367,7 +2367,7 @@ setup_service_user() {
     local user_name="svcacct"
 
     useradd --root /mnt --create-home --shell /bin/bash --system "${user_name}"
-    #chfn --root /mnt --full-name "Service Account" "${user_name}"
+    arch-chroot /mnt chfn --full-name "Service Account" "${user_name}"
 
     # Password will always be initialized to the install os (debian, ubuntu, etc.)
     local encrypted
@@ -2390,7 +2390,7 @@ setup_service_user() {
       echo "${AUTO_SERVICE_ACCT_SSH_KEY}" | tee -a "/mnt/home/${user_name}/.ssh/authorized_keys"
       chmod "0644" "/mnt/home/${user_name}/.ssh/authorized_keys"
       chmod "0700" "/mnt/home/${user_name}/.ssh"
-      chown -R "${user_name}:${user_name}" "/mnt/home/${user_name}/.ssh"
+      arch-chroot /mnt chown -R "${user_name}:${user_name}" "/home/${user_name}/.ssh"
     fi
 
     # Setup Service Account for passwordless sudo
@@ -2423,7 +2423,7 @@ setup_user() {
     fi
 
     useradd --root /mnt --create-home --shell /bin/bash "${user_name}"
-    #chfn --root /mnt --full-name "${user_name}" "${user_name}"
+    arch-chroot /mnt chfn --full-name "${user_name}" "${user_name}"
 
     # Check if the password is encrypted
     if echo "${user_pwd}" | grep -q '^\$[[:digit:]]\$.*$'; then
@@ -2452,7 +2452,7 @@ setup_user() {
       echo "${AUTO_USER_SSH_KEY}" | tee -a "/mnt/home/${user_name}/.ssh/authorized_keys"
       chmod "0644" "/mnt/home/${user_name}/.ssh/authorized_keys"
       chmod "0700" "/mnt/home/${user_name}/.ssh"
-      chown -R "${user_name}:${user_name}" "/mnt/home/${user_name}/.ssh"
+      arch-chroot /mnt chown -R "${user_name}:${user_name}" "/home/${user_name}/.ssh"
     fi
   fi
 }
