@@ -1847,15 +1847,13 @@ configure_encryption() {
 
     local main_keyfile="none"
     if [[ "${ENCRYPTION_FILE}" != "password" ]]; then
-      main_keyfile="/mnt/boot/root.key"
-      mv "${ENCRYPTION_FILE}" "${main_keyfile}"
-      chmod 0400 "${main_keyfile}"
+      main_keyfile="/etc/keys/root.key"
+      mv "${ENCRYPTION_FILE}" "/mnt${main_keyfile}"
+      chmod 0400 "/mnt${main_keyfile}"
     fi
 
     local main_uuid
-    local boot_uuid
     main_uuid=$(blkid -o value -s UUID "${MAIN_DISK_THIRD_PART}")
-    boot_uuid=$(blkid -o value -s UUID "${MAIN_DISK_SECOND_PART}")
 
     local discard_option=""
     local disk_gran
@@ -1865,12 +1863,10 @@ configure_encryption() {
     fi
 
     if [[ "${ENCRYPTION_FILE}" != "password" ]]; then
-      echo "cryptroot UUID=${main_uuid} /dev/disk/by-uuid/${boot_uuid}:root.key luks,initramfs,keyscript=/lib/cryptsetup/scripts/passdev,tries=3${discard_option}" >> /mnt/etc/crypttab
+      echo "cryptroot UUID=${main_uuid} ${main_keyfile} luks,tries=3${discard_option}" >> /mnt/etc/crypttab
     else
-      echo "cryptroot UUID=${main_uuid} none luks,initramfs,tries=3${discard_option}" >> /mnt/etc/crypttab
+      echo "cryptroot UUID=${main_uuid} none luks,tries=3${discard_option}" >> /mnt/etc/crypttab
     fi
-
-    fix_systemd_encryption_bug
 
     if [[ "${SELECTED_SECOND_DISK}" != "ignore" && "${SECONDARY_FILE}" != "" ]]; then
       local second_key="/etc/keys/secondary.key"
@@ -1889,6 +1885,10 @@ configure_encryption() {
 
       echo "cryptdata UUID=${second_uuid} ${second_key} luks,tries=3${discard_option}" >> /mnt/etc/crypttab
     fi
+
+    # Setup to copy keys to initramfs
+    sed -i -E 's|^#KEYFILE_PATTERN=$|KEYFILE_PATTERN=/etc/keys/*.key|g' /mnt/etc/cryptsetup-initramfs/conf-hook
+    echo -E "UMASK=0077" >> /mnt/etc/initramfs-tools/conf.d/safe-initramfs.conf
   fi
 
   # If a multi-disk system, configure LVM to issue discards, regardless of encryption
@@ -1898,58 +1898,6 @@ configure_encryption() {
 
   # Ensure the fstrim timer is enabled
   arch-chroot /mnt systemctl enable fstrim.timer
-}
-
-fix_systemd_encryption_bug() {
-  # BAF - There is a major bug in Systemd where it doesn't handle the passdev syntax for the key.  It expects the OPPOSITE where the first part is the file path, then a colon, then a disk identifier like UUID=xxx or LABEL=xxx.  Passdev uses a format of a disk identifier (usually a persistent devices /dev/disk/xxx, then a colon, then the path to the file.
-  #
-  # Systemd calls systemd-cryptsetup-generator on boot and generates some files.  We can manually call that, edit one of the files and copy it to /etc/systemd/system to override what the generator creates.
-  #
-  # Lastly, the chroot environment isn't running systemd so we can't do it in there.  Instead, we have to set up a script to run on boot which takes care of everything.
-
-  write_log "Applying systemd fix for encryption"
-
-  cat <<- 'EOF' > /mnt/etc/systemd/system/cryptsetup-first-boot.service
-[Unit]
-Description=First boot script to fix systemd encryption issue
-ConditionPathExists=/usr/local/sbin/fix-systemd-encryption-issue.sh
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/sbin/fix-systemd-encryption-issue.sh
-
-[Install]
-WantedBy=default.target
-EOF
-
-  cat <<- 'EOF' > /mnt/usr/local/sbin/fix-systemd-encryption-issue.sh
-#!/usr/bin/env sh
-
-# Run the generator
-/lib/systemd/system-generators/systemd-cryptsetup-generator
-if [ ! -f "/tmp/systemd-cryptsetup@cryptroot.service" ]
-then
-  exit 1
-fi
-
-dest_file="/etc/systemd/system/systemd-cryptsetup@cryptroot.service"
-
-cp "/tmp/systemd-cryptsetup@cryptroot.service" "${dest_file}"
-
-# Now edit the file to remove the offending lines
-sed -i '/^After=dev-disk-by.*root\.key\.device$/d' "${dest_file}"
-sed -i '/^Requires=dev-disk-by.*root\.key\.device$/d' "${dest_file}"
-
-# Clean up the systemctl service
-systemctl disable cryptsetup-first-boot.service
-rm /etc/systemd/system/cryptsetup-first-boot.service
-
-# Clean up by deleting this script
-rm $0
-EOF
-
-  chmod 0754 /mnt/usr/local/sbin/fix-systemd-encryption-issue.sh
-  arch-chroot /mnt systemctl enable cryptsetup-first-boot.service
 }
 
 configure_fstab() {
