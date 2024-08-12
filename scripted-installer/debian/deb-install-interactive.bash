@@ -16,7 +16,7 @@
 # also be used to produce a "configuration" file with the selected options during the
 # interactive session.  The provided configuration file can then be used to automatically
 # execute the installation with those settings.  This can provide a consistent install
-# configuration for mutiple machines.
+# configuration for multiple machines.
 #
 # At the end of the interactive questions you will be prompted whether you wish to export
 # a configuration file or proceed and perform the installation.  While the export can be
@@ -584,7 +584,7 @@ ask_for_ubuntu_kernel_version() {
   write_log "In ask for UBUNTU kernel version."
 
   print_section "Kernel Version To Install"
-  print_section_info "Pick a Kernel Version to install.  Note that the installer will regressively fall back if the requested kernel edition is not available.  If hwe-edge is requested but only hwe is available, you will get hwe.  If neither are aviable, the default kernel will be installed."
+  print_section_info "Pick a Kernel Version to install.  Note that the installer will regressively fall back if the requested kernel edition is not available.  If hwe-edge is requested but only hwe is available, you will get hwe.  If neither are available, the default kernel will be installed."
 
   local options=('default' 'hwe' 'hwe-edge')
 
@@ -881,7 +881,7 @@ ask_for_disk_password() {
             AUTO_DISK_PWD=${input}
             break
           else
-            invalid_option "You must input a full path to the file, releative paths are not supported."
+            invalid_option "You must input a full path to the file, relative paths are not supported."
           fi
         done
         ;;
@@ -1286,7 +1286,7 @@ ask_for_first_boot_script() {
   write_log "In ask for after first boot script."
 
   print_section "Execute A 'First Boot' Script"
-  print_section_info "You can, optionally, provide a script that will run on the first boot of the machine.  This script will run only once.  It can be used to perform after installation steps or kick off some external configuration process or basically do any kind of post-installation steps you might want.  The script will be named '/usr/local/sbin/first-boot.script' and it will not be removed after execution.  The script does not have to be a bash script, but MUST have a shebang that properly indicates how the script should be run.  Please note that you will need to ensure that the script language used is installed and supported in your taget environment (for instance by using AUTO_EXTRA_PACKAGES).  The value provided should be a URL that will be accessible by the installation machine.  The script will be downloaded from that location using wget, so any URL supported by wget will work.  Leaving this blank will skip execution of any 'first boot' script."
+  print_section_info "You can, optionally, provide a script that will run on the first boot of the machine.  This script will run only once.  It can be used to perform after installation steps or kick off some external configuration process or basically do any kind of post-installation steps you might want.  The script will be named '/usr/local/sbin/first-boot.script' and it will not be removed after execution.  The script does not have to be a bash script, but MUST have a shebang that properly indicates how the script should be run.  Please note that you will need to ensure that the script language used is installed and supported in your target environment (for instance by using AUTO_EXTRA_PACKAGES).  The value provided should be a URL that will be accessible by the installation machine.  The script will be downloaded from that location using wget, so any URL supported by wget will work.  Leaving this blank will skip execution of any 'first boot' script."
 
   local input
   read -rp "'First Boot' script to execute: " input
