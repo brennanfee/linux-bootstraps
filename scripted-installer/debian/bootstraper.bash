@@ -133,7 +133,16 @@ show_help() {
   l+="- Script date: ${SCRIPT_DATE}"
   print_msg "$l"
   print_blank_line
-  print_msg "Example:  bootstraper.bash (configuration) (os edition) (flags/options)"
+  print_msg "Example:  bootstraper.bash {distro} {edition} (configuration) (flags/options)"
+  print_blank_line
+  l="Distro is required.  It is the Linux distribution to install, currently only 'debian' "
+  l+="and 'ubuntu' are supported."
+  print_msg "$l"
+  print_blank_line
+  l="Edition is required and can be any of 'stable', 'backports', 'testing', or 'sid' "
+  l+="for Debian and 'lts', 'ltshwe', 'ltsedge', or 'rolling' for Ubuntu.  It is also possible "
+  l+="to pass in a codename for a release, such as 'bookworm' or 'jammy'."
+  print_msg "$l"
   print_blank_line
   l="Configuration is optional and can be one of 'default', 'vagrant', 'vm', 'homelab', "
   l+="'vmhomelab', and 'external'.  The default is 'default'. These configurations serve as "
@@ -144,19 +153,12 @@ show_help() {
   l+="configuration the next parameter must be a URL that points to a script that will set "
   l+="the desired options (using exported environment variables). The script will be downloaded "
   l+="and sourced before the rest of the options are processed. Example: bootstraper.bash "
-  l+="external https://tinyurl.com/mysettings"
-  print_msg "$l"
-  print_blank_line
-  l="OS Edition is optional and can be any of 'stable', 'backports', 'testing', or 'sid' "
-  l+="for Debian and 'lts', 'ltshwe', 'ltsedge', or 'rolling' for Ubuntu.  It is also possible "
-  l+="to pass in a codename for a release, such as 'bookworm' or 'jammy', but then the following "
-  l+="parameter must be the target distribution (only 'debian' and 'ubuntu' are supported.) "
-  l+="Example: bootstraper.bash vagrant bookworm debian"
+  l+="debian stable external https://tinyurl.com/mysettings --auto-mode"
   print_msg "$l"
   print_blank_line
   l="Options are all passed as flags (-{short option}, --{long option}), some are mutually "
   l+="exclusive and in those cases the last one passed in wins.  For a list of the options "
-  l+="run this script again with 'options' as the configuration or --options as a flag."
+  l+="run this script again with 'options' as the distribution or --options as a flag."
   print_msg "$l"
   print_blank_line
   l="Lastly, all of these settings and flags are simply setting up the environment variable "
@@ -177,8 +179,8 @@ show_options() {
   print_blank_line
   l="Most options allow a 'no' option to turn the option off rather than on. "
   l+="Simply pass --no-{option} or --no{option} instead.  The 'auto', 'single-disk', "
-  l+="'dual-disk', and 'script' options are the only ones without the 'no' variants. "
-  l+="To use the 'no' option you cannot use the short variant for the option name."
+  l+="'dual-disk', 'interactive', and 'script' options are the only ones without the "
+  l+="'no' variants.  To use the 'no' option you cannot use the short variant for the option name."
   print_msg "$l"
   print_blank_line
   print_msg "Options:"
@@ -196,6 +198,7 @@ show_options() {
   print_msg "      Aliases: --usedata, --use-data"
   print_msg "  --service-acct: Configure a service account (not commonly used)."
   print_msg "      Aliases: --create-service-acct, --svc-acct"
+  print_msg "  --interactive: Use the interactive version of the deb-install script.  Alias: -i"
   print_blank_line
   local l="Finally, a --script option is available that is used in advanced and test scenario's "
   l+="to override which deb-installer script to use.  It is passed like: --script <path to script>"
@@ -247,6 +250,8 @@ print_options() {
 
 ############ END: Help and Output
 
+DISTRO=""
+EDITION=""
 CONFIGURATION="default"
 CONFIGURATION_URL=""
 PARAMETER_SHIFTS=0
@@ -278,7 +283,7 @@ load_defaults() {
   export AUTO_IS_DEBUG="${AUTO_IS_DEBUG:=0}"
 }
 
-process_positional_arguments() {
+read_positional_arguments() {
   if [[ "$1" == "help" || "$1" == "-h" || "$1" == "--help" ]]; then
     show_help
   fi
@@ -286,10 +291,59 @@ process_positional_arguments() {
     show_options
   fi
 
-  local supported_editions=("stable" "backport" "backports" "testing" "sid" "lts" "ltshwe" "ltsedge" "rolling")
+  local l
+
+  ## Distro
+  local supported_distros=("debian" "ubuntu")
+  local os="debian"
+  if [[ "$1" =~ ^"-" || "$1" == "" ]]; then
+    l="You must pass in the distribution you want to install.  Currently, 'debian' and "
+    l+="'ubuntu' are supported."
+    print_error "$l"
+    show_help
+  fi
+
+  DISTRO="$1"
+  PARAMETER_SHIFTS=$((PARAMETER_SHIFTS + 1))
+
+  get_exit_code contains_element "${DISTRO}" "${supported_distros[@]}"
+  if [[ ! "${EXIT_CODE}" == "0" ]]; then
+    l="Invalid distribution read '${DISTRO}'.  Currently, only 'debian' and 'ubuntu' are "
+    l+="supported."
+    print_error "$l"
+    show_help
+  fi
+
+  shift
+
+  if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    show_help
+  fi
+  if [[ "$1" == "--options" ]]; then
+    show_options
+  fi
+
+  if [[ ("$1" =~ ^"-" || "$1" == "") ]]; then
+    l="You must pass in the edition you want to install. The edition can be a codename "
+    l+="or a special target.  See the help for more information."
+    print_error "$l"
+    show_help
+  fi
+
+  EDITION="$1"
+  PARAMETER_SHIFTS=$((PARAMETER_SHIFTS + 1))
+
+  shift
+
+  if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    show_help
+  fi
+  if [[ "$1" == "--options" ]]; then
+    show_options
+  fi
 
   ## Configuration
-  if [[ "$1" != "" ]]; then
+  if [[ ! ("$1" =~ ^"-" || "$1" == "") ]]; then
     CONFIGURATION="$1"
     PARAMETER_SHIFTS=$((PARAMETER_SHIFTS + 1))
 
@@ -307,22 +361,8 @@ process_positional_arguments() {
       PARAMETER_SHIFTS=$((PARAMETER_SHIFTS + 1))
 
       CONFIGURATION_URL="$1"
-      local is_error="0"
 
       if [[ "${CONFIGURATION_URL}" == "" || "${CONFIGURATION_URL}" =~ ^"-" ]]; then
-        is_error="1"
-      fi
-
-      get_exit_code contains_element "${CONFIGURATION_URL}" "${supported_editions[@]}"
-      if [[ "${EXIT_CODE}" == "0" ]]; then
-        is_error="1"
-      fi
-
-      if [[ "${CONFIGURATION_URL}" == "debian" || "${CONFIGURATION_URL}" == "ubuntu" ]]; then
-        is_error="1"
-      fi
-
-      if [[ "${is_error}" == "1" ]]; then
         local l="When using the 'external' setting, you must provide a URL to a script "
         l+="that will be used to set the environment variable defaults."
         print_error "$l"
@@ -330,61 +370,40 @@ process_positional_arguments() {
       fi
     fi
   fi
+}
 
-  shift
-
-  ## OS Edition
-  if [[ ! ("$1" =~ ^"-" || "$1" == "") ]]; then
-    local edition="$1"
-    local os="debian"
-    PARAMETER_SHIFTS=$((PARAMETER_SHIFTS + 1))
-
-    get_exit_code contains_element "${edition}" "${supported_editions[@]}"
-    if [[ ! "${EXIT_CODE}" == "0" ]]; then
-      shift
-      PARAMETER_SHIFTS=$((PARAMETER_SHIFTS + 1))
-
-      os="$1"
-      if [[ "${os}" != "debian" && "${os}" != "ubuntu" ]]; then
-        print_error "For an edition based on a code name, you must pass the OS as the second parameter."
-        show_help
-      fi
-
+process_distro_and_edition() {
+  case "${EDITION}" in
+    "stable" | "testing" | "sid")
+      DISTRO="debian"
       export AUTO_KERNEL_VERSION="default"
-    else
-      case "${edition}" in
-        "stable" | "testing" | "sid")
-          os="debian"
-          export AUTO_KERNEL_VERSION="default"
-          ;;
-        "backport" | "backports")
-          os="debian"
-          edition="stable"
-          export AUTO_KERNEL_VERSION="backports"
-          ;;
-        "lts" | "rolling")
-          os="ubuntu"
-          export AUTO_KERNEL_VERSION="default"
-          ;;
-        "ltshwe")
-          os="ubuntu"
-          edition="lts"
-          export AUTO_KERNEL_VERSION="hwe"
-          ;;
-        "ltsedge")
-          os="ubuntu"
-          edition="lts"
-          export AUTO_KERNEL_VERSION="hwe-edge"
-          ;;
-        *)
-          noop
-          ;;
-      esac
-    fi
-  fi
+      ;;
+    "backport" | "backports")
+      DISTRO="debian"
+      EDITION="stable"
+      export AUTO_KERNEL_VERSION="backports"
+      ;;
+    "lts" | "rolling")
+      DISTRO="ubuntu"
+      export AUTO_KERNEL_VERSION="default"
+      ;;
+    "ltshwe")
+      DISTRO="ubuntu"
+      EDITION="lts"
+      export AUTO_KERNEL_VERSION="hwe"
+      ;;
+    "ltsedge")
+      DISTRO="ubuntu"
+      EDITION="lts"
+      export AUTO_KERNEL_VERSION="hwe-edge"
+      ;;
+    *)
+      export AUTO_KERNEL_VERSION="default"
+      ;;
+  esac
 
-  export AUTO_INSTALL_OS="${os}"
-  export AUTO_INSTALL_EDITION="${edition}"
+  export AUTO_INSTALL_OS="${DISTRO}"
+  export AUTO_INSTALL_EDITION="${EDITION}"
 }
 
 process_configuration() {
@@ -548,8 +567,9 @@ main() {
   print_title
 
   load_defaults
-  process_positional_arguments "$@"
+  read_positional_arguments "$@"
 
+  process_distro_and_edition
   process_configuration
 
   process_options "$@"
