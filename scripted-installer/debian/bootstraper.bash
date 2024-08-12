@@ -191,7 +191,7 @@ show_options() {
   print_msg "  --reboot: Reboot the machine automatically at end of install. Alias: -r"
   print_msg "  --debug: Debug mode, run the install script in debug mode. Alias: -d"
   print_msg "  --single-disk: Single disk machine configuration. Alias: --single"
-  print_msg "  --dual-disk: Dual disk machine configuration. Alias: --dual"
+  print_msg "  --dual-disk: Dual disk machine configuration. Alias: --dual, --dual-disks"
   print_msg "  --encrypt: Encrypt the disks. Aliases: -e, --encrypted"
   print_msg "  --enable-root: Enable and configure the root account."
   print_msg "  --data: Configure a data directory (not commonly used)."
@@ -256,6 +256,14 @@ CONFIGURATION="default"
 CONFIGURATION_URL=""
 PARAMETER_SHIFTS=0
 INTERACTIVE=0
+
+check_root() {
+  local user_id
+  user_id=$(id -u)
+  if [[ "${user_id}" != "0" ]]; then
+    error_msg "ERROR! You must execute the script as the 'root' user."
+  fi
+}
 
 load_defaults() {
   export AUTO_INSTALL_EDITION="${AUTO_INSTALL_EDITION:=stable}"
@@ -487,7 +495,7 @@ process_options() {
         export AUTO_MAIN_DISK="smallest"
         export AUTO_SECOND_DISK="ignore"
         ;;
-      --dual-disk | --dual)
+      --dual-disk | --dual | --dual-disks)
         export AUTO_MAIN_DISK="smallest"
         export AUTO_SECOND_DISK="largest"
         ;;
@@ -536,6 +544,10 @@ process_options() {
       --i | --interactive)
         INTERACTIVE=1
         ;;
+      --source)
+        shift
+        CONFIG_SCRIPT_SOURCE="$1"
+        ;;
       *)
         error_msg "Unknown option: '$1'"
         ;;
@@ -566,6 +578,8 @@ download_deb_installer() {
 main() {
   print_title
 
+  check_root
+
   load_defaults
   read_positional_arguments "$@"
 
@@ -581,7 +595,7 @@ main() {
   download_deb_installer "${script_file}"
 
   # Now run the script
-  sudo bash "${script_file}"
+  bash "${script_file}"
 }
 
 main "$@"
