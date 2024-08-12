@@ -40,8 +40,8 @@ fi
 
 SCRIPT_AUTHOR="Brennan Fee"
 SCRIPT_LICENSE="MIT License"
-SCRIPT_VERSION="1.7"
-SCRIPT_DATE="2023-07-01"
+SCRIPT_VERSION="1.8"
+SCRIPT_DATE="2024-08-11"
 
 ## Data - These values will change from time-to-time and are placed here to have one place to
 ## change them without having to hunt around in the script.
@@ -105,7 +105,7 @@ CONSOLE_FONT_SIZE="20x10"
 
 ### End: Constants & Global Variables
 
-### Start: Options & User Overrideable Parameters
+### Start: Options & User Overideable Parameters
 
 # All options are read from environment variables allowing override of the defaults.  It is expected that the user set whatever options they want with environment variable exports before calling this script.  The overridable values all begin with "AUTO_" to indicate that they are for the "automatic" installation and to avoid potential collisions with other environment variables.
 #
@@ -157,7 +157,7 @@ AUTO_SECOND_DISK="${AUTO_SECOND_DISK:=ignore}"
 # Whether the volume(s) created should be encrypted.  This is a boolean value.
 AUTO_ENCRYPT_DISKS="${AUTO_ENCRYPT_DISKS:=1}"
 
-# The password to use for the main encrypted volume.  A special value of "file", the default, can be passed which will generate a disk file in the /boot partition that will auto-decrypt on boot.  This is done so that any automated systems that expect a boot without the need of a password can still function.  You can also pass a full path (it must start with slash /, no relative paths) to a file to use, that file will be copied to the /boot partition to preserve the automatic boot nature required for automation.  Instead of a local file you can allso pass a URL to a file which should be downloaded and used, it must start with a schema, such as http:// or https://.  Lastly, you can still provide an actual passphrase which will be used.  However, this method will break any automations as typing the password will be required during boot.
+# The password to use for the main encrypted volume.  A special value of "file", the default, can be passed which will generate a disk file in the /boot partition that will auto-decrypt on boot.  This is done so that any automated systems that expect a boot without the need of a password can still function.  You can also pass a full path (it must start with slash /, no relative paths) to a file to use, that file will be copied to the /boot partition to preserve the automatic boot nature required for automation.  Instead of a local file you can also pass a URL to a file which should be downloaded and used, it must start with a schema, such as http:// or https://.  Lastly, you can still provide an actual passphrase which will be used.  However, this method will break any automations as typing the password will be required during boot.
 #
 # In all configurations, if a second disk is being used a separate file will be generated automatically as the decryption key for the second disk and stored on the root partition (in the /etc/keys directory).  The system will be configured to automatically unlock that partition after the root partition is decrypted.
 #
@@ -167,16 +167,16 @@ AUTO_DISK_PWD="${AUTO_DISK_PWD:=file}"
 # Whether root should be disabled.  This is a boolean value.  The default is to NOT disable the root account.  Some feel that disabling root is a more secure installation footprint, so this setting can be used for those that wish.
 AUTO_ROOT_DISABLED="${AUTO_ROOT_DISABLED:=0}"
 
-# If root is enabled, what the root password should be.  This can be a plain text password or a crypted password.  If you do not pass a root password, we will use the same password you passed for the AUTO_USER_PWD.  If that is also blank the password will be the target installed OS in all lower case ("debian" or "ubuntu", etc.)
+# If root is enabled, what the root password should be.  This can be a plain text password or an encrypted password.  If you do not pass a root password, we will use the same password you passed for the AUTO_USER_PWD.  If that is also blank the password will be the target installed OS in all lower case ("debian" or "ubuntu", etc.)
 AUTO_ROOT_PWD="${AUTO_ROOT_PWD:=}"
 
 # Whether to create a user.  If the root user is disabled with the AUTO_ROOT_DISABLED option, this value will be ignored as in that case a user MUST be created and so we will force the creation of this user.  However, if root is enabled you can optionally turn off the creation of a normal user.
 AUTO_CREATE_USER="${AUTO_CREATE_USER:=1}"
 
-# The username to create, if not provied defaults to a username that matches the installed OS (debian or ubuntu).
+# The username to create, if not provided defaults to a username that matches the installed OS (debian or ubuntu).
 AUTO_USERNAME="${AUTO_USERNAME:=}"
 
-# The password for the created user.  If you do not provide a password it will default to the target installed OS in all lower case ("debian" or "ubuntu", etc.). The password can be a plain text password or a crypted password.
+# The password for the created user.  If you do not provide a password it will default to the target installed OS in all lower case ("debian" or "ubuntu", etc.). The password can be a plain text password or an encrypted password.
 AUTO_USER_PWD="${AUTO_USER_PWD:=}"
 
 # A public SSH key to be set up in the created user account to allow SSH into the machine for the user.
@@ -222,7 +222,7 @@ AUTO_CONFIRM_SETTINGS="${AUTO_CONFIRM_SETTINGS:=1}"
 # Whether to automatically reboot after the script has completed.   Default is not to reboot.  Automated environments such as Packer should turn this on.
 AUTO_REBOOT="${AUTO_REBOOT:=0}"
 
-### END: Options & User Overrideable Parameters
+### END: Options & User Overideable Parameters
 
 ### START: Params created during verification
 
@@ -384,7 +384,7 @@ confirm_with_user() {
       print_status "The architecture is ${SYS_ARCH}, dpkg ${DPKG_ARCH}, and a BIOS has been found."
     fi
     print_status "It appears you are installing from a '${INSTALLER_DISTRO}' installer medium."
-    blank_line
+    print_blank_line
 
     print_status "The selected keymap is '${AUTO_KEYMAP}', locale is '${AUTO_LOCALE}', language is '${AUTO_LANGUAGE}', and the selected timezone is '${AUTO_TIMEZONE}'."
 
@@ -405,7 +405,7 @@ confirm_with_user() {
     else
       print_status "The hostname selected is '${AUTO_HOSTNAME}'. ${domain_info}"
     fi
-    blank_line
+    print_blank_line
 
     if [[ "${AUTO_SKIP_PARTITIONING}" == "1" ]]; then
       print_status "Automatic disk partitioning has been DISABLED.  You should have already manually setup the target /mnt directory, performing any needed disk partitioning and mounting.  This can be done either manually before calling this script or in a provided 'before' script."
@@ -441,7 +441,7 @@ confirm_with_user() {
         print_status "The disks will NOT be encrypted."
       fi
     fi
-    blank_line
+    print_blank_line
 
     if [[ "${AUTO_ROOT_DISABLED}" == "1" ]]; then
       print_status "The root account will be disabled."
@@ -463,11 +463,11 @@ confirm_with_user() {
     else
       print_status "User creation was disabled."
     fi
-    blank_line
+    print_blank_line
 
     if [[ "${AUTO_CREATE_SERVICE_ACCT}" == "1" ]]; then
       print_status "The 'Service Account' will be created and configured."
-      blank_line
+      print_blank_line
     fi
 
     pause_output
@@ -485,7 +485,7 @@ confirm_with_user() {
     fi
 
     print_status "The stamp location (copy location for install log files) will be '${SELECTED_STAMP_LOCATION}'."
-    blank_line
+    print_blank_line
 
     if [[ "${AUTO_CONFIG_MANAGEMENT}" == "none" ]]; then
       print_status "No configuration management software will be pre-installed."
@@ -503,7 +503,7 @@ confirm_with_user() {
     else
       print_status "Extra prerequisite pre-installation packages have been selected to be installed: '${AUTO_EXTRA_PREREQ_PACKAGES}'."
     fi
-    blank_line
+    print_blank_line
 
     if [[ "${AUTO_BEFORE_SCRIPT}" == "" ]]; then
       print_status "No 'before' script has been provided."
@@ -522,14 +522,14 @@ confirm_with_user() {
     else
       print_status "'First boot' script selected is '${AUTO_FIRST_BOOT_SCRIPT}'."
     fi
-    blank_line
+    print_blank_line
 
     if [[ "${AUTO_REBOOT}" == "1" ]]; then
       print_status "The system will automatically boot after installation."
     else
-      print_status "The system will NOT automatically boot after installation.  You will have the opportunity to manually continue configurations.  The taget chroot location is /mnt.  BE SURE TO UNMOUNT IT BEFORE REBOOTING!"
+      print_status "The system will NOT automatically boot after installation.  You will have the opportunity to manually continue configurations.  The target chroot location is /mnt.  BE SURE TO UNMOUNT IT BEFORE REBOOTING!"
     fi
-    blank_line
+    print_blank_line
 
     pause_output
   else
@@ -552,7 +552,7 @@ print_title() {
   echo -e "# ${BOLD}${text}${RESET}"
   write_log "TITLE: ${text}"
   print_line
-  blank_line
+  print_blank_line
 }
 
 print_summary_header() {
@@ -571,7 +571,7 @@ print_line() {
   write_log_spacer
 }
 
-blank_line() {
+print_blank_line() {
   echo ""
   write_log_blank
 }
@@ -617,7 +617,7 @@ pause_output() {
   read -re -sn 1 -p "Press enter to continue..."
 }
 
-error_msg() {
+print_error() {
   local RED
   RED="$(tput setaf 1)"
   local T_COLS
@@ -625,6 +625,10 @@ error_msg() {
   T_COLS=$((T_COLS - 1))
   echo -e "${RED}$1${RESET}\n" | fold -sw "${T_COLS}"
   write_log "ERROR: ${1}"
+}
+
+error_msg() {
+  print_error "$1"
   exit 1
 }
 
@@ -1083,7 +1087,7 @@ parse_main_disk() {
         ;;
 
       *)
-        # Should never happen as we have already verified thie value
+        # Should never happen as we have already verified the value
         error_msg "ERROR! Invalid main disk selection: '${AUTO_MAIN_DISK}'"
         ;;
     esac
@@ -1117,7 +1121,7 @@ parse_second_disk() {
 
   write_log "checking for second disk"
   if [[ "${AUTO_SKIP_PARTITIONING}" == "1" || "${#devices_list[@]}" == "0" ]]; then
-    write_log "Forcing ingore for second disk due to only 1 disk in system"
+    write_log "Forcing ignore for second disk due to only 1 disk in system"
     # There is only 1 disk in the system or the user has chosen to skip partitioning, so regardless of what they asked for on second disk it should be ignored
     SECOND_DISK_METHOD="forced"
     SELECTED_SECOND_DISK="ignore"
@@ -1152,7 +1156,7 @@ parse_second_disk() {
       ;;
 
     *)
-      # Should never happen as we have already verified thie value
+      # Should never happen as we have already verified the value
       error_msg "ERROR! Invalid second disk selection: '${AUTO_SECOND_DISK}'"
       ;;
   esac
@@ -2543,11 +2547,11 @@ stamp_build() {
 }
 
 show_complete_screen() {
-  blank_line
+  print_blank_line
   print_line
   print_success "INSTALL COMPLETED"
   print_info "After reboot you can configure users, install other software, etc."
-  blank_line
+  print_blank_line
 }
 
 ### END: Wrapping Up
@@ -2558,15 +2562,15 @@ welcome_screen() {
   write_log "In welcome screen."
   print_title
   print_status "Automated script to install Debian and Ubuntu systems the 'Arch Way' (aka deboostrap)."
-  blank_line
+  print_blank_line
   print_status "Script version: ${SCRIPT_VERSION} - Script date: ${SCRIPT_DATE}"
-  blank_line
+  print_blank_line
   print_status "For more information, documentation, or help:  https://github.com/brennanfee/linux-bootstraps"
-  blank_line
+  print_blank_line
   print_line
-  blank_line
+  print_blank_line
   print_status "Script can be canceled at any time with CTRL+C"
-  blank_line
+  print_blank_line
   if [[ "${AUTO_CONFIRM_SETTINGS}" == "1" || "${IS_DEBUG}" == "1" ]]; then
     pause_output
   fi
