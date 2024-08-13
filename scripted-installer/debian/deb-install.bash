@@ -62,9 +62,10 @@ DEFAULT_DEBIAN_REPO="https://deb.debian.org/debian"
 DEFAULT_UBUNTU_REPO="http://archive.ubuntu.com/ubuntu"
 
 # Debootstrap download filenames
+#TODO: Write a method to make this more resilient to change over time (auto select the latest)
 DEBOOTSTRAP_PATH="pool/main/d/debootstrap"
-CURRENT_DEBIAN_DEBOOTSTRAP_FILE="debootstrap_1.0.134~bpo12+1.tar.gz"
-CURRENT_UBUNTU_DEBOOTSTRAP_FILE="debootstrap_1.0.134ubuntu1.tar.gz"
+CURRENT_DEBIAN_DEBOOTSTRAP_FILE="debootstrap_1.0.137.tar.gz"
+CURRENT_UBUNTU_DEBOOTSTRAP_FILE="debootstrap_1.0.137ubuntu3.tar.gz"
 
 ### End: Data
 
