@@ -95,7 +95,7 @@ DPKG_ARCH=$(dpkg --print-architecture) # Something like amd64, arm64
 UEFI=0
 
 # This is not to be confused with the OS we are going to install, this is the OS that was booted to perform the install.  This script only supports Debian and Ubuntu Live Server installers images.
-INSTALLER_DISTRO=$(lsb_release -i -s | tr "[:upper:]" "[:lower:]")
+INSTALLER_DISTRO=$(lsb_release -i -s 2> /dev/null | tr "[:upper:]" "[:lower:]")
 
 # Console font size, I pre-configure the console font to enlarge it which should work better on higher resolution screens.
 # The font family chosen is the Lat15-Terminus font family.  The only value changed here is the final size.
@@ -1572,7 +1572,7 @@ install_base_system_debian() {
 
   # Can't use branches like "stable" or "oldstable" must convert to the codename like "bullseye" or "bookworm"
   local edition
-  edition=$(arch-chroot /mnt lsb_release -c -s)
+  edition=$(arch-chroot /mnt lsb_release -c -s 2> /dev/null)
 
   # Kernel & Firmware
   local kernel_to_install="default"
@@ -1637,7 +1637,7 @@ install_base_system_ubuntu() {
 
   # The HWE kernels use the Ubuntu version numbers rather than the codename
   local release_ver
-  release_ver=$(arch-chroot /mnt lsb_release -r -s)
+  release_ver=$(arch-chroot /mnt lsb_release -r -s 2> /dev/null)
 
   local hwe_edge_exists=0
   if package_exists "linux-generic-hwe-${release_ver}-edge"; then
@@ -1799,7 +1799,7 @@ configure_apt_debian() {
   if [[ ! "${EXIT_CODE}" == "0" ]]; then
     # Can't use branches like "stable" or "oldstable" must convert to the codename like "bullseye" or "bookworm"
     local edition
-    edition=$(arch-chroot /mnt lsb_release -c -s)
+    edition=$(arch-chroot /mnt lsb_release -c -s 2> /dev/null)
 
     # Now backports
     echo "deb ${SELECTED_REPO_URL} ${edition}-backports ${components}" > /mnt/etc/apt/sources.list.d/debian-backports.list
@@ -2188,11 +2188,11 @@ install_salt_from_repo() {
 
   local salt_version="latest" # alternatively something like 3005
   local distro
-  distro=$(arch-chroot /mnt lsb_release -i -s | tr "[:upper:]" "[:lower:]")
+  distro=$(arch-chroot /mnt lsb_release -i -s 2> /dev/null | tr "[:upper:]" "[:lower:]")
   local release
-  release=$(arch-chroot /mnt lsb_release -r -s)
+  release=$(arch-chroot /mnt lsb_release -r -s 2> /dev/null)
   local codename
-  codename=$(arch-chroot /mnt lsb_release -c -s | tr "[:upper:]" "[:lower:]")
+  codename=$(arch-chroot /mnt lsb_release -c -s 2> /dev/null | tr "[:upper:]" "[:lower:]")
 
   # Salt only supports stable releases, not testing
   case "${codename}" in
@@ -2236,7 +2236,7 @@ install_puppet_from_repo() {
   print_info "Installing puppet from repo"
 
   local codename
-  codename=$(arch-chroot /mnt lsb_release -c -s)
+  codename=$(arch-chroot /mnt lsb_release -c -s 2> /dev/null)
 
   # Puppet only supports stable releases, not testing
   case "${codename}" in
