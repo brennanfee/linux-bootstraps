@@ -2000,7 +2000,7 @@ configure_boot() {
   # fi
   sed -i "s/^GRUB_CMDLINE_LINUX_DEFAULT=.*$/${grub_cmdline_linux_default}/g" /mnt/etc/default/grub
 
-  sed -i -E '/GRUB_GFXMODE=/ c\GRUB_GFXMODE=1024x768x32' /mnt/etc/default/grub
+  sed -i -E '/GRUB_GFXMODE=/ c\GRUB_GFXMODE=1280x720x32' /mnt/etc/default/grub
 
   # Run updates
   arch-chroot /mnt update-initramfs -u
