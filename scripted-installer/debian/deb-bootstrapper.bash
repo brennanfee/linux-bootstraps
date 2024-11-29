@@ -7,14 +7,19 @@
 # and then automatically calls the deb-install script.  Optionally, it allows
 # using an external script to set some of the values.
 #
-# Short URL:
-# Github URL:
+# Short URL: https://tinyurl.com/deb-bootstrapper
+# Github URL: https://raw.githubusercontent.com/brennanfee/linux-bootstraps/refs/heads/main/scripted-installer/debian/deb-bootstrapper.bash
+#
+# For the develop branch version:
+#
+# Short URL: https://tinyurl.com/dev-deb-bootstrapper
+# Github URL: https://raw.githubusercontent.com/brennanfee/linux-bootstraps/refs/heads/develop/scripted-installer/debian/deb-bootstrapper.bash
 #
 
 SCRIPT_AUTHOR="Brennan Fee"
 SCRIPT_LICENSE="MIT License"
-SCRIPT_VERSION="1.8"
-SCRIPT_DATE="2024-08-10"
+SCRIPT_VERSION="2.0"
+SCRIPT_DATE="2024-11-28"
 
 ############ START: Generic Print Methods
 
