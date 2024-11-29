@@ -663,6 +663,7 @@ setup_installer_environment() {
 
   ### Resolution
   write_log "Setting resolution"
+  print_info "   Setting resolution..."
   local detected_virt
   detected_virt=$(systemd-detect-virt || true)
   if [[ "${detected_virt}" == "oracle" ]]; then
