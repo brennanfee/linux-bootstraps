@@ -145,20 +145,24 @@ show_help() {
   print_msg "$l"
   print_blank_line
   l="Configuration is optional and can be one of 'default', 'vagrant', 'vm', 'homelab', "
-  l+="'vmhomelab', and 'external'.  The default is 'default'. These configurations serve as "
-  l+="pre-set groups of settings based on a common target type of system to be initialized. "
-  l+="For instance, the vagrant configuration assumes vm usage (and so skips disk encryption) "
-  l+="and creates a 'vagrant' user as the main user.  All of the values initialized with a "
-  l+="configuration can be overridden by flags or options that follow.  For the 'external' "
-  l+="configuration the next parameter must be a URL that points to a script that will set "
-  l+="the desired options (using exported environment variables). The script will be downloaded "
-  l+="and sourced before the rest of the options are processed. Example: bootstraper.bash "
-  l+="debian stable external https://tinyurl.com/mysettings --auto-mode"
+  l+="'homelan', 'vmhomelab', 'vmhomelan', and 'external'.  The default is, naturally 'default'. "
+  l+="These configurations serve as pre-set groups of settings based on a common target type "
+  l+="of system to be initialized. For instance, the vagrant configuration assumes vm usage "
+  l+="(and so skips disk encryption) and creates a 'vagrant' user as the main user.  All of "
+  l+="the values initialized with a configuration can be overridden by flags or options that "
+  l+="follow.  For the 'external' configuration the next parameter must be a URL that points "
+  l+="to a script that will set the desired options (using exported environment variables). "
+  l+="The script will be downloaded and sourced before the rest of the options are processed. "
+  l+="Example: bootstraper.bash debian stable external https://tinyurl.com/mysettings --auto-mode"
+  print_msg "$l"
+  print_blank_line
+  l="The configurations 'homelab', 'homelan', 'vmhomelab', and 'vmhomelan' are for my own personal "
+  l+="use.  While they may work for you, the settings may not be what you would desire."
   print_msg "$l"
   print_blank_line
   l="Options are all passed as flags (-{short option}, --{long option}), some are mutually "
   l+="exclusive and in those cases the last one passed in wins.  For a list of the options "
-  l+="run this script again with 'options' as the distribution or --options as a flag."
+  l+="run this script again with 'options' as the first parameter or --options as a flag."
   print_msg "$l"
   print_blank_line
   l="Lastly, all of these settings and flags are simply setting up the environment variable "
@@ -303,7 +307,6 @@ read_positional_arguments() {
 
   ## Distro
   local supported_distros=("debian" "ubuntu")
-  local os="debian"
   if [[ "$1" =~ ^"-" || "$1" == "" ]]; then
     l="You must pass in the distribution you want to install.  Currently, 'debian' and "
     l+="'ubuntu' are supported."
@@ -436,10 +439,16 @@ process_configuration() {
       export AUTO_ENCRYPT_DISKS=0
       ;;
     homelab)
-      process_from_external "https://tinyurl.com/brennan-homelab"
+      process_from_external "https://tinyurl.com/brennan-home-lab-config"
+      ;;
+    homelan)
+      process_from_external "https://tinyurl.com/brennan-home-lan-config"
       ;;
     vmhomelab)
-      process_from_external "https://tinyurl.com/brennan-vmhomelab"
+      process_from_external "https://tinyurl.com/brennan-vm-home-lab-config"
+      ;;
+    vmhomelan)
+      process_from_external "https://tinyurl.com/brennan-vm-home-lan-config"
       ;;
     external)
       process_from_external "$CONFIGURATION_URL"
