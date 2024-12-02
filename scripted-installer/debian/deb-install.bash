@@ -668,6 +668,7 @@ setup_installer_environment() {
   detected_virt=$(systemd-detect-virt || true)
   if [[ "${detected_virt}" == "oracle" ]]; then
     fbset -xres 1280 -yres 720 -depth 32 -match
+    clear -x
   fi
 
   ### Console Font
@@ -2306,10 +2307,19 @@ setup_data_directory() {
   if [[ "${AUTO_USE_DATA_DIR}" == "1" ]]; then
     groupadd --root /mnt --system data-user
     arch-chroot /mnt chown -R root:data-user /data
-    arch-chroot /mnt chown -R root:data-user /srv
-    chmod -R g+w /mnt/data
-    chmod -R g+w /mnt/srv
+    chmod -R g+rwx /mnt/data
+
+    usermod --root /mnt -a -G "data-user" "root"
   fi
+}
+
+setup_srv_directory() {
+  print_info "In Setup Srv Directory"
+  groupadd --root /mnt --system srv-user
+  arch-chroot /mnt chown -R root:srv-user /srv
+  chmod -R g+rwx /mnt/srv
+
+  usermod --root /mnt -a -G "srv-user" "root"
 }
 
 setup_service_user() {
@@ -2329,7 +2339,7 @@ setup_service_user() {
     usermod --root /mnt --password "${encrypted}" "${user_name}"
 
     # _ssh is the new name for the ssh group going forward, but I attempt to add both (ssh, _ssh) just in case
-    groupsToAdd=(audio video plugdev netdev bluetooth kvm sudo ssh _ssh users data-user vboxsf)
+    groupsToAdd=(audio video plugdev netdev bluetooth kvm sudo ssh _ssh users data-user srv-user vboxsf)
     for groupToAdd in "${groupsToAdd[@]}"; do
       group_exists=$(arch-chroot /mnt getent group "${groupToAdd}" | wc -l || true)
       if [[ "${group_exists}" == "1" ]]; then
@@ -2391,7 +2401,7 @@ setup_user() {
     fi
 
     # _ssh is the new name for the ssh group going forward, but I attempt to add both (ssh, _ssh) just in case
-    groupsToAdd=(audio video plugdev netdev bluetooth kvm sudo ssh _ssh users data-user vboxsf)
+    groupsToAdd=(audio video plugdev netdev bluetooth kvm sudo ssh _ssh users data-user srv-user vboxsf)
     for groupToAdd in "${groupsToAdd[@]}"; do
       group_exists=$(arch-chroot /mnt getent group "${groupToAdd}" | wc -l || true)
       if [[ "${group_exists}" == "1" ]]; then
@@ -2640,6 +2650,7 @@ install_applications() {
 setup_users() {
   setup_root
   setup_data_directory
+  setup_srv_directory
   setup_service_user
   setup_user
 }
