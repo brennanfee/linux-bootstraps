@@ -168,7 +168,7 @@ AUTO_DISK_PWD="${AUTO_DISK_PWD:=file}"
 # Whether root should be disabled.  This is a boolean value.  The default is to NOT disable the root account.  Some feel that disabling root is a more secure installation footprint, so this setting can be used for those that wish.
 AUTO_ROOT_DISABLED="${AUTO_ROOT_DISABLED:=0}"
 
-# If root is enabled, what the root password should be.  This can be a plain text password or an encrypted password.  If you do not pass a root password, we will use the same password you passed for the AUTO_USER_PWD.  If that is also blank the password will be the target installed OS in all lower case ("debian" or "ubuntu", etc.)
+# If root is enabled, what the root password should be.  This can be a plain text password or a hashed password.  If you do not pass a root password, we will use the same password you passed for the AUTO_USER_PWD.  If that is also blank the password will be the target installed OS in all lower case ("debian" or "ubuntu", etc.)
 AUTO_ROOT_PWD="${AUTO_ROOT_PWD:=}"
 
 # Whether to create a user.  If the root user is disabled with the AUTO_ROOT_DISABLED option, this value will be ignored as in that case a user MUST be created and so we will force the creation of this user.  However, if root is enabled you can optionally turn off the creation of a normal user.
@@ -177,7 +177,7 @@ AUTO_CREATE_USER="${AUTO_CREATE_USER:=1}"
 # The username to create, if not provided defaults to a username that matches the installed OS (debian or ubuntu).
 AUTO_USERNAME="${AUTO_USERNAME:=}"
 
-# The password for the created user.  If you do not provide a password it will default to the target installed OS in all lower case ("debian" or "ubuntu", etc.). The password can be a plain text password or an encrypted password.
+# The password for the created user.  If you do not provide a password it will default to the target installed OS in all lower case ("debian" or "ubuntu", etc.). The password can be a plain text password or a hashed password.
 AUTO_USER_PWD="${AUTO_USER_PWD:=}"
 
 # A public SSH key to be set up in the created user account to allow SSH into the machine for the user.
@@ -188,6 +188,9 @@ AUTO_USER_SSH_KEY="${AUTO_USER_SSH_KEY:=}"
 # jobs that should not run as root but should also not run as a "regular" user.  Given this is highly specific
 # to my setups it is likely you will want to leave this disabled, which is the default.  This is a boolean value.
 AUTO_CREATE_SERVICE_ACCT="${AUTO_CREATE_SERVICE_ACCT:=0}"
+
+# The password for the service acct user.  If you do not provide a password it will default to the target installed OS in all lower case ("debian" or "ubuntu", etc.). The password can be a plain text password or a hashed password.
+AUTO_SERVICE_ACCT_PWD="${AUTO_SERVICE_ACCT_PWD:=}"
 
 # A public SSH key to be set up for the 'Service Account'.
 AUTO_SERVICE_ACCT_SSH_KEY="${AUTO_SERVICE_ACCT_SSH_KEY:=}"
@@ -339,6 +342,7 @@ log_values() {
   write_log_password "AUTO_USER_PWD: '${AUTO_USER_PWD}'"
   write_log "AUTO_USER_SSH_KEY: '${AUTO_USER_SSH_KEY}'"
   write_log "AUTO_CREATE_SERVICE_ACCT: '${AUTO_CREATE_SERVICE_ACCT}'"
+  write_log_password "AUTO_SERVICE_ACCT_PWD: '${AUTO_SERVICE_ACCT_PWD}'"
   write_log "AUTO_SERVICE_ACCT_SSH_KEY: '${AUTO_SERVICE_ACCT_SSH_KEY}'"
   write_log_blank
 
@@ -2282,15 +2286,15 @@ setup_root() {
       fi
     fi
 
-    # Check if the password is encrypted
+    # Check if the password is hashed
     if echo "${root_pwd}" | grep -q '^\$[[:digit:]]\$.*$'; then
-      # Password is encrypted
+      # Password is hashed
       usermod --root /mnt --password "${root_pwd}" root
     else
       # Password is plaintext
-      local encrypted
-      encrypted=$(echo "${root_pwd}" | openssl passwd -6 -stdin)
-      usermod --root /mnt --password "${encrypted}" root
+      local hashed
+      hashed=$(echo "${root_pwd}" | openssl passwd -6 -stdin)
+      usermod --root /mnt --password "${hashed}" root
     fi
 
     # If root is the only user, allow login with root through SSH.  Users can of course (and should) change this after initial boot, this just allows a remote connection to start things off.
@@ -2329,14 +2333,26 @@ setup_service_user() {
     print_info "Setting up Service User"
 
     local user_name="svcacct"
+    local user_pwd
+    user_pwd="${AUTO_SERVICE_ACCT_PWD}"
+    # If they did not pass a password, default it to the install os
+    if [[ "${user_pwd}" == "" ]]; then
+      user_pwd="${AUTO_INSTALL_OS}"
+    fi
 
     useradd --root /mnt --create-home --shell /bin/bash --system "${user_name}"
     arch-chroot /mnt chfn --full-name "Service Account" "${user_name}"
 
-    # Password will always be initialized to the install os (debian, ubuntu, etc.)
-    local encrypted
-    encrypted=$(echo "${AUTO_INSTALL_OS}" | openssl passwd -6 -stdin)
-    usermod --root /mnt --password "${encrypted}" "${user_name}"
+    # Check if the password is hashed
+    if echo "${user_pwd}" | grep -q '^\$[[:digit:]]\$.*$'; then
+      # Password is hashed
+      usermod --root /mnt --password "${user_pwd}" "${user_name}"
+    else
+      # Password is plaintext
+      local hashed
+      hashed=$(echo "${user_pwd}" | openssl passwd -6 -stdin)
+      usermod --root /mnt --password "${hashed}" "${user_name}"
+    fi
 
     # _ssh is the new name for the ssh group going forward, but I attempt to add both (ssh, _ssh) just in case
     groupsToAdd=(audio video plugdev netdev bluetooth kvm sudo ssh _ssh users data-user srv-user vboxsf)
@@ -2389,15 +2405,15 @@ setup_user() {
     useradd --root /mnt --create-home --shell /bin/bash "${user_name}"
     arch-chroot /mnt chfn --full-name "${user_name}" "${user_name}"
 
-    # Check if the password is encrypted
+    # Check if the password is hashed
     if echo "${user_pwd}" | grep -q '^\$[[:digit:]]\$.*$'; then
-      # Password is encrypted
+      # Password is hashed
       usermod --root /mnt --password "${user_pwd}" "${user_name}"
     else
       # Password is plaintext
-      local encrypted
-      encrypted=$(echo "${user_pwd}" | openssl passwd -6 -stdin)
-      usermod --root /mnt --password "${encrypted}" "${user_name}"
+      local hashed
+      hashed=$(echo "${user_pwd}" | openssl passwd -6 -stdin)
+      usermod --root /mnt --password "${hashed}" "${user_name}"
     fi
 
     # _ssh is the new name for the ssh group going forward, but I attempt to add both (ssh, _ssh) just in case
