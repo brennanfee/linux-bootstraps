@@ -369,7 +369,7 @@ read_positional_arguments() {
     CONFIGURATION="$1"
     PARAMETER_SHIFTS=$((PARAMETER_SHIFTS + 1))
 
-    local supported_configs=("default" "defaults" "vagrant" "vm" "homelab" "vmhomelab" "external")
+    local supported_configs=("default" "defaults" "vagrant" "vm" "homelab" "homelan" "vmhomelab" "vmhomelan" "external")
     get_exit_code contains_element "${CONFIGURATION}" "${supported_configs[@]}"
     if [[ ! "${EXIT_CODE}" == "0" ]]; then
       local l="Value read as configuration '${CONFIGURATION}' is not valid, try again with "
