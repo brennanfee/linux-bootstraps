@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Author: Brennan Fee
 # License: MIT License
-# Version: 1.7
-# Date: 2023-07-01
+# Version: 1.9
+# Date: 2024-12-04
 #
 # Example to run directly from URL: bash <(curl -fsSL <url here>)
 #
@@ -40,8 +40,8 @@ fi
 
 SCRIPT_AUTHOR="Brennan Fee"
 SCRIPT_LICENSE="MIT License"
-SCRIPT_VERSION="1.8"
-SCRIPT_DATE="2024-08-11"
+SCRIPT_VERSION="1.9"
+SCRIPT_DATE="2024-12-04"
 
 ## Data - These values will change from time-to-time and are placed here to have one place to
 ## change them without having to hunt around in the script.
