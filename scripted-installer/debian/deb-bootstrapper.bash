@@ -481,7 +481,7 @@ process_from_external() {
   if [[ -f "${script_url}" ]]; then
     script_file="${script_url}"
   elif [[ ! -f "${script_file}" ]]; then
-    wget -O "${script_file}" "${script_url}"
+    curl -fsSL -o "${script_file}" "${script_url}"
     downloaded=1
   fi
 
@@ -598,9 +598,9 @@ download_deb_installer() {
   if [[ ! -f "${script_file}" ]]; then
     # To support testing of other versions of the install script (local versions, branches, etc.)
     if [[ "${CONFIG_SCRIPT_SOURCE:=}" != "" ]]; then
-      wget -O "${script_file}" "${CONFIG_SCRIPT_SOURCE}"
+      curl -fsSL -o "${script_file}" "${CONFIG_SCRIPT_SOURCE}"
     else
-      wget -O "${script_file}" "${script_url}"
+      curl -fsSL -o "${script_file}" "${script_url}"
     fi
   fi
 }

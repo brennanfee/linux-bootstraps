@@ -1256,7 +1256,7 @@ ask_for_before_script() {
   write_log "In ask for before script."
 
   print_section "Execute A 'Before' Script"
-  print_section_info "You can, optionally, provide a script that will run before the installation script runs.  This 'before' script can perform advanced actions such as disk partitioning.  Note that the target environment is not yet mounted at /mnt and therefore you cannot perform any chroot functionality.  The script can also export script options (export AUTO_TIMEZONE='value') which will be respected by the main script.  So, if you want settings to be based on some kind of logic or based on machine inspection, you may use the 'before' script to perform that logic.  The script does not have to be a bash script, but MUST have a shebang that properly indicates how the script should be run.  Please note that you will need to investigate that your preferred script language is supported in the pre-installation environment.  The value provided should be a URL that will be accessible by the installation machine.  The script will be downloaded from that location using wget, so any URL supported by wget will work.  Leaving this blank will skip execution of any 'before' script."
+  print_section_info "You can, optionally, provide a script that will run before the installation script runs.  This 'before' script can perform advanced actions such as disk partitioning.  Note that the target environment is not yet mounted at /mnt and therefore you cannot perform any chroot functionality.  The script can also export script options (export AUTO_TIMEZONE='value') which will be respected by the main script.  So, if you want settings to be based on some kind of logic or based on machine inspection, you may use the 'before' script to perform that logic.  The script does not have to be a bash script, but MUST have a shebang that properly indicates how the script should be run.  Please note that you will need to investigate that your preferred script language is supported in the pre-installation environment.  The value provided should be a URL that will be accessible by the installation machine.  The script will be downloaded from that location using curl, so any URL supported by curl will work.  Leaving this blank will skip execution of any 'before' script."
 
   local input
   read -rp "'Before' script to execute: " input
@@ -1271,7 +1271,7 @@ ask_for_after_script() {
   write_log "In ask for after script."
 
   print_section "Execute A 'After' Script"
-  print_section_info "You can, optionally, provide a script that will run after the main installation but before the machine is rebooted (if reboot was requested).  This script can preform any extra configurations for the target installation.  The /mnt directory will still be available and chroot into that location is supported (you can even use the provided arch-chroot command to make tasks simpler).  The 'after' script SHOULD NOT unmount the /mnt directory.  The script does not have to be a bash script, but MUST have a shebang that properly indicates how the script should be run.  Please note that you will need to investigate that your preferred script language is supported in the pre-installation environment.  The value provided should be a URL that will be accessible by the installation machine.  The script will be downloaded from that location using wget, so any URL supported by wget will work.  Leaving this blank will skip execution of any 'after' script."
+  print_section_info "You can, optionally, provide a script that will run after the main installation but before the machine is rebooted (if reboot was requested).  This script can preform any extra configurations for the target installation.  The /mnt directory will still be available and chroot into that location is supported (you can even use the provided arch-chroot command to make tasks simpler).  The 'after' script SHOULD NOT unmount the /mnt directory.  The script does not have to be a bash script, but MUST have a shebang that properly indicates how the script should be run.  Please note that you will need to investigate that your preferred script language is supported in the pre-installation environment.  The value provided should be a URL that will be accessible by the installation machine.  The script will be downloaded from that location using curl, so any URL supported by curl will work.  Leaving this blank will skip execution of any 'after' script."
 
   local input
   read -rp "'After' script to execute: " input
@@ -1286,7 +1286,7 @@ ask_for_first_boot_script() {
   write_log "In ask for after first boot script."
 
   print_section "Execute A 'First Boot' Script"
-  print_section_info "You can, optionally, provide a script that will run on the first boot of the machine.  This script will run only once.  It can be used to perform after installation steps or kick off some external configuration process or basically do any kind of post-installation steps you might want.  The script will be named '/usr/local/sbin/first-boot.script' and it will not be removed after execution.  The script does not have to be a bash script, but MUST have a shebang that properly indicates how the script should be run.  Please note that you will need to ensure that the script language used is installed and supported in your target environment (for instance by using AUTO_EXTRA_PACKAGES).  The value provided should be a URL that will be accessible by the installation machine.  The script will be downloaded from that location using wget, so any URL supported by wget will work.  Leaving this blank will skip execution of any 'first boot' script."
+  print_section_info "You can, optionally, provide a script that will run on the first boot of the machine.  This script will run only once.  It can be used to perform after installation steps or kick off some external configuration process or basically do any kind of post-installation steps you might want.  The script will be named '/usr/local/sbin/first-boot.script' and it will not be removed after execution.  The script does not have to be a bash script, but MUST have a shebang that properly indicates how the script should be run.  Please note that you will need to ensure that the script language used is installed and supported in your target environment (for instance by using AUTO_EXTRA_PACKAGES).  The value provided should be a URL that will be accessible by the installation machine.  The script will be downloaded from that location using curl, so any URL supported by curl will work.  Leaving this blank will skip execution of any 'first boot' script."
 
   local input
   read -rp "'First Boot' script to execute: " input
@@ -1723,9 +1723,9 @@ download_deb_installer() {
     # To support testing of other versions of the install script (local versions, branches, etc.)
     if [[ "${CONFIG_SCRIPT_SOURCE:=}" != "" ]]
     then
-      wget -O "${script_file}" "${CONFIG_SCRIPT_SOURCE}"
+      curl -fsSL -o "${script_file}" "${CONFIG_SCRIPT_SOURCE}"
     else
-      wget -O "${script_file}" "${script_url}"
+      curl -fsSL -o "${script_file}" "${script_url}"
     fi
   fi
 }

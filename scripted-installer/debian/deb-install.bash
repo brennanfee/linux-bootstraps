@@ -35,7 +35,7 @@ fi
 
 SCRIPT_AUTHOR="Brennan Fee"
 SCRIPT_LICENSE="MIT License"
-SCRIPT_VERSION="1.10"
+SCRIPT_VERSION="1.11"
 SCRIPT_DATE="2025-02-23"
 
 ## Data - These values will change from time-to-time and are placed here to have one place to
@@ -780,11 +780,11 @@ check_network_connection() {
       # Check localhost first (if network stack is up at all)
       if ping -q -w 3 -c 2 localhost &> /dev/null; then
         # Test the internet
-        if wget -q --spider https://www.google.com; then
+        if curl -fsSL https://www.google.com; then
           print_info "Connection found."
           break
         else
-          write_debug "wget failed, retrying..."
+          write_debug "curl failed, retrying..."
           sleep "${sleepLength}"
         fi
       else
@@ -1405,7 +1405,7 @@ encrypt_main_provided_file() {
 
   if [[ "${ENCRYPTION_FILE}" != /* ]]; then
     local download_file="downloaded-key"
-    wget -O "${download_file}" "${ENCRYPTION_FILE}"
+    curl -fsSL -o "${download_file}" "${ENCRYPTION_FILE}"
     ENCRYPTION_FILE="${download_file}"
   fi
 
@@ -2196,7 +2196,7 @@ install_salt_from_repo() {
 
   esac
 
-  wget -O /mnt/etc/apt/keyrings/salt-archive-keyring.gpg "https://repo.saltproject.io/salt/py3/${distro}/${release}/${DPKG_ARCH}/${salt_version}/salt-archive-keyring.gpg"
+  curl -fsSL -o /mnt/etc/apt/keyrings/salt-archive-keyring.gpg "https://repo.saltproject.io/salt/py3/${distro}/${release}/${DPKG_ARCH}/${salt_version}/salt-archive-keyring.gpg"
 
   echo "deb [signed-by=/etc/apt/keyrings/salt-archive-keyring.gpg arch=${DPKG_ARCH}] https://repo.saltproject.io/salt/py3/${distro}/${release}/${DPKG_ARCH}/${salt_version} ${codename} main" | tee /mnt/etc/apt/sources.list.d/salt.list
 
@@ -2240,7 +2240,8 @@ install_puppet_from_repo() {
 
   esac
 
-  wget -O "/mnt/usr/local/src/puppet7-release-${codename}.deb" "https://apt.puppet.com/puppet7-release-${codename}.deb"
+  curl -fsSL -o "/mnt/usr/local/src/puppet7-release-${codename}.deb" \
+    "https://apt.puppet.com/puppet7-release-${codename}.deb"
   sync
 
   arch-chroot /mnt dpkg -i "/usr/local/src/puppet7-release-${codename}.deb"
@@ -2436,7 +2437,7 @@ run_before_script() {
     if [[ "${AUTO_BEFORE_SCRIPT}" == /* ]]; then
       cp "${AUTO_BEFORE_SCRIPT}" "${script}"
     else
-      wget -O "${script}" "${AUTO_BEFORE_SCRIPT}"
+      curl -fsSL -o "${script}" "${AUTO_BEFORE_SCRIPT}"
     fi
     chmod +x "${script}"
 
@@ -2455,7 +2456,7 @@ run_after_script() {
     if [[ "${AUTO_AFTER_SCRIPT}" == /* ]]; then
       cp "${AUTO_AFTER_SCRIPT}" "${script}"
     else
-      wget -O "${script}" "${AUTO_AFTER_SCRIPT}"
+      curl -fsSL -o "${script}" "${AUTO_AFTER_SCRIPT}"
     fi
     chmod +x "${script}"
 
@@ -2474,7 +2475,7 @@ setup_first_boot_script() {
     if [[ "${AUTO_FIRST_BOOT_SCRIPT}" == /* ]]; then
       cp "${AUTO_FIRST_BOOT_SCRIPT}" "${script}"
     else
-      wget -O "${script}" "${AUTO_FIRST_BOOT_SCRIPT}"
+      curl -fsSL -o "${script}" "${AUTO_FIRST_BOOT_SCRIPT}"
     fi
     cp "${script}" "/mnt/usr/local/sbin/first-boot.script"
 
