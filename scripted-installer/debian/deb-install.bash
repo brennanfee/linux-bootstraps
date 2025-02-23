@@ -1,9 +1,4 @@
 #!/usr/bin/env bash
-# Author: Brennan Fee
-# License: MIT License
-# Version: 1.9
-# Date: 2024-12-04
-#
 # Example to run directly from URL: bash <(curl -fsSL <url here>)
 #
 # Short URL: https://tinyurl.com/deb-install
@@ -40,8 +35,8 @@ fi
 
 SCRIPT_AUTHOR="Brennan Fee"
 SCRIPT_LICENSE="MIT License"
-SCRIPT_VERSION="1.9"
-SCRIPT_DATE="2024-12-04"
+SCRIPT_VERSION="1.10"
+SCRIPT_DATE="2025-02-23"
 
 ## Data - These values will change from time-to-time and are placed here to have one place to
 ## change them without having to hunt around in the script.
@@ -60,12 +55,7 @@ CURRENT_UBUNTU_ROLLING_CODENAME="noble"
 # Default repositories - NOTE: These should NOT end in slashes
 DEFAULT_DEBIAN_REPO="https://deb.debian.org/debian"
 DEFAULT_UBUNTU_REPO="http://archive.ubuntu.com/ubuntu"
-
-# Debootstrap download filenames
-#TODO: Write a method to make this more resilient to change over time (auto select the latest)
 DEBOOTSTRAP_PATH="pool/main/d/debootstrap"
-CURRENT_DEBIAN_DEBOOTSTRAP_FILE="debootstrap_1.0.138.tar.gz"
-CURRENT_UBUNTU_DEBOOTSTRAP_FILE="debootstrap_1.0.138.tar.gz"
 
 ### End: Data
 
@@ -831,24 +821,21 @@ install_prereqs() {
 get_debootstrap() {
   print_info "Getting debootstrap"
 
-  local debootstrap_file
-  case "${AUTO_INSTALL_OS}" in
-    debian)
-      debootstrap_file="${CURRENT_DEBIAN_DEBOOTSTRAP_FILE}"
-      ;;
-    ubuntu)
-      debootstrap_file="${CURRENT_UBUNTU_DEBOOTSTRAP_FILE}"
-      ;;
-    *)
-      error_msg "ERROR! OS to install not supported: '${AUTO_INSTALL_OS}'"
-      ;;
-  esac
+  local deboostrap_url_path latest_version debootstrap_file local_archive
 
-  local debootstrap_url="${SELECTED_REPO_URL}/${DEBOOTSTRAP_PATH}/${debootstrap_file}"
+  debootstrap_url_path="${SELECTED_REPO_URL}/${DEBOOTSTRAP_PATH}"
+  latest_version=$(curl -fsSL "${debootstrap_url_path}" \
+    | grep -Eo 'href="debootstrap.*\.tar\.gz"' | cut -d\" -f2 | sort | tail -n1)
+
+  deboostrap_url_file="${debootstrap_url_path}/${latest_version}"
+
+  local_archive="/home/user/debootstrap.tar.gz"
+
+  curl -fsSL -o "${local_archive}" "${deboostrap_url_file}"
 
   mkdir -p "/debootstrap"
-  wget -O "/home/user/debootstrap.tar.gz" "${debootstrap_url}"
-  tar zxvf "/home/user/debootstrap.tar.gz" --directory="/debootstrap" --strip-components=1
+  tar zxvf "${local_archive}" --directory="/debootstrap" --strip-components=1
+  rm "${local_archive}"
   chmod +x /debootstrap/debootstrap
 
   # Protect against Ubuntu team being lazy
