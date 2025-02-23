@@ -18,8 +18,8 @@
 
 SCRIPT_AUTHOR="Brennan Fee"
 SCRIPT_LICENSE="MIT License"
-SCRIPT_VERSION="2.0"
-SCRIPT_DATE="2024-11-28"
+SCRIPT_VERSION="2.1"
+SCRIPT_DATE="2025-02-23"
 
 ############ START: Generic Print Methods
 
@@ -235,6 +235,7 @@ print_options() {
 
   print_blank_line
 
+  print_bold "AUTO_HOSTNAME='${AUTO_HOSTNAME}'"
   print_bold "AUTO_DOMAIN='${AUTO_DOMAIN}'"
 
   print_blank_line
@@ -268,6 +269,7 @@ CONFIGURATION="default"
 CONFIGURATION_URL=""
 PARAMETER_SHIFTS=0
 INTERACTIVE=0
+IS_DRY_RUN=0
 
 check_root() {
   local user_id
@@ -286,6 +288,7 @@ load_defaults() {
   export AUTO_SECOND_DISK="${AUTO_SECOND_DISK:=ignore}"
   export AUTO_ENCRYPT_DISKS="${AUTO_ENCRYPT_DISKS:=0}"
 
+  export AUTO_HOSTNAME="${AUTO_HOSTNAME:=}"
   export AUTO_DOMAIN="${AUTO_DOMAIN:=}"
 
   export AUTO_ROOT_DISABLED="${AUTO_ROOT_DISABLED:=0}"
@@ -564,6 +567,13 @@ process_options() {
       --i | --interactive)
         INTERACTIVE=1
         ;;
+      --dryrun)
+        IS_DRY_RUN=1
+        ;;
+      --hostname)
+        shift
+        export AUTO_HOSTNAME="$1"
+        ;;
       --source)
         shift
         CONFIG_SCRIPT_SOURCE="$1"
@@ -614,8 +624,10 @@ main() {
   script_file="/tmp/deb-install.bash"
   download_deb_installer "${script_file}"
 
-  # Now run the script
-  bash "${script_file}"
+  if [[ "${IS_DRY_RUN}" == 0 ]]; then
+    # Now run the script
+    bash "${script_file}"
+  fi
 }
 
 main "$@"
