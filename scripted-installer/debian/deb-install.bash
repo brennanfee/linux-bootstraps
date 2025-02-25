@@ -44,14 +44,6 @@ SCRIPT_DATE="2025-02-23"
 # The supported target OSes to be installed
 SUPPORTED_OSES=('debian' 'ubuntu')
 
-# Should be updated whenever a new Debian stable is released
-CURRENT_DEB_STABLE_CODENAME="bookworm"
-CURRENT_DEB_TESTING_CODENAME="trixie"
-
-# Should be updated with new Ubuntu releases
-CURRENT_UBUNTU_LTS_CODENAME="noble"
-CURRENT_UBUNTU_ROLLING_CODENAME="noble"
-
 # Default repositories - NOTE: These should NOT end in slashes
 DEFAULT_DEBIAN_REPO="https://deb.debian.org/debian"
 DEFAULT_UBUNTU_REPO="http://archive.ubuntu.com/ubuntu"
@@ -117,7 +109,7 @@ AUTO_TIMEZONE="${AUTO_TIMEZONE:=America/Chicago}" # Suck it east and west coast!
 # The OS to install, default is debian, alternative ubuntu.
 AUTO_INSTALL_OS="${AUTO_INSTALL_OS:=debian}"
 
-# The distro edition (sometimes called codename) to install.  For debian this is things like 'stable', 'bullesye', etc.  And for Ubuntu it is can be the codename 'jammy', 'kinetic', etc.  Ubuntu also supports the special values of 'lts' or 'rolling' for the latest LTS or rolling edition.For anything else that is "debian" based this is what should be placed into the APT sources.list.  If you do not provide a value, the default will be defined by each supported OS.  If left blank or the 'default' keyword is used this will always be the stable edition for Debian or the LTS edition for Ubuntu.
+# The distro edition (sometimes called codename) to install.  For debian this is things like 'stable', 'bullesye', etc.  And for Ubuntu it is can be the codename 'jammy', 'kinetic', etc.  Ubuntu also supports the special values of 'lts' or 'rolling' for the latest LTS or rolling edition. For anything else that is "debian" based this is what should be placed into the APT sources.list.  If you do not provide a value, the default will be defined by each supported OS.  If left blank or the 'default' keyword is used this will always be the stable edition for Debian or the LTS edition for Ubuntu.
 AUTO_INSTALL_EDITION="${AUTO_INSTALL_EDITION:=stable}"
 
 # For all distro's "default" will install the default kernel for the edition requested.  However, some distributions support alternate kernels.  For those, other values may be supported.  For instance, for Debian stable you can pass "backports" to install the kernel from the backports repository (if available).  For Ubuntu LTS editions you can choose "hwe" and "hwe-edge" as alternatives.
@@ -810,7 +802,8 @@ install_prereqs() {
 
   # Things all systems need (reminder these are being installed to the installation environment, not the target machine)
   print_status "    Installing common prerequisites"
-  local_install vim arch-install-scripts parted bc cryptsetup lvm2 xfsprogs laptop-detect ntp console-data locales fbset dosfstools
+  local_install vim arch-install-scripts parted bc cryptsetup lvm2 xfsprogs \
+    laptop-detect ntp console-data locales fbset dosfstools
 
   if [[ "${AUTO_EXTRA_PREREQ_PACKAGES}" != "" ]]; then
     print_status "    Installing user requested prerequisites"
@@ -926,17 +919,24 @@ verify_install_os() {
 
 verify_install_edition() {
   print_info "Verifying Install OS"
+  local current_ubuntu_lts_codename current_ubuntu_rolling_codename
+
+  # TODO: Should come up with a way to handle "offline" installations
+  current_ubuntu_lts_codename=$(curl -s https://changelogs.ubuntu.com/meta-release-lts \
+    | grep Dist: | tail -n1 | cut -d: -f2 | xargs)
+  current_ubuntu_rolling_codename=$(curl -s https://changelogs.ubuntu.com/meta-release \
+    | grep Dist: | tail -n1 | cut -d: -f2 | xargs)
 
   SELECTED_INSTALL_EDITION="${AUTO_INSTALL_EDITION}"
   if [[ "${AUTO_INSTALL_OS}" == "ubuntu" ]]; then
     if [[ "${SELECTED_INSTALL_EDITION}" == "lts" ]]; then
-      SELECTED_INSTALL_EDITION="${CURRENT_UBUNTU_LTS_CODENAME}"
+      SELECTED_INSTALL_EDITION="${current_ubuntu_lts_codename}"
     elif [[ "${SELECTED_INSTALL_EDITION}" == "rolling" ]]; then
-      SELECTED_INSTALL_EDITION="${CURRENT_UBUNTU_ROLLING_CODENAME}"
+      SELECTED_INSTALL_EDITION="${current_ubuntu_rolling_codename}"
     elif [[ "${SELECTED_INSTALL_EDITION}" == "stable" ]]; then
       # Handles the edge case where they said ubuntu but kept the default
       # 'stable' for edition
-      SELECTED_INSTALL_EDITION="${CURRENT_UBUNTU_LTS_CODENAME}"
+      SELECTED_INSTALL_EDITION="${current_ubuntu_lts_codename}"
     fi
   fi
 }
@@ -2175,6 +2175,15 @@ install_salt() {
 
 install_salt_from_repo() {
   print_info "Installing saltstack from repo"
+  local current_deb_stable_codename current_deb_testing_codename
+
+  # NOTE: We DO NOT want to use the users custom passed repo location here.  We want
+  # the "official" values from the current debian releases
+  # TODO: Should come up with an option to do "offline" installations
+  current_deb_stable_codename=$(curl -fsSL https://deb.debian.org/debian/dists/stable/Release \
+    | grep -i 'Codename:' | cut -d' ' -f2)
+  current_deb_testing_codename=$(curl -fsSL https://deb.debian.org/debian/dists/testing/Release \
+    | grep -i 'Codename:' | cut -d' ' -f2)
 
   mkdir -p /mnt/etc/apt/keyrings
   chmod "0755" /mnt/etc/apt/keyrings
@@ -2189,8 +2198,8 @@ install_salt_from_repo() {
 
   # Salt only supports stable releases, not testing
   case "${codename}" in
-    stable | testing | "${CURRENT_DEB_TESTING_CODENAME}")
-      codename="${CURRENT_DEB_STABLE_CODENAME}"
+    stable | testing | "${current_deb_testing_codename}")
+      codename="${current_deb_stable_codename}"
       ;;
     *) ;;
 
@@ -2227,14 +2236,23 @@ install_salt_from_bootstrap() {
 
 install_puppet_from_repo() {
   print_info "Installing puppet from repo"
+  local current_deb_stable_codename current_deb_testing_codename
+
+  # NOTE: We DO NOT want to use the users custom passed repo location here.  We want
+  # the "official" values from the current debian releases
+  # TODO: Should come up with an option to do "offline" installations
+  current_deb_stable_codename=$(curl -fsSL https://deb.debian.org/debian/dists/stable/Release \
+    | grep -i 'Codename:' | cut -d' ' -f2)
+  current_deb_testing_codename=$(curl -fsSL https://deb.debian.org/debian/dists/testing/Release \
+    | grep -i 'Codename:' | cut -d' ' -f2)
 
   local codename
   codename=$(arch-chroot /mnt lsb_release -c -s 2> /dev/null)
 
   # Puppet only supports stable releases, not testing
   case "${codename}" in
-    stable | testing | "${CURRENT_DEB_TESTING_CODENAME}")
-      codename="${CURRENT_DEB_STABLE_CODENAME}"
+    stable | testing | "${current_deb_testing_codename}")
+      codename="${current_deb_stable_codename}"
       ;;
     *) ;;
 
