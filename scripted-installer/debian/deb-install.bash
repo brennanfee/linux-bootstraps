@@ -35,8 +35,8 @@ fi
 
 SCRIPT_AUTHOR="Brennan Fee"
 SCRIPT_LICENSE="MIT License"
-SCRIPT_VERSION="1.13"
-SCRIPT_DATE="2025-02-24"
+SCRIPT_VERSION="1.14"
+SCRIPT_DATE="2026-09-26"
 
 ## Data - These values will change from time-to-time and are placed here to have one place to
 ## change them without having to hunt around in the script.
