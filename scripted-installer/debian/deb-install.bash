@@ -803,7 +803,7 @@ install_prereqs() {
   # Things all systems need (reminder these are being installed to the installation environment, not the target machine)
   print_status "    Installing common prerequisites"
   local_install vim arch-install-scripts parted bc cryptsetup lvm2 xfsprogs \
-    laptop-detect ntpsec console-data locales fbset dosfstools
+    console-data locales fbset dosfstools
 
   if [[ "${AUTO_EXTRA_PREREQ_PACKAGES}" != "" ]]; then
     print_status "    Installing user requested prerequisites"
@@ -845,12 +845,9 @@ get_debootstrap() {
 setup_clock() {
   print_info "Setting up system clock"
 
-  hwclock --systohc --utc --update-drift
   timedatectl set-local-rtc 0
   timedatectl set-timezone "${AUTO_TIMEZONE}"
-
-  # Set the time with ntp once
-  ntpd -gq || true
+  timedatectl set-ntp true
 }
 
 ### END: Preparation Functions
@@ -1958,8 +1955,6 @@ EOF
 
 the_timezone=$(cat /etc/timezone)
 
-hwclock --systohc --utc --update-drift
-
 timedatectl set-local-rtc 0
 timedatectl set-timezone "${the_timezone}"
 timedatectl set-ntp true
@@ -2090,7 +2085,7 @@ install_applications_common() {
   print_info "Installing common applications"
 
   # Required in all environments, many to true up standard server installation
-  chroot_install apt-transport-https ca-certificates curl wget gnupg lsb-release build-essential dkms sudo acl git vim-nox python3-dev python3-keyring python3-pip python-is-python3 pipx software-properties-common apparmor ssh locales console-setup console-data lz4 network-manager netplan.io cryptsetup cryptsetup-initramfs xfsprogs dictionaries-common iamerican ibritish discover discover-data laptop-detect usbutils eject util-linux-locales man-db tasksel fbset dosfstools
+  chroot_install apt-transport-https ca-certificates curl wget gnupg lsb-release build-essential dkms sudo acl git vim-nox python3-dev python3-keyring python3-pip python-is-python3 pipx software-properties-common apparmor ssh locales console-setup console-data lz4 network-manager netplan.io cryptsetup cryptsetup-initramfs xfsprogs dictionaries-common iamerican ibritish discover discover-data usbutils eject util-linux-locales man-db tasksel fbset dosfstools
 
   setfont "Lat15-Terminus${CONSOLE_FONT_SIZE}"
 
@@ -2595,7 +2590,7 @@ show_complete_screen() {
 welcome_screen() {
   write_log "In welcome screen."
   print_title
-  print_status "Automated script to install Debian and Ubuntu systems the 'Arch Way' (aka debootsrap)."
+  print_status "Automated script to install Debian and Ubuntu systems the 'Arch Way' (aka debootstrap)."
   print_blank_line
   print_status "Script version: ${SCRIPT_VERSION} - Script date: ${SCRIPT_DATE}"
   print_blank_line
