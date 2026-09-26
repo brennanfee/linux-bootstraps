@@ -1756,43 +1756,80 @@ configure_locale() {
 configure_apt_debian() {
   print_info "Configuring APT (Debian)"
 
-  # Backup the one originally installed
-  mv /mnt/etc/apt/sources.list /mnt/etc/apt/sources.list.bootstrapped
+  # Backup the originally installed one
+  if [[ -f "/mnt/etc/apt/sources.list" ]]; then
+    mv /mnt/etc/apt/sources.list /mnt/etc/apt/sources.list.bootstrapped
+  fi
+
+  local main_file="/mnt/etc/apt/sources.list.d/debian.sources"
+  local backports_file="/mnt/etc/apt/sources.list.d/debian-backports.sources"
+  local types="deb deb-src"
+  local signed_by="/usr/share/keyrings/debian-archive-keyring.gpg"
 
   local components="main contrib non-free non-free-firmware"
 
   # This list should shrink over time until all releases support the new "non-free-firmware" component that was introduced in "bookworm"
-  local old_editions=("oldoldstable" "buster" "oldstable" "bullseye")
+  local old_editions=("oldoldstable" "bullseye" "buster" "stretch")
   get_exit_code contains_element "${SELECTED_INSTALL_EDITION}" "${old_editions[@]}"
   if [[ "${EXIT_CODE}" == "0" ]]; then
     components="main contrib non-free"
   fi
 
-  # Write out sources
-  echo "deb ${SELECTED_REPO_URL} ${SELECTED_INSTALL_EDITION} ${components}" > /mnt/etc/apt/sources.list
+  # Write out main source using deb822 format
+  {
+    echo "# Main Source"
+    echo "Types: ${types}"
+    echo "URIs: ${SELECTED_REPO_URL}"
+    echo "Suites: ${SELECTED_INSTALL_EDITION}"
+    echo "Components: ${components}"
+    echo "Signed-By: ${signed_by}"
+  } > "${main_file}"
 
   # Alt repos
   local dont_support_alt_repos=("sid" "unstable" "rc-buggy" "experimental")
   get_exit_code contains_element "${SELECTED_INSTALL_EDITION}" "${dont_support_alt_repos[@]}"
   if [[ ! "${EXIT_CODE}" == "0" ]]; then
-    # Alt repos
+    # Write out the security source
+    # NOTE: The security source MUST come from the main sources as mirrors will not contain copies
     {
-      # The security repo MUST come from the main sources as mirrors will not contain a copy
-      echo "deb http://deb.debian.org/debian-security ${SELECTED_INSTALL_EDITION}-security ${components}"
-      echo "deb ${SELECTED_REPO_URL} ${SELECTED_INSTALL_EDITION}-updates ${components}"
-    } >> /mnt/etc/apt/sources.list
+      echo ""
+      echo "# Security Updates Source"
+      echo "Types: ${types}"
+      echo "URIs: https://deb.debian.org/debian-security"
+      echo "Suites: ${SELECTED_INSTALL_EDITION}-security"
+      echo "Components: ${components}"
+      echo "Signed-By: ${signed_by}"
+    } >> "${main_file}"
+
+    # Write out the updates source
+    {
+      echo ""
+      echo "# Updates Source"
+      echo "Types: ${types}"
+      echo "URIs: ${SELECTED_REPO_URL}"
+      echo "Suites: ${SELECTED_INSTALL_EDITION}-updates"
+      echo "Components: ${components}"
+      echo "Signed-By: ${signed_by}"
+    } >> "${main_file}"
   fi
 
-  # Will need to regularly update the codename for testing here, currently "trixie"
-  local dont_support_backports=("trixie" "testing" "sid" "unstable" "rc-buggy" "experimental")
+  # Will need to update this to remove bullseye and oldoldstable once those branches support a backports source
+  local dont_support_backports=("sid" "unstable" "rc-buggy" "experimental" "bullseye" "oldoldstable")
   get_exit_code contains_element "${SELECTED_INSTALL_EDITION}" "${dont_support_alt_repos[@]}"
   if [[ ! "${EXIT_CODE}" == "0" ]]; then
-    # Can't use branches like "stable" or "oldstable" must convert to the codename like "bullseye" or "bookworm"
-    local edition
-    edition=$(arch-chroot /mnt lsb_release -c -s 2> /dev/null)
+    # # Can't use branches like "stable" or "oldstable" must convert to the codename like "bullseye" or "bookworm"
+    # local edition
+    # edition=$(arch-chroot /mnt lsb_release -c -s 2> /dev/null)
 
-    # Now backports
-    echo "deb ${SELECTED_REPO_URL} ${edition}-backports ${components}" > /mnt/etc/apt/sources.list.d/debian-backports.list
+    # Now write the backports file
+    {
+      echo "# Debian Backports Source"
+      echo "Types: ${types}"
+      echo "URIs: ${SELECTED_REPO_URL}"
+      echo "Suites: ${SELECTED_INSTALL_EDITION}-backports"
+      echo "Components: ${components}"
+      echo "Signed-By: ${signed_by}"
+    } > "${backports_file}"
   fi
 
   chroot_run_updates
@@ -1801,16 +1838,42 @@ configure_apt_debian() {
 configure_apt_ubuntu() {
   print_info "Configuring APT (Ubuntu)"
 
-  # Backup the one originally installed
-  mv /mnt/etc/apt/sources.list /mnt/etc/apt/sources.list.bootstrapped
+  # Backup the originally installed ones
+  if [[ -f "/mnt/etc/apt/sources.list" ]]; then
+    mv /mnt/etc/apt/sources.list /mnt/etc/apt/sources.list.bootstrapped
+  fi
 
-  # Write out sources
+  if [[ -f "/mnt/etc/apt/sources.list.d/ubuntu.sources" ]]; then
+    mv /mnt/etc/apt/sources.list.d/ubuntu.sources /mnt/etc/apt/sources.list.d/ubuntu.sources.bootstrapped
+  fi
+
+  local sources_file="/mnt/etc/apt/sources.list.d/ubuntu.sources"
+  local types="deb deb-src"
+  local components="main restricted universe multiverse"
+  local signed_by="/usr/share/keyrings/ubuntu-archive-keyring.gpg"
+
+  # Write out the main sources
   {
-    echo "deb ${SELECTED_REPO_URL} ${SELECTED_INSTALL_EDITION} main restricted universe multiverse"
-    echo "deb ${SELECTED_REPO_URL} ${SELECTED_INSTALL_EDITION}-updates main restricted universe multiverse"
-    echo "deb ${SELECTED_REPO_URL} ${SELECTED_INSTALL_EDITION}-backports main restricted universe multiverse"
-    echo "deb ${SELECTED_REPO_URL} ${SELECTED_INSTALL_EDITION}-security main restricted universe multiverse"
-  } > /mnt/etc/apt/sources.list
+    echo "## Ubuntu distribution repository"
+    echo "Types: ${types}"
+    echo "URIs: ${SELECTED_REPO_URL}"
+    echo "Suites: ${SELECTED_INSTALL_EDITION} ${SELECTED_INSTALL_EDITION}-updates ${SELECTED_INSTALL_EDITION}-backports"
+    echo "Components: ${components}"
+    echo "Signed-By: ${signed_by}"
+
+  } > "${sources_file}"
+
+  # Write out the security source
+  # The security URL must point to the official Ubuntu security source
+  {
+    echo "## Ubuntu distribution repository"
+    echo "Types: ${types}"
+    echo "URIs: https://security.ubuntu.com/ubuntu/"
+    echo "Suites: ${SELECTED_INSTALL_EDITION}-security"
+    echo "Components: ${components}"
+    echo "Signed-By: ${signed_by}"
+
+  } >> "${sources_file}"
 
   chroot_run_updates
 }
@@ -2206,7 +2269,16 @@ install_salt_from_repo() {
 
   curl -fsSL -o /mnt/etc/apt/keyrings/salt-archive-keyring.gpg "https://repo.saltproject.io/salt/py3/${distro}/${release}/${DPKG_ARCH}/${salt_version}/salt-archive-keyring.gpg"
 
-  echo "deb [signed-by=/etc/apt/keyrings/salt-archive-keyring.gpg arch=${DPKG_ARCH}] https://repo.saltproject.io/salt/py3/${distro}/${release}/${DPKG_ARCH}/${salt_version} ${codename} main" | tee /mnt/etc/apt/sources.list.d/salt.list
+  # Write out source
+  {
+    echo "# Salt DEB Source"
+    echo "Types: deb"
+    echo "URIs: https://repo.saltproject.io/salt/py3/${distro}/${release}/${DPKG_ARCH}/${salt_version}"
+    echo "Suites: ${codename}"
+    echo "Components: main"
+    echo "Signed-By: /etc/apt/keyrings/salt-archive-keyring.gpg"
+    echo "Architecture: ${DPKG_ARCH}"
+  } > "/mnt/etc/apt/sources.list.d/salt.sources"
 
   chroot_run_updates
   chroot_install salt-minion
