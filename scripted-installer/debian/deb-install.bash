@@ -35,7 +35,7 @@ fi
 
 SCRIPT_AUTHOR="Brennan Fee"
 SCRIPT_LICENSE="MIT License"
-SCRIPT_VERSION="1.12"
+SCRIPT_VERSION="1.13"
 SCRIPT_DATE="2025-02-24"
 
 ## Data - These values will change from time-to-time and are placed here to have one place to
@@ -803,7 +803,7 @@ install_prereqs() {
   # Things all systems need (reminder these are being installed to the installation environment, not the target machine)
   print_status "    Installing common prerequisites"
   local_install vim arch-install-scripts parted bc cryptsetup lvm2 xfsprogs \
-    laptop-detect ntp console-data locales fbset dosfstools
+    laptop-detect ntpsec console-data locales fbset dosfstools
 
   if [[ "${AUTO_EXTRA_PREREQ_PACKAGES}" != "" ]]; then
     print_status "    Installing user requested prerequisites"
