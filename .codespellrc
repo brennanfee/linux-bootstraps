@@ -1,0 +1,4 @@
+[codespell]
+skip = */mise.lock
+ignore-sic = true
+ignore-words-list = crypted

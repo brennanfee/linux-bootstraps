@@ -134,11 +134,11 @@ print_title() {
 }
 
 show_help() {
-  local l="Deb-Install Bootstraper Help -- Script version: ${SCRIPT_VERSION} "
+  local l="Deb-Install Bootstrapper Help -- Script version: ${SCRIPT_VERSION} "
   l+="- Script date: ${SCRIPT_DATE}"
   print_msg "$l"
   print_blank_line
-  print_msg "Example:  bootstraper.bash {distro} {edition} (configuration) (flags/options)"
+  print_msg "Example:  bootstrapper.bash {distro} {edition} (configuration) (flags/options)"
   print_blank_line
   l="Distro is required.  It is the Linux distribution to install, currently only 'debian' "
   l+="and 'ubuntu' are supported."
@@ -158,7 +158,7 @@ show_help() {
   l+="follow.  For the 'external' configuration the next parameter must be a URL that points "
   l+="to a script that will set the desired options (using exported environment variables). "
   l+="The script will be downloaded and sourced before the rest of the options are processed. "
-  l+="Example: bootstraper.bash debian stable external https://tinyurl.com/mysettings --auto-mode"
+  l+="Example: bootstrapper.bash debian stable external https://tinyurl.com/mysettings --auto-mode"
   print_msg "$l"
   print_blank_line
   l="The configurations 'homelab', 'homelan', 'vmhomelab', and 'vmhomelan' are for my own personal "
@@ -182,7 +182,7 @@ show_help() {
 }
 
 show_options() {
-  local l="Deb-Install Bootstraper Help -- Script version: ${SCRIPT_VERSION} "
+  local l="Deb-Install Bootstrapper Help -- Script version: ${SCRIPT_VERSION} "
   l+="- Script date: ${SCRIPT_DATE}"
   print_msg "$l"
   print_blank_line

@@ -814,17 +814,17 @@ install_prereqs() {
 get_debootstrap() {
   print_info "Getting debootstrap"
 
-  local deboostrap_url_path latest_version debootstrap_file local_archive
+  local debootstrap_url_path latest_version local_archive
 
   debootstrap_url_path="${SELECTED_REPO_URL}/${DEBOOTSTRAP_PATH}"
   latest_version=$(curl -fsSL "${debootstrap_url_path}" \
     | grep -Eo 'href="debootstrap.*\.tar\.gz"' | cut -d\" -f2 | sort | tail -n1)
 
-  deboostrap_url_file="${debootstrap_url_path}/${latest_version}"
+  debootsrap_url_file="${debootstrap_url_path}/${latest_version}"
 
   local_archive="/home/user/debootstrap.tar.gz"
 
-  curl -fsSL -o "${local_archive}" "${deboostrap_url_file}"
+  curl -fsSL -o "${local_archive}" "${debootsrap_url_file}"
 
   mkdir -p "/debootstrap"
   tar zxvf "${local_archive}" --directory="/debootstrap" --strip-components=1
@@ -2063,7 +2063,7 @@ configure_virtualization() {
 
     if [[ ! -f "/mnt/boot/efi/startup.nsh" ]]; then
       echo "FS0:" > /mnt/boot/efi/startup.nsh
-      echo "\\EFI\\${AUTO_INSTALL_OS}\\grubx64.efi" >> /mnt/boot/efi/startup.nsh
+      echo -e "\\EFI\\${AUTO_INSTALL_OS}\\grubx64.efi" >> /mnt/boot/efi/startup.nsh
     fi
 
     local boot_imgs
@@ -2595,7 +2595,7 @@ show_complete_screen() {
 welcome_screen() {
   write_log "In welcome screen."
   print_title
-  print_status "Automated script to install Debian and Ubuntu systems the 'Arch Way' (aka deboostrap)."
+  print_status "Automated script to install Debian and Ubuntu systems the 'Arch Way' (aka debootsrap)."
   print_blank_line
   print_status "Script version: ${SCRIPT_VERSION} - Script date: ${SCRIPT_DATE}"
   print_blank_line
