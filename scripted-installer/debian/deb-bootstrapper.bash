@@ -18,8 +18,8 @@
 
 SCRIPT_AUTHOR="Brennan Fee"
 SCRIPT_LICENSE="MIT License"
-SCRIPT_VERSION="2.1"
-SCRIPT_DATE="2025-02-23"
+SCRIPT_VERSION="2.2"
+SCRIPT_DATE="2026-09-26"
 
 ############ START: Generic Print Methods
 
@@ -199,6 +199,7 @@ show_options() {
   print_msg "  --confirm: Ask for option confirmation on install. Aliases: -c, --confirmation"
   print_msg "  --reboot: Reboot the machine automatically at end of install. Alias: -r"
   print_msg "  --debug: Debug mode, run the install script in debug mode. Alias: -d"
+  print_msg "  --dev: Use the dev branch version of the installer."
   print_msg "  --single-disk: Single disk machine configuration. Alias: --single"
   print_msg "  --dual-disk: Dual disk machine configuration. Alias: --dual, --dual-disks"
   print_msg "  --encrypt: Encrypt the disks. Aliases: -e, --encrypted"
@@ -269,6 +270,7 @@ CONFIGURATION="default"
 CONFIGURATION_URL=""
 PARAMETER_SHIFTS=0
 INTERACTIVE=0
+DEV=0
 IS_DRY_RUN=0
 
 check_root() {
@@ -567,6 +569,9 @@ process_options() {
       --i | --interactive)
         INTERACTIVE=1
         ;;
+      --dev)
+        DEV=1
+        ;;
       --dryrun)
         IS_DRY_RUN=1
         ;;
@@ -593,6 +598,13 @@ download_deb_installer() {
   local script_url="https://raw.githubusercontent.com/brennanfee/linux-bootstraps/main/scripted-installer/debian/deb-install.bash"
   if [[ "${INTERACTIVE}" == 1 ]]; then
     local script_url="https://raw.githubusercontent.com/brennanfee/linux-bootstraps/main/scripted-installer/debian/deb-install-interactive.bash"
+  fi
+
+  if [[ "${DEV}" == 1 ]]; then
+    local script_url="https://raw.githubusercontent.com/brennanfee/linux-bootstraps/develop/scripted-installer/debian/deb-install.bash"
+    if [[ "${INTERACTIVE}" == 1 ]]; then
+      local script_url="https://raw.githubusercontent.com/brennanfee/linux-bootstraps/develop/scripted-installer/debian/deb-install-interactive.bash"
+    fi
   fi
 
   if [[ ! -f "${script_file}" ]]; then
