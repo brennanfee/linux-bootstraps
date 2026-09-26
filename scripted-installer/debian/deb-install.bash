@@ -803,7 +803,7 @@ install_prereqs() {
   # Things all systems need (reminder these are being installed to the installation environment, not the target machine)
   print_status "    Installing common prerequisites"
   local_install vim arch-install-scripts parted bc cryptsetup lvm2 xfsprogs \
-    console-data locales fbset dosfstools
+    console-data locales fbset dosfstools systemd-timesyncd
 
   if [[ "${AUTO_EXTRA_PREREQ_PACKAGES}" != "" ]]; then
     print_status "    Installing user requested prerequisites"
@@ -2085,7 +2085,11 @@ install_applications_common() {
   print_info "Installing common applications"
 
   # Required in all environments, many to true up standard server installation
-  chroot_install apt-transport-https ca-certificates curl wget gnupg lsb-release build-essential dkms sudo acl git vim-nox python3-dev python3-keyring python3-pip python-is-python3 pipx software-properties-common apparmor ssh locales console-setup console-data lz4 network-manager netplan.io cryptsetup cryptsetup-initramfs xfsprogs dictionaries-common iamerican ibritish discover discover-data usbutils eject util-linux-locales man-db tasksel fbset dosfstools
+  chroot_install apt-transport-https ca-certificates curl wget gnupg lsb-release build-essential dkms sudo acl git \
+    vim-nox python3-dev python3-keyring python3-pip python-is-python3 pipx software-properties-common apparmor ssh \
+    locales console-setup console-data lz4 network-manager netplan.io cryptsetup cryptsetup-initramfs xfsprogs \
+    dictionaries-common iamerican ibritish discover discover-data usbutils eject util-linux-locales man-db tasksel \
+    fbset dosfstools systemd-timesyncd
 
   setfont "Lat15-Terminus${CONSOLE_FONT_SIZE}"
 
